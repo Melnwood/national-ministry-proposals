@@ -215,7 +215,7 @@ left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color
 
 <div class="shell" id="app" style="display:none">
   <header class="top">
-    <div class="brand"><div class="mk">JV</div><div><h1>Grant Approval Console</h1><div class="tag">Country Proposals · BUILD 49 (travel approvals moved to dashboard)</div></div></div>
+    <div class="brand"><div class="mk">JV</div><div><h1>Grant Approval Console</h1><div class="tag">Country Proposals · BUILD 50 (single cash source + still-owed) (travel approvals moved to dashboard)</div></div></div>
     <div class="spacer"></div>
     <span class="ready-chip" id="readyChip" style="display:none"></span>
     <div class="meta" id="meta"></div>
@@ -546,7 +546,12 @@ function setAvail(){
   let committed=0;
   PROPS.forEach(p=>{const st=stageOf(p.f[F.status]);
     if(st>=2&&st<=4){const aw=p.f[F.awarded]; committed += (aw!=null&&aw!=='')?Number(aw):(Number(p.f[F.reqAmt])||0);}});
-  const avail = bal - committed;
+  // Conservative: part-paid grants still owe the difference. Blank paid = paid in full.
+  let owed=0;
+  PROPS.forEach(p=>{const pd=p.f['fldHug3aktd9okS1W'];
+    if(pd==null||pd==='')return;
+    const d=(Number(p.f[F.awarded])||0)-Number(pd); if(d>0) owed+=d;});
+  const avail = bal - committed - owed;
   const restr = FUNDS.filter(f=>/Restricted/i.test(f.status)).reduce((s,f)=>s+f.amount,0);
   const travelUsed = (TRAVEL||[]).filter(t=>/Approved|Paid/i.test(t.status||'')).reduce((s,t)=>s+(Number(t.appAmt)||Number(t.reqAmt)||0),0);
   const seLeft = restr - travelUsed;

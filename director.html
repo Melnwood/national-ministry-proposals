@@ -397,7 +397,7 @@
     <div class="eyebrow">National Ministries</div>
     <h1>Grant <em>decisions</em></h1>
     <p class="sub">What's been given, what's left, and who to prioritize for the requests on the table — for cycle <span id="cl">2025-26</span>.</p>
-    <div><span id="badge"></span><span class="stamp" id="stamp"></span><span class="stamp" style="opacity:.7"> · report build 47</span></div>
+    <div><span id="badge"></span><span class="stamp" id="stamp"></span><span class="stamp" style="opacity:.7"> · report build 48</span></div>
     <div style="margin-top:12px"><a href="phases.html" class="phasebtn">View grants by phase &rarr;</a> <a href="reports.html" class="phasebtn phasebtn-alt">Report tracking &rarr;</a> <a href="#travel" class="phasebtn phasebtn-alt">Travel fund &rarr;</a> <a class="phasebtn phasebtn-alt" style="cursor:pointer" onclick="openPeople()">Sign-ins &rarr;</a></div>
     <div class="totalgiven" id="totalgiven"></div>
   </header>
@@ -828,6 +828,7 @@ function buildMap(props){
 function lookupRec(p,c){return PROPMAP[norm(c.country)+'|'+norm(p.name)]||PROPMAP[norm(p.name)]||null;}
 
 /* live available-to-grant + live country data, computed from Airtable */
+const PAID='fldHug3aktd9okS1W';
 const FUND_AMT='fldcZFJwHyfu5IgCl',FUND_STAT='fldXwNvQuraOWvgq7',REQ='fld3bvuKr1SIXAwUf',AWARDED='fldeeQMQPRVyXbklW',
   F_LEAD='fldc2XplvqvAX8NlX',F_CH='fld6ZWqZuuK9gcfab',F_PPL='fld8CdQ8Ens5m3NDs',F_COACH='fldstKKgW2SeCjYxG',F_CYC='flda02NPGg4TFd8wp',F_YEAR='fld4xy7sYr8vl8dNj';
 const STAGE={'EVP Approval':2,'Grant Team Approval (Dave & Pavel)3':3,'Funding For Grant Identified 4':4,'Funds distributed to Council Account 5':5,'Funds Distributed to Cedarstone Country Account 6':6,'Submitted':1};
@@ -837,17 +838,22 @@ const slabel=s=>SLABEL[String(s||'').trim()]||(String(s||'').trim()||'—');
 const TERMINAL=/Denial|Pause|Achived|distribut|approv/i;
 const stg=p=>stageOf(p.status);
 const isPending=p=>stg(p)<2 && !TERMINAL.test(p.status);   // pending = status is pre-EVP; status is the source of truth
-let BASEPOOL=0, PROPSARR=[], PROPFULL=[], CYCLEYEAR={}, AVAIL=0, COMMITTED=0, PENDINGREQ=0, PENDINGCOUNT=0, BOOTCYCLES=[], BOOTGOALS=[], TOTALDEPOSITS=0, REPORTS=[], REPORTSORT='country', TRAVEL=[], TRAVEL_TOTAL=0;
+let BAL=null, STILLOWED=0, BASEPOOL=0, PROPSARR=[], PROPFULL=[], CYCLEYEAR={}, AVAIL=0, COMMITTED=0, PENDINGREQ=0, PENDINGCOUNT=0, BOOTCYCLES=[], BOOTGOALS=[], TOTALDEPOSITS=0, REPORTS=[], REPORTSORT='country', TRAVEL=[], TRAVEL_TOTAL=0;
 const numv=x=>{const v=aval(x);const n=Number(String(v).replace(/[, ]/g,''));return isNaN(n)?0:n;};
 function ingest(boot){
-  BASEPOOL=(boot.funds||[]).filter(f=>/Open/i.test((f.fields[FUND_STAT]&&(f.fields[FUND_STAT].name||f.fields[FUND_STAT]))||'')).reduce((a,f)=>a+(f.fields[FUND_AMT]||0),0);
+  // Single source of truth: the real cash in account 510181 (Account Balance table).
+  // Fall back to the Available Funds "Open" pool only if no balance record exists.
+  BAL = boot.bal || null;
+  BASEPOOL = (BAL && BAL.balance!=null)
+    ? BAL.balance
+    : (boot.funds||[]).filter(f=>/Open/i.test((f.fields[FUND_STAT]&&(f.fields[FUND_STAT].name||f.fields[FUND_STAT]))||'')).reduce((a,f)=>a+(f.fields[FUND_AMT]||0),0);
   CYCLEYEAR={}; (boot.cycles||[]).forEach(c=>{CYCLEYEAR[c.id]=String(aval(c.fields[F_YEAR])||'');});
   BOOTCYCLES=boot.cycles||[]; BOOTGOALS=boot.goals||[];
   TOTALDEPOSITS=BOOTCYCLES.reduce((a,c)=>a+(c.fields['fldw0BPZ4mU0GwiXz']||0),0);
   PROPFULL=(boot.props||[]).map(p=>{const f=p.fields;return {
     id:p.id, name:aval(f[A_NAME])||'(untitled)', country:aval(f[A_CTY])||'Not specified',
     status:String(f[A_STATUS]&&(f[A_STATUS].name||f[A_STATUS])||'').trim(), gate:!!f[A_GATE],
-    req:f[REQ]||0, awarded:f[AWARDED]||0, leaders:numv(f[F_LEAD]), churches:numv(f[F_CH]), people:numv(f[F_PPL]),
+    req:f[REQ]||0, awarded:f[AWARDED]||0, paid:f[PAID], leaders:numv(f[F_LEAD]), churches:numv(f[F_CH]), people:numv(f[F_PPL]),
     coach:aval(f[F_COACH])||'', cycleId:(Array.isArray(f[F_CYC])&&f[F_CYC][0]&&f[F_CYC][0].id)||null, raw:f };});
   RAW={}; PROPFULL.forEach(p=>RAW[p.id]=p.raw);
   PROPSARR=PROPFULL;
@@ -857,9 +863,15 @@ function ingest(boot){
 }
 function recompute(){
   COMMITTED=PROPFULL.filter(p=>{const s=stg(p);return s>=2&&s<=4;}).reduce((a,p)=>a+((p.awarded&&p.awarded>0)?p.awarded:(p.req||0)),0);
+  // Conservative: any grant part-paid still owes the difference. Blank "paid" = paid in full.
+  STILLOWED=PROPFULL.reduce((a,p)=>{
+    if(p.paid==null||p.paid==='') return a;
+    const owed=(Number(p.awarded)||0)-Number(p.paid);
+    return a + (owed>0?owed:0);
+  },0);
   PENDINGREQ=PROPFULL.filter(isPending).reduce((a,p)=>a+(p.req||0),0);
   PENDINGCOUNT=PROPFULL.filter(isPending).length;
-  AVAIL=BASEPOOL-COMMITTED;
+  AVAIL=BASEPOOL-COMMITTED-STILLOWED;
 }
 function buildLiveFoundations(curLabel){
   const GF={found:'fldnNt8n0RNqdSccO',gift:'fldw0BPZ4mU0GwiXz',awarded:'fldH1cWVAE20ntcob',count:'fld4GE2gj9YRXIrQv'};
@@ -901,7 +913,18 @@ function applyAvail(){
   recompute();
   const gv=document.querySelector('.gapside.give .v'), gs=document.querySelector('.gapside.give .s'), av=document.querySelector('.gapside.ask .v');
   if(gv) gv.textContent=fmt(AVAIL);
-  if(gs) gs.textContent=fmt(BASEPOOL)+' pool · '+fmt(COMMITTED)+' already committed';
+  if(gs){
+    let bits=fmt(BASEPOOL)+' in account';
+    if(BAL&&BAL.asOf){
+      const d=new Date(BAL.asOf), days=Math.floor((Date.now()-d)/86400000);
+      bits+=' as of '+d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      if(days>21) bits+=' \u26a0 '+days+' days old';
+    }
+    if(COMMITTED>0) bits+=' \u00b7 '+fmt(COMMITTED)+' committed';
+    if(STILLOWED>0) bits+=' \u00b7 '+fmt(STILLOWED)+' still owed on part-paid grants';
+    gs.textContent=bits;
+    gs.style.color = (BAL&&BAL.asOf&&(Date.now()-new Date(BAL.asOf))/86400000>21) ? '#9A2E22' : '';
+  }
   if(av) av.textContent=fmt(PENDINGREQ);
   const tg=document.getElementById('totalgiven'); if(tg) tg.innerHTML='<span class="tglbl">Total deposited toward National Ministry Projects \u00b7 all cycles</span><b>'+fmt(TOTALDEPOSITS)+'</b> received in foundation gifts across every cycle';
   const asub=document.querySelector('.gapside.ask .s'); if(asub) asub.textContent='across '+PENDINGCOUNT+' pending proposal'+(PENDINGCOUNT===1?'':'s');
