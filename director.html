@@ -87,6 +87,14 @@
   .tvtag.den{background:#F6E0D8;color:#9A2E22}
   .tvtag.retro{background:#ECE4F3;color:var(--purple)}
   .tvfoot{font-size:12px;color:var(--ink-soft);border-top:1px dashed var(--line-d);padding-top:12px;margin-top:4px}
+  .pplead{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px}
+  .pprow{display:flex;gap:14px;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+  .pprow:last-child{border-bottom:none}
+  .ppname{font-size:14.5px;font-weight:600;color:var(--ink)}
+  .ppmeta{font-size:12px;color:var(--ink-soft);margin-top:1px}
+  .ppset{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px;margin-left:6px}
+  .ppset.yes{background:#DCEAE0;color:var(--green-d)}
+  .ppset.no{background:#F6E9D8;color:#8a6a2e}
   /* PRIORITIES */
   .toggle{display:inline-flex;border:1px solid var(--line-d);border-radius:9px;overflow:hidden;margin-bottom:4px}
   .toggle button{border:0;background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink-soft);padding:7px 13px;cursor:pointer}
@@ -389,8 +397,8 @@
     <div class="eyebrow">National Ministries</div>
     <h1>Grant <em>decisions</em></h1>
     <p class="sub">What's been given, what's left, and who to prioritize for the requests on the table — for cycle <span id="cl">2025-26</span>.</p>
-    <div><span id="badge"></span><span class="stamp" id="stamp"></span><span class="stamp" style="opacity:.7"> · report build 46</span></div>
-    <div style="margin-top:12px"><a href="phases.html" class="phasebtn">View grants by phase &rarr;</a> <a href="reports.html" class="phasebtn phasebtn-alt">Report tracking &rarr;</a> <a href="#travel" class="phasebtn phasebtn-alt">Travel fund &rarr;</a></div>
+    <div><span id="badge"></span><span class="stamp" id="stamp"></span><span class="stamp" style="opacity:.7"> · report build 47</span></div>
+    <div style="margin-top:12px"><a href="phases.html" class="phasebtn">View grants by phase &rarr;</a> <a href="reports.html" class="phasebtn phasebtn-alt">Report tracking &rarr;</a> <a href="#travel" class="phasebtn phasebtn-alt">Travel fund &rarr;</a> <a class="phasebtn phasebtn-alt" style="cursor:pointer" onclick="openPeople()">Sign-ins &rarr;</a></div>
     <div class="totalgiven" id="totalgiven"></div>
   </header>
 
@@ -427,6 +435,7 @@
 </div>
 
 <div class="modal" id="projModal"><div class="mpanel"><button class="mx" id="projClose">&times;</button><div id="projBody"></div></div></div>
+<div class="modal" id="peopleModal"><div class="mpanel" style="max-width:620px"><button class="mx" id="peopleClose">&times;</button><div class="mtitle" style="font-size:21px">Sign-ins</div><p class="pplead">Reset someone's sign-in and their password is cleared. The next time they sign in, whatever password they type becomes their new one — no email needed.</p><div id="peopleBody"><div class="tvnone">Loading…</div></div></div></div>
 <div class="modal" id="delModal"><div class="mpanel" style="max-width:440px"><div class="mtitle" style="font-size:21px">Delete this project?</div><p class="delmsg" id="delMsg"></p><div class="delrow"><button class="delcancel" id="delCancel">Cancel</button><button class="delconfirm" id="delGo">Delete permanently</button></div></div></div>
 <div id="toast"></div>
 
@@ -931,6 +940,33 @@ function approveBtn(p,c){
 const tEl=()=>document.getElementById('toast');
 function toast(m,t){const e=tEl();if(!e)return;e.className=t==='load'?'show':(t==='err'?'show err':'show');e.innerHTML=(t==='load'?'<span class="sp"></span>':'')+m;if(t!=='load'){clearTimeout(e._t);e._t=setTimeout(()=>e.className='',2400);}}
 
+// ---- Sign-ins — reset a person's password without touching Airtable ----
+let PEOPLE=[];
+async function openPeople(){
+  document.getElementById('peopleModal').classList.add('open');
+  document.getElementById('peopleBody').innerHTML='<div class="tvnone">Loading…</div>';
+  try{ const d=await apiCall('people_list',{}); PEOPLE=d.people||[]; renderPeople(); }
+  catch(e){ document.getElementById('peopleBody').innerHTML='<div class="tvnone">Could not load: '+(e.message||'error')+'</div>'; }
+}
+function renderPeople(){
+  const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  document.getElementById('peopleBody').innerHTML=(PEOPLE||[]).map(p=>`
+    <div class="pprow">
+      <div><div class="ppname">${esc(p.name||p.email)}<span class="ppset ${p.hasPassword?'yes':'no'}">${p.hasPassword?'Password set':'Not set yet'}</span></div>
+      <div class="ppmeta">${esc(p.email)}${p.role?' · '+esc(p.role):''}</div></div>
+      <div>${p.hasPassword?`<button class="tvbtn no" onclick="resetPerson('${p.id}')">Reset sign-in</button>`:'<span class="ppmeta">Will set on first sign-in</span>'}</div>
+    </div>`).join('')||'<div class="tvnone">No people found.</div>';
+}
+async function resetPerson(id){
+  const p=(PEOPLE||[]).find(x=>x.id===id);
+  if(!confirm('Reset the sign-in for '+((p&&(p.name||p.email))||'this person')+"?\n\nTheir password will be cleared. The next password they type when signing in becomes their new one.")) return;
+  toast('Resetting…','load');
+  try{ await apiCall('people_reset',{recordId:id});
+    if(p) p.hasPassword=false;
+    renderPeople(); toast('Sign-in reset — they can set a new password now.');
+  }catch(e){ toast(e.message,'err'); }
+}
+
 // ---- Travel fund (SE Christian) — review & approve in the dashboard ----
 function travelTotals(){
   const used=(TRAVEL||[]).filter(t=>/Approved|Paid/i.test(t.status||'')).reduce((a,t)=>a+(Number(t.appAmt)||Number(t.reqAmt)||0),0);
@@ -1106,6 +1142,8 @@ async function confirmDeleteProj(){
 {const g=document.getElementById('delGo'); if(g)g.onclick=confirmDeleteProj;}
 {const dm=document.getElementById('delModal'); if(dm)dm.onclick=e=>{if(e.target.id==='delModal')closeDel();};}
 {const _pc=document.getElementById('projClose'); if(_pc)_pc.onclick=closeProj;}
+{const _px=document.getElementById('peopleClose'); if(_px)_px.onclick=()=>document.getElementById('peopleModal').classList.remove('open');
+ const _pm=document.getElementById('peopleModal'); if(_pm)_pm.onclick=e=>{if(e.target.id==='peopleModal')_pm.classList.remove('open');};}
 {const _pm=document.getElementById('projModal'); if(_pm)_pm.onclick=e=>{if(e.target.id==='projModal')closeProj();};}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const dm=document.getElementById('delModal');if(dm&&dm.classList.contains('open')){closeDel();}else{closeProj();}}});
 document.getElementById('login').onclick=doLogin;

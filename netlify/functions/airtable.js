@@ -14,7 +14,7 @@ const T_APP  = 'tblKGAf1Y7hSYTIjg';   // Approvers
 const T_FUNDS= 'tblKvuCr44xylo7hK';   // Available Funds
 const T_BAL  = 'tblWNR84jiDleBali';   // Account Balance
 const T_GOALS= 'tblmsBWCZxEKjsQdH';   // Grant Goals
-// JV Grant Console serverless function — build 49 (budget file proxy through our domain)
+// JV Grant Console serverless function — build 50 (sign-in reset for approvers)
 const T_COUNTRIES= 'tblPjsYGcbLPfZzCq'; // Countries (for phase grouping)
 const T_REPORT= 'tblJ1tbsGshSpd1Il';   // Project Report (mid/final report tracking)
 const T_TRAVEL= 'tbl89ML7snRz5BQqL';   // Travel Fund Requests (SE Christian)
@@ -31,7 +31,10 @@ const SECRET = process.env.SESSION_SECRET;
 const PROP_CREATED = 'fldkSi7mZ7RhhqPvC';
 const L = { type:'fldWdXntN7qxzP27w', detail:'fldxS6j7X32kek3sA', user:'fldhcgVDw0620rPOq',
             email:'fldHgUJthRzbKAFBj', pid:'fldB1xE98xE2LdsW2', entry:'fldY2QaCQeesowSUP' };
-const A = { email:'fldE3WddwlJbCRq7U', name:'fldmHfuuitDTDnPXR', salt:'fldzmEAe6cH17xFRw', hash:'fldv0hVikFT0fJlCx' };
+const A = { email:'fldE3WddwlJbCRq7U', name:'fldmHfuuitDTDnPXR', salt:'fldzmEAe6cH17xFRw', hash:'fldv0hVikFT0fJlCx',
+            role:'fldX8zlGcfHjCXzUx' };
+// Who may reset another person's sign-in. Add an email here to grant that power.
+const ADMINS = ['mellenwood@josiahventure.com'];
 
 function reply(code, obj){ return { statusCode:code, headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj) }; }
 const v = x => Array.isArray(x) ? x.map(v).join(', ') : (x && typeof x==='object' && 'name' in x ? x.name : x);
@@ -235,6 +238,31 @@ exports.handler = async (event) => {
         status:(r.fields[TR.status]&&(r.fields[TR.status].name||r.fields[TR.status]))||'Submitted'
       }));
       return reply(200, { cycles, props, logs, funds, bal, goals, countries_meta, reports, travel, user:who });
+    }
+
+    if(body.op === 'people_list'){
+      const people = await fetchAll(T_APP, {});
+      return reply(200, { people: people.map(r => ({
+        id:r.id,
+        email:r.fields[A.email]||'',
+        name:r.fields[A.name]||'',
+        role:r.fields[A.role]||'',
+        hasPassword: !!(r.fields[A.salt] && r.fields[A.hash])
+      })), user:who });
+    }
+
+    if(body.op === 'people_reset'){
+      if(!ADMINS.includes((who.email||'').trim().toLowerCase()))
+        return reply(403, { error:'Only an administrator can reset sign-ins.' });
+      if(!body.recordId) return reply(400, { error:'Missing recordId.' });
+      const target = await at(BASE+'/'+T_APP+'/'+body.recordId+'?returnFieldsByFieldId=true');
+      const tEmail = (target.fields && target.fields[A.email]) || '(unknown)';
+      await at(BASE+'/'+T_APP+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields:{ [A.salt]:'', [A.hash]:'' } }) });
+      try{
+        await writeLog([{ fields:{ [L.entry]:'Sign-in reset for '+tEmail, [L.type]:'Login',
+          [L.detail]:(who.name||who.email)+' reset the sign-in for '+tEmail, [L.user]:who.name||'', [L.email]:who.email||'' } }]);
+      }catch(logErr){ /* best effort */ }
+      return reply(200, { ok:true, email:tEmail, user:who });
     }
 
     if(body.op === 'travel_update'){
