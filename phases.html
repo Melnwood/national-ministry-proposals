@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#FF6600">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Grant Phases">
+<title>National Expansion Grant Decisions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F2E9;--paper-2:#FBF8F1;--ink:#1E2A24;--ink-soft:#46544C;
+    --green:#2E5E4E;--green-d:#1F4438;--gold:#C58B2E;--gold-soft:#E7C988;
+    --terra:#B0573B;--line:#DED7C6;--line-d:#CcC2AC;--given:#2E5E4E;--pending:#C58B2E;--blue:#436A8A;--purple:#7a64a0;
+    --shadow:0 1px 2px rgba(31,42,36,.06),0 8px 24px rgba(31,42,36,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:'Hanken Grotesk',-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 1px 1px,rgba(31,42,36,.04) 1px,transparent 0);background-size:22px 22px;}
+  .wrap{max-width:920px;margin:0 auto;padding:38px 24px 70px}
+  header{border-bottom:2px solid var(--ink);padding-bottom:20px}
+  .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(27px,5vw,42px);line-height:1.04;letter-spacing:-.015em;margin:8px 0 6px}
+  h1 em{font-style:italic;color:var(--green)}
+  .sub{color:var(--ink-soft);font-size:14.5px;max-width:60ch}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;margin-top:14px}
+  .badge.live{background:#DCEAE0;color:var(--green-d)}.badge.snap{background:#F4E9D6;color:#8a6418}
+  .badge .d{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .stamp{font-size:11.5px;color:var(--ink-soft);margin-left:10px}
+  h2{font-family:'Fraunces',serif;font-weight:600;font-size:13px;letter-spacing:.13em;text-transform:uppercase;color:var(--gold);margin:40px 0 2px}
+  .sectlead{font-family:'Fraunces',serif;font-size:21px;color:var(--ink);margin-bottom:14px;letter-spacing:-.01em}
+  .panel{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:22px 24px}
+  /* GAP */
+  .twobox{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:stretch}
+  @media(max-width:640px){.twobox{grid-template-columns:1fr}}
+  .restbox .rv{color:#7a64a0}
+  .track .restfill{position:absolute;left:0;top:0;height:100%;background:#cdbfe0}
+  .gaprow{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between}
+  .gapside .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .gapside .v{font-family:'Fraunces',serif;font-weight:600;font-size:34px;line-height:1;margin-top:5px;letter-spacing:-.02em}
+  .gapside.give .v{color:#3C7A50}.gapside.ask .v{color:var(--terra)}
+  .gapside .s{font-size:12px;color:var(--ink-soft);margin-top:6px}
+  .track{position:relative;height:30px;background:#ECE6D7;border-radius:8px;overflow:hidden;margin:20px 0 8px}
+  .track .conf{position:absolute;left:0;top:0;height:100%;background:#FAEFD9;border-right:2px dashed var(--pending)}
+  .track .now{position:absolute;left:0;top:0;height:100%;background:var(--green)}
+  .tracklab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-soft)}
+  .short{color:var(--terra);font-weight:600}
+  .gapnote{font-size:12.5px;color:var(--ink-soft);margin-top:14px;padding-top:13px;border-top:1px dashed var(--line-d)}
+  .gapnote b{color:var(--ink);font-weight:600}
+  /* PRIORITIES */
+  .toggle{display:inline-flex;border:1px solid var(--line-d);border-radius:9px;overflow:hidden;margin-bottom:4px}
+  .toggle button{border:0;background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--ink-soft);padding:7px 13px;cursor:pointer}
+  .toggle button.on{background:var(--green);color:#fff}
+  .toghint{font-size:11.5px;color:var(--ink-soft);margin:8px 0 0}
+  .band{margin-top:16px}
+  .band .bh{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:9px}
+  .band .bh .rt{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-soft)}
+  .prow{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;margin-bottom:8px;background:var(--paper);cursor:pointer}
+  .prow.open{margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .prow .chev{flex:0 0 auto;width:7px;height:7px;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(-45deg);transition:transform .2s;opacity:.5}
+  .prow.open .chev{transform:rotate(45deg)}
+  .pdetail{display:none;margin:0 0 8px;padding:10px 13px;background:#F3EEE1;border:1px solid var(--line);border-top:0;border-radius:0 0 11px 11px;font-size:12.5px;color:var(--ink-soft)}
+  .pdetail.show{display:block}
+  .pdetail.z-none{border-left:4px solid #A89F88;background:#EFEDE4}
+  .pdetail.z-low{border-left:4px solid #4A7FA8;background:#E6EEF5}
+  .pdetail.z-mid{border-left:4px solid #C99A3A;background:#F6EEDB}
+  .pdetail.z-high{border-left:4px solid #3C7A50;background:#E4F0E0}
+  .pdetail .ztag{font-size:11.5px;font-weight:600;color:var(--ink-soft)}
+  .pdetail .impact{margin-top:7px;font-size:12.5px;color:var(--ink)}
+  .pdetail .impact b{color:#3C7A50;font-variant-numeric:tabular-nums}
+  .p .pimp{display:block;font-size:10.5px;color:var(--ink-soft);margin-top:2px;font-variant-numeric:tabular-nums}
+  .reqimpact{font-size:12.5px;color:var(--ink);background:#E4F0E0;border:1px solid #BcD8C0;border-radius:8px;padding:9px 12px;margin:2px 0 12px}
+  .reqimpact b{color:#2E5E4E;font-variant-numeric:tabular-nums}
+  .pdetail .at{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pdetail .p{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px dashed var(--line-d)}
+  .pdetail .p:first-child{border-top:0}
+  .pdetail .p .a{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .prow.flag{background:#FBF4E6;border-color:var(--gold-soft)}
+  .prow .rank{width:18px;text-align:center;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .prow .cty{font-weight:600;font-size:14.5px}
+  .prow .meta{flex:1;min-width:0}
+  .prow .ph{font-size:10px;font-weight:600;color:var(--ink-soft);background:#EDE7D8;padding:2px 7px;border-radius:999px;margin-left:7px;white-space:nowrap}
+  .prow .given{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+  .prow .rimpact{font-size:11.5px;color:var(--ink-soft);margin-top:3px}
+  .prow .rimpact b{color:#3C7A50;font-weight:600;font-variant-numeric:tabular-nums}
+  .prow .ask{font-size:14px;font-weight:600;color:#fff;background:var(--terra);padding:4px 11px;border-radius:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .props{margin:0 0 10px 41px}
+  .props .p{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;border-top:1px dashed var(--line-d)}
+  .props .p .who{color:var(--ink-soft);font-size:11px}
+  .props .p .a{font-variant-numeric:tabular-nums;color:var(--ink-soft);white-space:nowrap}
+  details.early{margin-top:6px}
+  details.early summary{cursor:pointer;font-size:12.5px;color:var(--ink-soft);padding:7px 2px;list-style:none}
+  details.early summary::-webkit-details-marker{display:none}
+  details.early summary::before{content:"▸ ";color:var(--line-d)}
+  details.early[open] summary::before{content:"▾ "}
+  .erow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding:5px 12px}
+  .erow .ph{font-size:10px;background:#EDE7D8;padding:1px 6px;border-radius:999px;margin-left:6px}
+  .prow.z-none{background:#EFEDE4;border-left:4px solid #A89F88}
+  .prow.z-low{background:#E6EEF5;border-left:4px solid #4A7FA8}
+  .prow.z-mid{background:#F6EEDB;border-left:4px solid #C99A3A}
+  .prow.z-high{background:#E4F0E0;border-left:4px solid #3C7A50}
+  .zkey{display:flex;flex-wrap:wrap;gap:16px;margin:10px 0 16px;font-size:12px;color:var(--ink-soft)}
+  .zkey .zk{display:inline-flex;align-items:center;gap:7px}
+  .zkey .sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .zkey .kreq{width:14px;height:14px;border-radius:4px;background:var(--terra);display:inline-block}
+  .prow.asking{box-shadow:inset 0 0 0 1.5px rgba(176,87,59,.40)}
+  .totalgiven{margin-top:14px;padding:13px 18px;background:#EDE4D3;border-radius:12px;font-size:15px;color:var(--ink)}
+  .totalgiven b{font-family:'Fraunces',serif;font-size:21px;color:var(--green-d);font-weight:600}
+  .totalgiven .tglbl{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:3px}
+  .sharepct{color:var(--green-d);font-weight:600}
+  .rshare{margin-top:5px;font-size:12.5px;color:var(--ink-soft)}
+  .rshare b{color:var(--green-d);font-weight:700}
+  .phgroup{border:1px solid var(--line);border-radius:14px;background:#fff;margin:0 0 16px;overflow:hidden}
+  .phhead{background:#EDE4D3;padding:13px 18px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px}
+  .phname{font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:var(--green-d)}
+  .phtot{font-size:13.5px;color:var(--ink-soft)}
+  .phtot b{font-size:16px;color:var(--green-d)}
+  .phc{display:grid;grid-template-columns:1fr auto auto;align-items:baseline;gap:14px;padding:9px 18px;border-top:1px solid #F0EBE0}
+  .phcn{font-weight:600;font-size:14.5px;color:var(--ink)}
+  .phcg{font-size:13.5px;color:var(--ink-soft)}
+  .phcg b{color:var(--green-d);font-size:14.5px}
+  .phpct{opacity:.8}
+  .phask{font-size:12.5px;color:#B0573B;font-weight:600;white-space:nowrap}
+  .phtop{display:flex;gap:28px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+  .hleft{flex:1 1 320px;min-width:280px}
+  .hright{flex:0 0 auto}
+  .phasebtn{display:inline-block;background:var(--green-d);color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;transition:opacity .15s}
+  .phasebtn:hover{opacity:.88}
+  .phasebtn-alt{background:#B0723B}
+  #phasepie{display:flex;flex-direction:column;align-items:center;gap:10px}
+  #phasepie .lg{font-size:12px;color:var(--ink-soft);display:grid;gap:4px}
+  #phasepie .lgi{display:flex;align-items:center;gap:7px}
+  #phasepie .lgi b{color:var(--ink)}
+  #phasepie .sw{width:11px;height:11px;border-radius:3px;display:inline-block;flex:0 0 auto}
+  /* phase color-coding (matches Airtable phase colors: gray → orange shades) */
+  .ph-1{--pc:#9C9588}
+  .ph-2{--pc:#E8A04B}
+  .ph-3{--pc:#E07B39}
+  .ph-4{--pc:#D9601F}
+  .ph-5{--pc:#B0480E}
+  .ph-x{--pc:#9C9588}
+  .phgroup{border-left:6px solid var(--pc,#D9D2C7)}
+  .phgroup .phhead{background:color-mix(in srgb, var(--pc,#EDE4D3) 16%, #fff)}
+  .phgroup .phname{color:var(--pc,#2f5d3a)}
+  @media(max-width:560px){.phc{grid-template-columns:1fr auto;gap:6px}.phask{grid-column:1 / -1}}
+  .cshare{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 18px 16px}
+  .cshare .csh{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
+  .cshare .crow{display:grid;grid-template-columns:130px 1fr 150px;align-items:center;gap:12px;padding:5px 0;border-top:1px solid #F0EBE0}
+  .cshare .crow:first-of-type{border-top:none}
+  .cshare .cnm{font-weight:600;font-size:13.5px;color:var(--ink)}
+  .cshare .cbarwrap{background:#EDE7DA;border-radius:6px;height:13px;overflow:hidden}
+  .cshare .cbar{height:100%;background:var(--green);border-radius:6px}
+  .cshare .cval{text-align:right;font-size:13px;color:var(--ink-soft)}
+  .cshare .cval b{color:var(--green-d);font-size:14px}
+  @media(max-width:560px){.cshare .crow{grid-template-columns:96px 1fr 96px;gap:8px}.cshare .cval{font-size:11.5px}}
+  .prow.inproc{border-left:4px solid #7A4FB5 !important;background:#F2ECFA !important}
+  .rproc{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px}
+  .procpill{font-size:11px;background:#EEE5F8;color:#553084;border:1px solid #DCCBEE;padding:2px 9px;border-radius:999px}
+  .procpill b{font-weight:700}
+  .procflag{font-size:11px;font-weight:700;color:#553084;background:#EEE5F8;border:1px solid #DCCBEE;padding:5px 12px;border-radius:999px;white-space:nowrap}
+  .pdetail .p.procrow{border-left:3px solid #7A4FB5;padding-left:9px;background:rgba(122,79,181,.06);border-radius:6px}
+  .pjlink{color:var(--green-d);cursor:pointer;font-weight:600;text-decoration:underline;text-decoration-color:rgba(31,68,56,.3);text-underline-offset:2px}
+  .pjlink:hover{text-decoration-color:var(--green-d)}
+  .modal{position:fixed;inset:0;background:rgba(31,42,36,.42);display:none;align-items:flex-start;justify-content:center;z-index:70;padding:40px 18px;overflow-y:auto}
+  .modal.open{display:flex}
+  .mpanel{background:var(--paper-2);border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.3);max-width:680px;width:100%;margin:auto;padding:30px 34px 34px;position:relative}
+  .mx{position:absolute;top:14px;right:18px;background:none;border:none;font-size:26px;line-height:1;color:var(--ink-soft);cursor:pointer}
+  .meyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700}
+  .mtitle{font-family:'Fraunces',serif;font-weight:600;font-size:25px;line-height:1.15;letter-spacing:-.01em;margin:4px 0 10px;padding-right:24px}
+  .mmeta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:16px}
+  .mpill{font-size:13px;font-weight:700;color:#fff;background:var(--terra);padding:4px 12px;border-radius:8px}
+  .mchip{font-size:11.5px;font-weight:600;background:#EEE5F8;color:#553084;padding:3px 10px;border-radius:999px}
+  .mchip.cty{background:#DCEAE0;color:var(--green-d)}
+  .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px 26px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:14px}
+  .mf .l{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+  .mf .v{font-size:14px;color:var(--ink)}
+  .msec{margin-bottom:13px}
+  .msec h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--green);margin-bottom:3px}
+  .msec p{font-size:13.5px;line-height:1.55;color:#3a463f;white-space:pre-wrap}
+  @media(max-width:560px){.mgrid{grid-template-columns:1fr}}
+  .sw.z-none{background:#EFEDE4;border-left:4px solid #A89F88}
+  .sw.z-low{background:#E6EEF5;border-left:4px solid #4A7FA8}
+  .sw.z-mid{background:#F6EEDB;border-left:4px solid #C99A3A}
+  .sw.z-high{background:#E4F0E0;border-left:4px solid #3C7A50}
+  .edot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  .edot.z-none{background:#A89F88}.edot.z-low{background:#4A7FA8}.edot.z-mid{background:#C99A3A}.edot.z-high{background:#3C7A50}
+  /* GOALS */
+  .goalwrap{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+  .gfound{border:1px solid var(--line);border-radius:12px;padding:15px 18px 17px;background:#fff}
+  .gfh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:13px}
+  .gfn{font-family:'Fraunces',serif;font-weight:600;font-size:18px;color:var(--ink)}
+  .gfy{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .goal{margin:0 0 13px}
+  .goal:last-child{margin-bottom:0}
+  .grow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:10px}
+  .gname{font-size:13px;font-weight:600;color:var(--ink)}
+  .gval{font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .gval.muted{color:var(--ink-soft);font-weight:500}
+  .gmet{font-size:9.5px;font-weight:700;color:#fff;background:var(--green);padding:1px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em;margin-left:5px}
+  .gtrack{height:9px;background:#EEEADD;border-radius:999px;overflow:hidden;display:flex}
+  .gfill{height:100%;background:#3C7A50;border-radius:0}
+  .gfill.done{background:var(--green)}
+  .gprop{height:100%;background:#D9A33A;border-radius:0}
+  .gtrack.awaiting{background:repeating-linear-gradient(45deg,#F0ECDF,#F0ECDF 5px,#E7E2D3 5px,#E7E2D3 10px)}
+  .gnote{font-size:11px;color:var(--ink-soft);margin-top:4px;font-style:italic}
+  .glegend{grid-column:1 / -1;display:flex;gap:18px;flex-wrap:wrap;margin:0 0 2px}
+  .glegend .gk{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft)}
+  .glegend .gk i{width:13px;height:13px;border-radius:3px;display:inline-block}
+  .glegend .ks-fund{background:#3C7A50}
+  .glegend .ks-prop{background:#D9A33A}
+  /* REACH */
+  .rcyc{margin:0 0 17px}
+  .rch{display:flex;gap:9px;align-items:baseline;margin-bottom:5px}
+  .rch .ry{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--ink)}
+  .rch .rf{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .rch .rnow{margin-left:auto;font-size:9.5px;font-weight:700;color:#fff;background:var(--green);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+  .rbar{height:14px;background:#EEEADD;border-radius:7px;overflow:hidden}
+  .rfill{height:100%;background:#3C7A50;border-radius:7px;min-width:3px}
+  .rval{font-size:12.5px;color:var(--ink);margin-top:5px}
+  .rval b{font-size:15px;color:#2E5E4E;font-variant-numeric:tabular-nums}
+  .rval .rpend{font-size:12px;color:var(--ink-soft);font-style:italic}
+  .rextra{font-size:11.5px;color:var(--ink-soft);margin-top:3px}
+  .rextra b{color:var(--ink);font-variant-numeric:tabular-nums}
+  /* featured (current) cycle */
+  .rbig{margin-bottom:20px}
+  .rbig .ry{font-size:21px}
+  .rbig .rbar{height:18px;border-radius:9px}
+  .rbig .rfill{border-radius:9px}
+  .rbig .rval{margin-top:7px;font-size:13.5px}
+  .rbig .rval b{font-size:19px}
+  /* earlier cycles, compact */
+  .rdiv{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 11px;padding-top:13px;border-top:1px solid var(--line)}
+  .rsmall{margin:0 0 11px}
+  .rsmall .rch{margin-bottom:3px;gap:7px}
+  .rsmall .ry{font-size:13px}
+  .rsmall .rf{font-size:9.5px}
+  .rsmall .rbar{height:8px;border-radius:4px}
+  .rsmall .rfill{border-radius:4px}
+  .rsmall .rval{margin-top:4px;font-size:11.5px}
+  .rsmall .rval b{font-size:12.5px}
+  .rsmall .rpend{font-size:10.5px;color:var(--ink-soft);font-style:normal}
+  /* proposals-on-the-table anticipated impact */
+  .rprop{margin-top:14px;padding:13px 16px;background:#F7EEE8;border:1px solid #E4CBBC;border-radius:11px}
+  .rproph{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--terra);margin-bottom:8px}
+  .rpstats{display:flex;gap:26px;flex-wrap:wrap}
+  .rpstats span{font-size:12.5px;color:var(--ink-soft)}
+  .rpstats b{display:block;font-family:'Fraunces',serif;font-size:22px;color:var(--terra);font-variant-numeric:tabular-nums;line-height:1.1}
+  .rpnote{font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:9px}
+  /* NUMBERS */
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+  .pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px}
+  .pill.gen{background:#E1EBE5;color:var(--green-d)}.pill.pend{background:#FBF3E3;color:#8a6418;border:1px dashed var(--pending)}
+  .pill.rest{background:#ECE4F1;color:#5b4a78}.pill.exc{background:#ECE8DD;color:var(--ink-soft)}
+  .nlist{list-style:none;font-size:13px;color:var(--ink-soft)}
+  .nlist li{padding:7px 0;border-top:1px dashed var(--line-d);line-height:1.5}
+  .nlist li:first-child{border-top:0}
+  .nlist b{color:var(--ink);font-weight:600}
+  @media(max-width:560px){.gapside .v{font-size:27px}}
+  /* approvals add-on */
+  #gate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px;background-image:radial-gradient(circle at 1px 1px,rgba(31,42,36,.04) 1px,transparent 0);background-size:22px 22px}
+  #gate .box{max-width:430px;width:100%;background:var(--paper-2);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:40px}
+  #gate h1{font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin:6px 0 8px;letter-spacing:-.015em}
+  #gate h1 em{font-style:italic;color:var(--green)}
+  #gate .sub{color:var(--ink-soft);font-size:14px;margin-bottom:22px}
+  #gate input{width:100%;padding:12px 13px;border:1px solid var(--line-d);border-radius:10px;font-family:inherit;font-size:14px;margin-bottom:10px;background:#fff;color:var(--ink)}
+  #gate input:focus{outline:none;border-color:var(--green)}
+  #gate button{width:100%;font-family:inherit;font-weight:600;font-size:14.5px;border:none;border-radius:10px;padding:12px;cursor:pointer;background:var(--green);color:#fff;margin-top:4px}
+  #gate button:hover{background:var(--green-d)}
+  #gate .err{color:#9A2E22;font-size:13px;margin-top:12px;display:none}
+  #gate .hint{color:var(--ink-soft);font-size:12px;margin-top:13px;line-height:1.5}
+  .signed{position:fixed;top:14px;right:16px;z-index:30;display:flex;gap:8px;align-items:center}
+  .signed .w{font-size:11.5px;color:var(--ink-soft);background:#fff;border:1px solid var(--line);padding:4px 10px;border-radius:999px}
+  .signed button{font-family:inherit;font-size:11.5px;font-weight:600;color:var(--ink-soft);background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 9px;cursor:pointer}
+  .pdetail .p{align-items:center}
+  .pdetail .p .pr{display:flex;align-items:center;gap:10px;white-space:nowrap}
+  .apbtn{font-family:inherit;font-weight:600;font-size:11.5px;border:none;border-radius:8px;padding:6px 13px;cursor:pointer;background:var(--green);color:#fff;transition:.15s}
+  .apbtn:hover{background:var(--green-d)}.apbtn:disabled{opacity:.55;cursor:default}
+  .apd{font-size:11px;font-weight:700;color:var(--green-d);background:#DCEAE0;padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+  .apd.statusbadge{color:#7A5A1C;background:#F0E3C6}
+  .props .p .pr{display:flex;align-items:center;gap:10px}
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:11px 20px;border-radius:10px;font-size:13.5px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:9px}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.err{background:#9A2E22}
+  #toast .sp{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="box">
+    <div class="eyebrow" style="font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:600">National Ministries</div>
+    <h1>Grant <em>decisions</em></h1>
+    <div class="sub">Sign in to review the requests and record your approvals.</div>
+    <input type="email" id="gEmail" placeholder="Email" autocomplete="username">
+    <input type="password" id="gPass" placeholder="Password" autocomplete="current-password">
+    <button id="login">Sign in</button>
+    <div class="err" id="gateErr"></div>
+    <div class="hint">First time? Enter the email your administrator added and choose a password — it'll be set for you.</div>
+  </div>
+</div>
+<div class="signed" id="signed" style="display:none"><span class="w" id="who"></span><button id="refresh" title="Re-pull from Airtable">↻ Refresh</button><button id="signout">Sign out</button></div>
+<div class="wrap" id="app" style="display:none">
+  <header>
+    <div class="phtop">
+      <div class="hleft">
+        <div class="eyebrow">National Ministries</div>
+        <h1>Grants by <em>phase</em></h1>
+        <p class="sub">Every country grouped by its ministry phase, with all-time grants given and this cycle's requests rolled up per phase.</p>
+        <div><span id="badge"></span><span class="stamp" id="stamp"></span><span class="stamp" style="opacity:.7"> · phases build 32</span></div>
+        <div style="margin-top:12px"><a href="director.html" class="phasebtn">&larr; Back to grant decisions</a> <a href="reports.html" class="phasebtn phasebtn-alt">Report tracking &rarr;</a></div>
+      </div>
+      <div class="hright"><div id="phasepie"></div></div>
+    </div>
+    <div class="totalgiven" id="totalgiven"></div>
+  </header>
+
+  <div id="phasesview"></div>
+
+  <div style="display:none">
+    <div class="twobox" id="gap"></div>
+    <div class="goalwrap" id="goals"></div>
+    <div id="anticip"></div>
+    <div id="priorities"></div>
+  </div>
+  <div style="display:none" id="deadsections"></div>
+  <div style="display:none">
+
+  <h2>How the numbers work</h2>
+  <div class="sectlead">The detail behind the figures.</div>
+  <div class="panel" id="numbers"></div>
+</div>
+</div>
+<div class="modal" id="projModal"><div class="mpanel"><button class="mx" id="projClose">&times;</button><div id="projBody"></div></div></div>
+<div id="toast"></div>
+
+<script>
+const FALLBACK = {
+  generatedAt:"2026-05-30T12:00:00.000Z", cycleLabel:"2025-26",
+  foundations:[
+    {name:"Cornerstone", totalGrant:162000, perProjectAwardedSum:161063, projectCount:24, cycleName:"2025-26",
+      goals:[{type:"Projects funded",target:35,actual:0},{type:"Leaders impacted",target:1000,actual:0},{type:"Churches impacted",target:500,actual:0}]},
+    {name:"SouthEast Christian Church", totalGrant:36000, perProjectAwardedSum:0, projectCount:0, cycleName:"2025-26",
+      goals:[{type:"Countries involved",target:14,actual:0}]}
+  ],
+  allCycles:[
+    {name:"2025-26", foundation:"Cornerstone", end:"2026-06-30", committed:162000, awardedGrant:161063, reach:{direct:4106, digital:0, infra:21}},
+    {name:"2025-26", foundation:"SouthEast Christian Church", end:"2026-12-31", committed:36000, awardedGrant:0, reach:{direct:0, digital:0, infra:0}},
+    {name:"2024-25", foundation:"Cornerstone", end:"2025-03-31", committed:152000, awardedGrant:140620, reach:{direct:8020, digital:12100, infra:100}},
+    {name:"2024-25", foundation:"Domanada", end:"2024-12-31", committed:95000, awardedGrant:90827, reach:{direct:555, digital:1600, infra:43}},
+    {name:"2023-24", foundation:"Cornerstone", end:"2024-06-30", committed:45300, awardedGrant:43300, reach:{direct:0, digital:0, infra:0}}
+  ],
+  countries:[
+    {country:"Albania", phase:"Phase 2", tcGiven:0, atGiven:22578, pending:2695, hasPending:true, antLeaders:5, antChurches:5, antPeople:35, pendingProps:[{name:"Scholarship for Students", coach:"Ben Williams", requested:2695, leaders:5, churches:5, people:35}]},
+    {country:"Latvia", phase:"Phase 2", tcGiven:3600, atGiven:24100, pending:4000, hasPending:true, antLeaders:15, antChurches:15, antPeople:15, pendingProps:[{name:"Eremos Retreat Scholarship", coach:"Ben Williams", requested:4000, leaders:15, churches:15, people:15}]},
+    {country:"Serbia", phase:"Phase 3", tcGiven:5400, atGiven:25000, pending:7400, hasPending:true, antLeaders:100, antChurches:30, antPeople:500, pendingProps:[{name:"MREZA - Materials", coach:"Josh Patty", requested:7400, leaders:100, churches:30, people:500}]},
+    {country:"Ukraine", phase:"Phase 5", tcGiven:11000, atGiven:29100, pending:28250, hasPending:true, antLeaders:1055, antChurches:156, antPeople:652, pendingProps:[{name:"NextGen Lab - preparation Phase", coach:"Peter Hrubo", requested:11500, leaders:105, churches:36, people:0},{name:"Getting Alumni Into the Life of Christ", coach:"Ben Williams", requested:9000, leaders:200, churches:40, people:240},{name:"Equipping Leaders for 45 Summer Camps", coach:"Ben Williams", requested:4000, leaders:375, churches:40, people:37},{name:"Equipping Leaders for 45 Summer Camps", coach:"Ben Williams", requested:3750, leaders:375, churches:40, people:375}]},
+    {country:"Slovakia", phase:"Phase 5", tcGiven:30600, atGiven:47160, pending:45000, hasPending:true, antLeaders:650, antChurches:105, antPeople:1550, pendingProps:[{name:"Helping 35 churches", coach:"Michal Skiba", requested:15000, leaders:50, churches:35, people:50},{name:"POINTonline in Your Pocket", coach:"Michal Skiba", requested:15000, leaders:300, churches:30, people:500},{name:"UNLEASHED", coach:"Michal Skiba", requested:15000, leaders:300, churches:40, people:1000}]},
+    {country:"Germany", phase:"Phase 1", tcGiven:0, atGiven:0, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Slovenia", phase:"Phase 2", tcGiven:0, atGiven:0, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Montenegro", phase:"Phase 2", tcGiven:0, atGiven:1935, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Croatia", phase:"Phase 2", tcGiven:0, atGiven:17937, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Bulgaria", phase:"Phase 2", tcGiven:9900, atGiven:13500, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Moldova", phase:"Phase 1", tcGiven:13383, atGiven:35683, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Estonia", phase:"Phase 4", tcGiven:1260, atGiven:9381, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Hungary", phase:"Phase 3", tcGiven:10000, atGiven:10000, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Czech Republic", phase:"Phase 5", tcGiven:0, atGiven:52200, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Romania", phase:"Phase 5", tcGiven:37850, atGiven:65601, pending:0, hasPending:false, pendingProps:[]},
+    {country:"Poland", phase:"Phase 5", tcGiven:34470, atGiven:74870, pending:0, hasPending:false, pendingProps:[]},
+    {country:"S-team", phase:"", tcGiven:3600, atGiven:3600, pending:0, hasPending:false, pendingProps:[]}
+  ]
+};
+
+const fmt=(n)=>"$"+Math.round(n||0).toLocaleString("en-US");
+const isRestricted=(name)=>/south\s*east|se christian/i.test(name||"");
+const phaseNum=(c)=>parseInt(String(c.phase||"").replace(/\D/g,""))||0;
+const NON_COUNTRY=["S-team","National Ministries","Not specified",""];
+const PENDING_CONFIRM=45000;
+const zcls=(amt)=>amt<=0?"z-none":amt<15000?"z-low":amt<30000?"z-mid":"z-high";
+const zlabel=(amt)=>amt<=0?"none":amt<15000?"under $15k":amt<30000?"$15k–30k":"$30k+";
+
+let CUR=null;
+
+function moneySummary(d){
+  let totalIncome=0, given=0, generalLeft=0, restrictedLeft=0, restrictedTotal=0;
+  (d.foundations||[]).forEach(f=>{
+    const aw=f.perProjectAwardedSum||0, lo=f.totalGrant-aw;
+    totalIncome+=f.totalGrant; given+=aw;
+    if(isRestricted(f.name)){restrictedLeft+=lo;restrictedTotal+=f.totalGrant;} else {generalLeft+=lo;}
+  });
+  const today=new Date();
+  const carryTotal=(d.allCycles||[]).filter(c=>{
+    const active=c.end&&new Date(c.end)>=today;
+    return !active && c.name==="2024-25" && !isRestricted(c.foundation) && (c.committed-c.awardedGrant)>0;
+  }).reduce((a,c)=>a+(c.committed-c.awardedGrant),0);
+  const generalPool=generalLeft+carryTotal;
+  const poolIfConfirmed=generalPool+PENDING_CONFIRM;
+  const totalPending=(d.countries||[]).reduce((a,c)=>a+(c.pending||0),0);
+  const pendingCount=(d.countries||[]).reduce((a,c)=>a+((c.pendingProps&&c.pendingProps.filter(p=>p.pend!==false).length)||0),0);
+  return {totalIncome,given,generalLeft,restrictedLeft,restrictedTotal,carryTotal,generalPool,poolIfConfirmed,totalPending,pendingCount,
+    gap:totalPending-generalPool, gapIfConfirmed:totalPending-poolIfConfirmed};
+}
+
+function render(d,isLive){
+  CUR=d;
+  document.getElementById("badge").innerHTML=isLive?'<span class="badge live"><span class="d"></span>Live data from Airtable</span>':'<span class="badge snap"><span class="d"></span>Preview snapshot · deploy for live data</span>';
+  document.getElementById("stamp").textContent=(isLive?"Loaded ":"Snapshot ")+new Date(d.generatedAt).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"});
+  {const _cl=document.getElementById("cl"); if(_cl)_cl.textContent=d.cycleLabel||"";}
+  const S=moneySummary(d);
+
+  const nowPct=Math.max(S.generalPool/S.totalPending*100,2).toFixed(1);
+  const confPct=Math.min(S.poolIfConfirmed/S.totalPending*100,100).toFixed(1);
+  const restOpenPct=S.restrictedTotal>0?(S.restrictedLeft/S.restrictedTotal*100).toFixed(1):0;
+  document.getElementById("gap").innerHTML=`
+    <div class="panel">
+      <div class="gaprow">
+        <div class="gapside give"><div class="l">You can give</div><div class="v">${fmt(S.generalPool)}</div><div class="s">${fmt(S.poolIfConfirmed)} if the parked funds are confirmed</div></div>
+        <div class="gapside ask"><div class="l">Requested</div><div class="v">${fmt(S.totalPending)}</div><div class="s">across ${S.pendingCount} pending proposal${S.pendingCount===1?'':'s'}</div></div>
+      </div>
+      <div class="track"><div class="conf" style="width:${confPct}%"></div><div class="now" style="width:${nowPct}%"></div></div>
+      <div class="tracklab"><span>green = available now · gold = if pending confirmed</span><span class="short">${fmt(S.gap)} short (${fmt(S.gapIfConfirmed)} if confirmed)</span></div>
+      <div class="gapnote">The real question isn't <em>whether</em> to fund everything, but <b>who to prioritize</b>.</div>
+    </div>
+    <div class="panel restbox">
+      <div class="gapside"><div class="l">SE Christian · restricted</div><div class="v rv">${fmt(S.restrictedTotal)}</div><div class="s">all of it still available</div></div>
+      <div class="track"><div class="restfill" style="width:${restOpenPct}%"></div></div>
+      <div class="tracklab"><span>${fmt(S.restrictedTotal-S.restrictedLeft)} awarded</span><span>${fmt(S.restrictedLeft)} open</span></div>
+      <div class="gapnote">Funds only its own specific projects — it can't go toward the requests at left.</div>
+    </div>`;
+
+  renderGoals(d);
+  renderAnticipated(d);
+  renderPhases(d);
+  renderCountryShare(d);
+  renderPriorities();
+
+  document.getElementById("numbers").innerHTML=`
+    <div class="pills">
+      <span class="pill gen">General, open to give ${fmt(S.generalPool)}</span>
+      <span class="pill pend">Pending confirmation ${fmt(PENDING_CONFIRM)}</span>
+      <span class="pill rest">Restricted (SE Christian) ${fmt(S.restrictedLeft)}</span>
+      <span class="pill exc">Excluded (KAM Summit) $5,000</span>
+    </div>
+    <ul class="nlist">
+      <li><b>You can give ${fmt(S.generalPool)}</b> = ${fmt(S.generalLeft)} unawarded this cycle + ${fmt(S.carryTotal)} carried over from the two 2024-25 cycles.</li>
+      <li><b>${fmt(PENDING_CONFIRM)} pending confirmation</b> = a $15,000 deposit (in since 2024) and a $30,000 Strategic Planning transfer (2025), both parked in the National Expansion Project account. One line from finance confirming they're unobligated lifts the pool to ${fmt(S.poolIfConfirmed)}.</li>
+      <li><b>Restricted ${fmt(S.restrictedLeft)}</b> funds only SE Christian's own projects; a separate $5,000 KAM Summit adjustment is treated as already used.</li>
+      <li><b>Rankings use this-cycle giving</b>; tap a country to see its all-time total. Carry-over counts only the two 2024-25 cycles and assumes those foundations permit unspent funds to roll forward; 2023-24 is treated as fully spent.</li>
+    </ul>`;
+}
+
+function atDetail(c, extra){
+  const imp = (c.hasPending && (c.antLeaders||c.antChurches||c.antPeople))
+    ? `<div class="impact">If funded, anticipates reaching <b>${(c.antLeaders||0).toLocaleString()}</b> leaders · <b>${(c.antChurches||0).toLocaleString()}</b> churches · <b>${(c.antPeople||0).toLocaleString()}</b> people</div>`
+    : "";
+  return `<div class="pdetail ${zcls(c.atGiven)}"><span class="at">All-time: ${fmt(c.atGiven)}</span> given across all cycles <span class="ztag">· ${zlabel(c.atGiven)}</span>${imp}${extra||""}</div>`;
+}
+
+function phaseOrd(p){const m=/Phase\s*(\d+)/i.exec(p||'');return m?+m[1]:99;}
+function renderPhasePie(list){
+  const el=document.getElementById('phasepie'); if(!el) return;
+  if(!TOTALDEPOSITS || !list.length){ el.innerHTML=''; return; }
+  const colors={1:'#9C9588',2:'#E8A04B',3:'#E07B39',4:'#D9601F',5:'#B0480E'};
+  const segs=list.map(g=>({label:g.phase, pct:g.given/TOTALDEPOSITS, color:colors[phaseOrd(g.phase)]||'#9C9588'}));
+  const granted=list.reduce((a,g)=>a+g.given,0);
+  const rem=Math.max(TOTALDEPOSITS-granted,0);
+  if(rem>0) segs.push({label:'Not yet granted', pct:rem/TOTALDEPOSITS, color:'#E0D9CA'});
+  const r=52, C=2*Math.PI*r; let off=0;
+  const circles=segs.map(s=>{
+    const len=s.pct*C;
+    const c=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${s.color}" stroke-width="24" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"></circle>`;
+    off+=len; return c;
+  }).join('');
+  const legend=segs.map(s=>`<div class="lgi"><span class="sw" style="background:${s.color}"></span><b>${s.label}</b> · ${(s.pct*100).toFixed(1)}%</div>`).join('');
+  el.innerHTML=`<svg viewBox="0 0 140 140" width="150" height="150" role="img" aria-label="Share of deposits by phase">${circles}</svg><div class="lg">${legend}</div>`;
+}
+function renderPhases(d){
+  const el=document.getElementById('phasesview'); if(!el) return;
+  const live={}; (d&&d.countries||[]).forEach(c=>{ live[c.country]=c; });
+  // build country list from the Countries table meta (so every country shows, even with $0)
+  const rows=COUNTRYMETA.filter(m=>!NON_COUNTRY.includes(m.name) && m.phase);
+  if(!rows.length){
+    const diag = window.__cmPresent ? ('server sent countries_meta with '+COUNTRYMETA.length+' rows — check phase field') : 'the deployed function is still the OLD version (no countries_meta in its response). The function did not update on this deploy.';
+    el.innerHTML='<div class="sectlead" style="color:#B0573B">Phase data not loaded yet — '+diag+'</div>';
+    renderPhasePie([]);
+    return;
+  }
+  const groups={};
+  rows.forEach(m=>{
+    const lc=live[m.name]||{};
+    const g=groups[m.phase]||(groups[m.phase]={phase:m.phase,countries:[],given:0,pending:0,pendingCount:0});
+    const atGiven=lc.atGiven||0, pending=lc.hasPending?(lc.pending||0):0;
+    g.countries.push({name:m.name, atGiven, pending, hasPending:!!lc.hasPending,
+      pendCount:(lc.pendingProps?lc.pendingProps.filter(p=>p.pend).length:0)});
+    g.given+=atGiven; g.pending+=pending; g.pendingCount+=(lc.pendingProps?lc.pendingProps.filter(p=>p.pend).length:0);
+  });
+  const order=g=>phaseOrd(g);
+  const list=Object.values(groups).sort((a,b)=>order(a.phase)-order(b.phase));
+  renderPhasePie(list);
+  el.innerHTML=list.map(g=>{
+    g.countries.sort((a,b)=>(b.atGiven||0)-(a.atGiven||0));
+    const crows=g.countries.map(c=>{
+      const pct=TOTALDEPOSITS>0?(c.atGiven/TOTALDEPOSITS*100).toFixed(1):'0.0';
+      const ask=c.hasPending?`<span class="phask">${fmt(c.pending)} asking${c.pendCount>1?` · ${c.pendCount} proposals`:''}</span>`:'';
+      return `<div class="phc"><span class="phcn">${c.name}</span><span class="phcg"><b>${fmt(c.atGiven)}</b> <span class="phpct">· ${pct}%</span></span>${ask}</div>`;
+    }).join('');
+    const gpct=TOTALDEPOSITS>0?(g.given/TOTALDEPOSITS*100).toFixed(1):'0.0';
+    const askline=g.pending>0?` · <span style="color:#B0573B">${fmt(g.pending)} requested this cycle</span>`:'';
+    const pcls='ph-'+(order(g.phase)===99?'x':order(g.phase));
+    return `<div class="phgroup ${pcls}"><div class="phhead"><span class="phname">${g.phase}</span><span class="phtot"><b>${fmt(g.given)}</b> given all-time · <b>${gpct}%</b> of all funds deposited${askline}</span></div>${crows}</div>`;
+  }).join('');
+}
+function renderCountryShare(d){
+  const el=document.getElementById('countryshare'); if(!el) return;
+  const list=(d.countries||[]).filter(c=>!NON_COUNTRY.includes(c.country) && (c.atGiven||0)>0)
+    .sort((a,b)=>(b.atGiven||0)-(a.atGiven||0));
+  if(!list.length || !TOTALDEPOSITS){ el.innerHTML=''; return; }
+  const max=list[0].atGiven||1;
+  const rows=list.map(c=>{
+    const pct=c.atGiven/TOTALDEPOSITS*100;
+    const w=Math.max(c.atGiven/max*100,2);
+    return `<div class="crow"><span class="cnm">${c.country}</span><span class="cbarwrap"><span class="cbar" style="width:${w}%"></span></span><span class="cval"><b>${fmt(c.atGiven)}</b> · ${pct.toFixed(1)}%</span></div>`;
+  }).join('');
+  el.innerHTML=`<div class="csh">Grants received by country \u00b7 share of all funds deposited (${fmt(TOTALDEPOSITS)})</div>${rows}`;
+}
+function renderAnticipated(d){
+  const el=document.getElementById('anticip'); if(!el) return;
+  const pend=(d.countries||[]).filter(c=>c.hasPending);
+  const pP=pend.reduce((a,c)=>a+(c.antPeople||0),0);
+  const pL=pend.reduce((a,c)=>a+(c.antLeaders||0),0);
+  const pC=pend.reduce((a,c)=>a+(c.antChurches||0),0);
+  const nProj=pend.reduce((a,c)=>a+((c.pendingProps&&c.pendingProps.filter(p=>p.pend!==false).length)||0),0);
+  if(!(pP||pL||pC)){ el.innerHTML='<div class="rprop"><div class="rpnote">Nothing is currently awaiting a decision.</div></div>'; return; }
+  el.innerHTML=`<div class="rprop"><div class="rproph">If every proposal still awaiting a decision is approved, they would reach</div><div class="rpstats"><span><b>${pP.toLocaleString()}</b> people</span><span><b>${pL.toLocaleString()}</b> leaders</span><span><b>${pC.toLocaleString()}</b> churches</span></div><div class="rpnote">Live from the ${nProj} proposal${nProj===1?'':'s'} on the table now \u00b7 updates as proposals are approved or added.</div></div>`;
+}
+function renderGoals(d){
+  const founds=(d.foundations||[]).filter(f=>f.totalGrant||(f.goals&&f.goals.length));
+  // Anticipated contribution from THIS cycle's pending proposals (general pool only)
+  const pend=(d.countries||[]).filter(c=>c.hasPending);
+  const propProjects=pend.reduce((a,c)=>a+((c.pendingProps&&c.pendingProps.length)||0),0);
+  const propLeaders=pend.reduce((a,c)=>a+(c.antLeaders||0),0);
+  const propChurches=pend.reduce((a,c)=>a+(c.antChurches||0),0);
+  const proposedFor=(type)=>/project/i.test(type)?propProjects:/leader/i.test(type)?propLeaders:/church/i.test(type)?propChurches:0;
+  const anyProp=propProjects||propLeaders||propChurches;
+
+  const legend=anyProp?`<div class="glegend"><span class="gk"><i class="ks-fund"></i>funded / reported</span><span class="gk"><i class="ks-prop"></i>anticipated if proposed projects are approved</span></div>`:"";
+
+  const blocks=founds.map(f=>{
+    const label=isRestricted(f.name)?"SE Christian":f.name;
+    const allowProp=!isRestricted(f.name);
+    const deployed=f.perProjectAwardedSum||0, budget=f.totalGrant||0;
+    const dpct=budget>0?Math.min(deployed/budget*100,100):0;
+    const started=deployed>0;
+    let rows=`<div class="goal">
+        <div class="grow"><span class="gname">Grant deployed</span><span class="gval">${fmt(deployed)} / ${fmt(budget)}</span></div>
+        <div class="gtrack${started?"":" awaiting"}">${started?`<div class="gfill" style="width:${dpct.toFixed(1)}%"></div>`:""}</div>
+        ${started?"":`<div class="gnote">Not yet started this cycle</div>`}
+      </div>`;
+    (f.goals||[]).forEach(g=>{
+      const isProjects=/project/i.test(g.type);
+      const actual=isProjects?(f.projectCount||0):(g.actual||0);
+      const target=g.target||0;
+      const prop=(allowProp && isProjects)?proposedFor(g.type):0;
+      const met=target>0&&actual>=target;
+      const gpct=target>0?Math.min(actual/target*100,100):0;
+      const ppct=target>0?Math.min(prop/target*100,Math.max(0,100-gpct)):0;
+      const totalIf=actual+prop;
+      if(actual>0||prop>0){
+        const valLabel=actual>0?`${actual.toLocaleString()} / ${target.toLocaleString()}`:`<span class="muted">target ${target.toLocaleString()}</span>`;
+        let note="";
+        if(prop>0){
+          note=isProjects
+            ? `+${prop} proposed \u2192 ${totalIf.toLocaleString()} of ${target.toLocaleString()} if all approved`
+            : `${prop.toLocaleString()} anticipated from proposed projects${(target&&totalIf>target)?" \u2014 above the "+target.toLocaleString()+" target":""}${actual>0?"":" \u00b7 reported counts begin as reports arrive"}`;
+        }
+        rows+=`<div class="goal">
+          <div class="grow"><span class="gname">${g.type}${met?' <span class="gmet">met</span>':''}</span><span class="gval">${valLabel}</span></div>
+          <div class="gtrack">
+            ${actual>0?`<div class="gfill${met?" done":""}" style="width:${gpct.toFixed(1)}%"></div>`:""}
+            ${prop>0?`<div class="gprop" style="width:${ppct.toFixed(1)}%"></div>`:""}
+          </div>
+          ${note?`<div class="gnote">${note}</div>`:""}
+        </div>`;
+      } else {
+        rows+=`<div class="goal">
+          <div class="grow"><span class="gname">${g.type}</span><span class="gval muted">target ${target.toLocaleString()}</span></div>
+          <div class="gtrack awaiting"></div>
+          <div class="gnote">Counts begin as country reports come in</div>
+        </div>`;
+      }
+    });
+    return `<div class="gfound"><div class="gfh"><span class="gfn">${label}</span><span class="gfy">${f.cycleName||d.cycleLabel||""}</span></div>${rows}</div>`;
+  }).join("");
+  document.getElementById("goals").innerHTML=legend+blocks;
+}
+
+function renderReach(d){
+  const order={"2023-24":1,"2024-25":2,"2025-26":3};
+  const cyc=(d.allCycles||[])
+    .map(c=>({label:c.name||"", found:c.foundation||"", direct:(c.reach&&c.reach.direct)||0, digital:(c.reach&&c.reach.digital)||0, infra:(c.reach&&c.reach.infra)||0}))
+    .filter(c=>c.direct||c.digital||c.infra)
+    .sort((a,b)=>(order[b.label]||0)-(order[a.label]||0) || b.direct-a.direct);
+  if(!cyc.length){ document.getElementById("reach").innerHTML="<p class=\"toghint\">No reach data yet — populates as funded projects report.</p>"; return; }
+  const latest=Math.max(...cyc.map(c=>order[c.label]||0));
+  const feat=cyc.filter(c=>(order[c.label]||0)===latest);
+  // proposals still on the table (the only place leaders/churches are recorded)
+  const pend=(d.countries||[]).filter(c=>c.hasPending);
+  const pL=pend.reduce((a,c)=>a+(c.antLeaders||0),0);
+  const pC=pend.reduce((a,c)=>a+(c.antChurches||0),0);
+  const pP=pend.reduce((a,c)=>a+(c.antPeople||0),0);
+  const max=Math.max(...feat.map(c=>c.direct),1);
+  const rows=feat.map(c=>{
+    const w=Math.max(c.direct/max*100,1.5).toFixed(1);
+    const e=[];
+    if(c.digital) e.push(`<b>${c.digital.toLocaleString()}</b> digital / media reach`);
+    if(c.infra) e.push(`<b>${c.infra.toLocaleString()}</b> via infrastructure and facility development`);
+    return `<div class="rcyc rbig">
+      <div class="rch"><span class="ry">${c.label}</span><span class="rf">${isRestricted(c.found)?"SE Christian":c.found}</span><span class="rnow">current</span></div>
+      <div class="rbar"><div class="rfill" style="width:${w}%"></div></div>
+      <div class="rval"><b>${c.direct.toLocaleString()}</b> people reached in person <span class="rpend">· actual awaiting reports</span></div>
+      ${e.length?`<div class="rextra">Pulled out of the headline: ${e.join(" · ")}</div>`:""}
+    </div>`;
+  }).join("");
+  const prop=(pL||pC||pP)?`<div class="rprop"><div class="rproph">Proposals still awaiting a decision anticipate</div><div class="rpstats"><span><b>${pP.toLocaleString()}</b> people</span><span><b>${pL.toLocaleString()}</b> leaders</span><span><b>${pC.toLocaleString()}</b> churches</span></div><div class="rpnote">Leaders and churches aren't recorded on funded projects yet, so these come only from the open requests.</div></div>`:"";
+  document.getElementById("reach").innerHTML=rows+prop;
+}
+
+function renderPriorities(){
+  const cs=(CUR.countries||[]).filter(c=>!NON_COUNTRY.includes(c.country))
+    .sort((a,b)=>{const rank=c=>c.hasPending?2:(c.pendingProps&&c.pendingProps.some(p=>p.pend===false)?1:0);return rank(b)-rank(a)||a.country.localeCompare(b.country);});
+  const asking=cs.filter(c=>c.hasPending);
+  const askTotal=asking.reduce((a,c)=>a+c.pending,0);
+  const tL=asking.reduce((a,c)=>a+(c.antLeaders||0),0);
+  const tC=asking.reduce((a,c)=>a+(c.antChurches||0),0);
+  const tP=asking.reduce((a,c)=>a+(c.antPeople||0),0);
+
+  const rows=cs.map(c=>{
+    const pendProps=c.pendingProps.filter(p=>p.pend!==false);
+    const procProps=c.pendingProps.filter(p=>p.pend===false);
+    const n=pendProps.length;
+    const subparts=[`given ${fmt(c.tcGiven)} this cycle`];
+    if(c.hasPending) subparts.push(`asking · ${n} proposal${n>1?"s":""}`);
+    if(procProps.length) subparts.push(`${procProps.length} in process`);
+    const sub=subparts.join(" · ");
+    const impline=(c.hasPending&&(c.antLeaders||c.antChurches||c.antPeople))
+      ? `<div class="rimpact">would reach <b>${(c.antPeople||0).toLocaleString()}</b> people · <b>${(c.antLeaders||0).toLocaleString()}</b> leaders · <b>${(c.antChurches||0).toLocaleString()}</b> churches</div>`
+      : "";
+    const procline=procProps.length?`<div class="rproc">${procProps.map(p=>`<span class="procpill">${p.name} · <b>${p.statusLabel}</b></span>`).join("")}</div>`:"";
+    const right=c.hasPending?`<span class="ask">${fmt(c.pending)}</span>`:(procProps.length?`<span class="procflag">In process</span>`:"");
+    const props=(c.pendingProps&&c.pendingProps.length)?`<div style="margin-top:8px">${c.pendingProps.map(p=>`<div class="p${p.pend===false?' procrow':''}"><span><a class="pjlink" onclick="openProj(event,'${p.id}')">${p.name}</a> <span style="opacity:.65">· ${p.coach}</span>${(p.leaders||p.churches||p.people)?`<span class="pimp">${(p.leaders||0).toLocaleString()} leaders · ${(p.churches||0).toLocaleString()} churches · ${(p.people||0).toLocaleString()} people</span>`:""}</span><span class="pr"><span class="a">${fmt(p.requested)}</span>${approveBtn(p,c)}</span></div>`).join("")}</div>`:"";
+    const procCls=(!c.hasPending&&procProps.length)?" inproc":"";
+    const shareline=((c.atGiven||0)>0 && TOTALDEPOSITS>0)
+      ? `<div class="rshare"><b>${fmt(c.atGiven)}</b> received all-time · <b>${(c.atGiven/TOTALDEPOSITS*100).toFixed(1)}%</b> of all funds deposited</div>`
+      : "";
+    return `<div class="prow ${zcls(c.atGiven)}${c.hasPending?" asking":""}${procCls}" onclick="togglePrio(this)"><div class="meta"><span class="cty">${c.country}</span><span class="ph">${c.phase}</span><div class="given">${sub}</div>${shareline}${impline}${procline}</div><span class="chev"></span>${right}</div>`+atDetail(c,props);
+  }).join("");
+
+  document.getElementById("priorities").innerHTML=`
+    <div class="band">
+      <div class="bh"><span>All countries</span><span class="rt">${asking.length} asking this cycle · ${fmt(askTotal)}</span></div>
+      ${rows}
+    </div>`;
+}
+
+function togglePrio(el){
+  el.classList.toggle("open");
+  const d=el.nextElementSibling;
+  if(d&&d.classList.contains("pdetail")) d.classList.toggle("show");
+}
+
+/* ===== approvals add-on ===== */
+const A_NAME='fld1qi35letQtg6yC',A_CTY='fldpZ00pUwm1gB4zN',A_STATUS='fld1iHtOAuGDPvLVZ',A_GATE='fldmvzGjvzDOSGlux';
+let RAW={};
+const DF={category:'fldqZcI9IgfOPCdt3',totalBudget:'fldofeeQU3DlrHULR',problem:'fldb0TRzRi1nzkN7v',
+  obj1:'fld17fOaX3yAe3s4O',obj2:'fld2tSgq12UOBDMri',obj3:'fldquJXeXakScgMnU',success:'fldQKLTpf2M69gneF',
+  sustain:'fldvktGeT6orNqBlA',strategic:'fldTa8BUePK8Ifs02',lead:'flddNefZxzHMlvr9t',subName:'fldlfXrnrE7yAyNul',
+  subEmail:'fld64OxiMWtnko2H7',coach:'fldstKKgW2SeCjYxG',coachEmail:'fld4lLrDwB5x0ck72',account:'fldrqg7gy2oEhfdvw',
+  start:'fldVIJKaXqmUw8qFP',end:'fldxV1o8EVEXaitod',reqAmt:'fld3bvuKr1SIXAwUf',awarded:'fldeeQMQPRVyXbklW',
+  leaders:'fldc2XplvqvAX8NlX',churches:'fld6ZWqZuuK9gcfab',people:'fld8CdQ8Ens5m3NDs'};
+const EVP_STATUS='EVP Approval';
+let PROPMAP={};                 // "country|name" -> {id, approved}
+const norm=s=>String(s==null?'':s).toLowerCase().replace(/\s+/g,' ').trim();
+const aval=x=>Array.isArray(x)?x.map(aval).join(', '):(x&&typeof x==='object'&&'name'in x?x.name:x);
+function buildMap(props){
+  PROPMAP={};
+  props.forEach(p=>{
+    const f=p.fields, nm=aval(f[A_NAME]), cty=aval(f[A_CTY]);
+    if(!nm)return;
+    const st=String(f[A_STATUS]&&(f[A_STATUS].name||f[A_STATUS])||'').trim();
+    const approved=!!f[A_GATE]||(st!==''&&st!=='Submitted');
+    PROPMAP[norm(cty)+'|'+norm(nm)]=PROPMAP[norm(nm)]={id:p.id,approved};
+  });
+}
+function lookupRec(p,c){return PROPMAP[norm(c.country)+'|'+norm(p.name)]||PROPMAP[norm(p.name)]||null;}
+
+/* live available-to-grant + live country data, computed from Airtable */
+const FUND_AMT='fldcZFJwHyfu5IgCl',FUND_STAT='fldXwNvQuraOWvgq7',REQ='fld3bvuKr1SIXAwUf',AWARDED='fldeeQMQPRVyXbklW',
+  F_LEAD='fldc2XplvqvAX8NlX',F_CH='fld6ZWqZuuK9gcfab',F_PPL='fld8CdQ8Ens5m3NDs',F_COACH='fldstKKgW2SeCjYxG',F_CYC='flda02NPGg4TFd8wp',F_YEAR='fld4xy7sYr8vl8dNj';
+const STAGE={'EVP Approval':2,'Grant Team Approval (Dave & Pavel)3':3,'Funding For Grant Identified 4':4,'Funds distributed to Council Account 5':5,'Funds Distributed to Cedarstone Country Account 6':6,'Submitted':1};
+const stageOf=s=>STAGE[String(s||'').trim()]||0;
+const SLABEL={'Submitted':'Awaiting EVP','EVP Approval':'EVP approved','Grant Team Approval (Dave & Pavel)3':'Grant team approved','Funding For Grant Identified 4':'Funding identified','Funds distributed to Council Account 5':'Funds → Council','Funds Distributed to Cedarstone Country Account 6':'Funds → Country','Grant is approved but no funding yet':'Approved · awaiting funding','Grant Team Denial 3.1':'Denied','Pause':'Paused','Achived':'Archived'};
+const slabel=s=>SLABEL[String(s||'').trim()]||(String(s||'').trim()||'—');
+const TERMINAL=/Denial|Pause|Achived|distribut|approv/i;
+const stg=p=>stageOf(p.status);
+const isPending=p=>stg(p)<2 && !TERMINAL.test(p.status);   // pending = status is pre-EVP; status is the source of truth
+let BASEPOOL=0, PROPSARR=[], PROPFULL=[], CYCLEYEAR={}, AVAIL=0, COMMITTED=0, PENDINGREQ=0, PENDINGCOUNT=0, BOOTCYCLES=[], BOOTGOALS=[], TOTALDEPOSITS=0, COUNTRYMETA=[];
+const numv=x=>{const v=aval(x);const n=Number(String(v).replace(/[, ]/g,''));return isNaN(n)?0:n;};
+function ingest(boot){
+  BASEPOOL=(boot.funds||[]).filter(f=>/Open/i.test((f.fields[FUND_STAT]&&(f.fields[FUND_STAT].name||f.fields[FUND_STAT]))||'')).reduce((a,f)=>a+(f.fields[FUND_AMT]||0),0);
+  CYCLEYEAR={}; (boot.cycles||[]).forEach(c=>{CYCLEYEAR[c.id]=String(aval(c.fields[F_YEAR])||'');});
+  BOOTCYCLES=boot.cycles||[]; BOOTGOALS=boot.goals||[];
+  COUNTRYMETA=boot.countries_meta||[];
+  window.__cmPresent=(boot && Object.prototype.hasOwnProperty.call(boot,'countries_meta'));
+  TOTALDEPOSITS=BOOTCYCLES.reduce((a,c)=>a+(c.fields['fldw0BPZ4mU0GwiXz']||0),0);
+  PROPFULL=(boot.props||[]).map(p=>{const f=p.fields;return {
+    id:p.id, name:aval(f[A_NAME])||'(untitled)', country:aval(f[A_CTY])||'Not specified',
+    status:String(f[A_STATUS]&&(f[A_STATUS].name||f[A_STATUS])||'').trim(), gate:!!f[A_GATE],
+    req:f[REQ]||0, awarded:f[AWARDED]||0, leaders:numv(f[F_LEAD]), churches:numv(f[F_CH]), people:numv(f[F_PPL]),
+    coach:aval(f[F_COACH])||'', cycleId:(Array.isArray(f[F_CYC])&&f[F_CYC][0]&&f[F_CYC][0].id)||null, raw:f };});
+  RAW={}; PROPFULL.forEach(p=>RAW[p.id]=p.raw);
+  PROPSARR=PROPFULL;
+}
+function recompute(){
+  COMMITTED=PROPFULL.filter(p=>{const s=stg(p);return s>=2&&s<=4;}).reduce((a,p)=>a+(p.req||0),0);
+  PENDINGREQ=PROPFULL.filter(isPending).reduce((a,p)=>a+(p.req||0),0);
+  PENDINGCOUNT=PROPFULL.filter(isPending).length;
+  AVAIL=BASEPOOL-COMMITTED;
+}
+function buildLiveFoundations(curLabel){
+  const GF={found:'fldnNt8n0RNqdSccO',gift:'fldw0BPZ4mU0GwiXz',awarded:'fldH1cWVAE20ntcob',count:'fld4GE2gj9YRXIrQv'};
+  const byCycle={}, founds=[];
+  (BOOTCYCLES||[]).forEach(c=>{
+    const yr=String(aval(c.fields[F_YEAR])||'');
+    if(curLabel && yr!==curLabel) return;
+    const o={id:c.id, name:aval(c.fields[GF.found])||'(foundation)', totalGrant:c.fields[GF.gift]||0,
+      perProjectAwardedSum:c.fields[GF.awarded]||0, projectCount:c.fields[GF.count]||0, cycleName:yr, goals:[]};
+    byCycle[c.id]=o; founds.push(o);
+  });
+  const GG={type:'fldynRy5JVc8MHzmn',target:'fldC8KQzgngaBtmmL',actual:'fldrzoRt4JsDZb8gQ',cyc:'fldvzwukj9URXZoG7'};
+  (BOOTGOALS||[]).forEach(g=>{
+    const link=g.fields[GG.cyc], cid=Array.isArray(link)&&link[0]&&link[0].id;
+    if(cid && byCycle[cid]) byCycle[cid].goals.push({type:aval(g.fields[GG.type])||'Goal', target:g.fields[GG.target]||0, actual:g.fields[GG.actual]||0});
+  });
+  founds.sort((a,b)=>(b.totalGrant||0)-(a.totalGrant||0));
+  return founds;
+}
+function buildLiveCountries(curLabel){
+  const by={};
+  PROPFULL.forEach(p=>{
+    if(NON_COUNTRY.includes(p.country))return;
+    const o=by[p.country]||(by[p.country]={country:p.country,phase:'',tcGiven:0,atGiven:0,pending:0,hasPending:false,antLeaders:0,antChurches:0,antPeople:0,pendingProps:[]});
+    o.atGiven+=p.awarded||0;
+    if(curLabel && CYCLEYEAR[p.cycleId]===curLabel) o.tcGiven+=p.awarded||0;
+    const pend=isPending(p);
+    const closed=/Denial|Pause|Achived/i.test(p.status);
+    const inCountry=String(p.status||'').trim()==='Funds Distributed to Cedarstone Country Account 6'; // money landed → done
+    if(pend || (!closed && !inCountry)){   // pending (Approve) + in-process (status badge); hide done-in-country, denied, paused, archived
+      if(pend){ o.hasPending=true; o.pending+=p.req||0; o.antLeaders+=p.leaders; o.antChurches+=p.churches; o.antPeople+=p.people; }
+      o.pendingProps.push({id:p.id,name:p.name,coach:p.coach,requested:p.req||0,leaders:p.leaders,churches:p.churches,people:p.people,pend,statusLabel:slabel(p.status)});
+    }
+  });
+  return Object.values(by);
+}
+function applyAvail(){
+  recompute();
+  const gv=document.querySelector('.gapside.give .v'), gs=document.querySelector('.gapside.give .s'), av=document.querySelector('.gapside.ask .v');
+  if(gv) gv.textContent=fmt(AVAIL);
+  if(gs) gs.textContent=fmt(BASEPOOL)+' pool · '+fmt(COMMITTED)+' already committed';
+  if(av) av.textContent=fmt(PENDINGREQ);
+  const tg=document.getElementById('totalgiven'); if(tg) tg.innerHTML='<span class="tglbl">Total deposited toward National Ministry Projects \u00b7 all cycles</span><b>'+fmt(TOTALDEPOSITS)+'</b> received in foundation gifts across every cycle';
+  const asub=document.querySelector('.gapside.ask .s'); if(asub) asub.textContent='across '+PENDINGCOUNT+' pending proposal'+(PENDINGCOUNT===1?'':'s');
+  const now=document.querySelector('.track .now'), conf=document.querySelector('.track .conf');
+  if(now){const pct=PENDINGREQ>0?Math.max(Math.min(AVAIL/PENDINGREQ*100,100),2):100;now.style.width=pct.toFixed(1)+'%';}
+  if(conf) conf.style.width='0%';
+  const leg=document.querySelector('.tracklab span:first-child'); if(leg) leg.textContent='green = available to give now';
+  const short=document.querySelector('.tracklab .short');
+  if(short){const gap=PENDINGREQ-AVAIL; short.textContent = gap>0 ? fmt(gap)+' short' : fmt(-gap)+' to spare';}
+  const nb=document.getElementById('numbers');
+  if(nb) nb.innerHTML=`<div class="pills">
+      <span class="pill gen">Available to give ${fmt(AVAIL)}</span>
+      <span class="pill rest">Already committed ${fmt(COMMITTED)}</span>
+      <span class="pill pend">Requested &middot; pending ${fmt(PENDINGREQ)}</span>
+    </div>
+    <ul class="nlist">
+      <li><b>Available to give ${fmt(AVAIL)}</b> = your ${fmt(BASEPOOL)} usable pool minus ${fmt(COMMITTED)} already committed to approved grants awaiting funding.</li>
+      <li><b>Requested ${fmt(PENDINGREQ)}</b> across the proposals still awaiting your decision.</li>
+      <li>Approving a proposal shifts its amount from <b>requested</b> into <b>committed</b>, so the available figure drops on the spot.</li>
+      <li>All figures read live from Airtable each time the page loads.</li>
+    </ul>`;
+}
+function approveBtn(p,c){
+  if(p.pend===false){ return '<span class="apd statusbadge">'+ (p.statusLabel||'In progress') +'</span>'; }
+  const rec=p.id?{id:p.id,approved:false}:lookupRec(p,c);
+  if(!rec) return '';
+  if(rec.approved) return '<span class="apd">✓ Approved</span>';
+  return `<button class="apbtn" data-id="${rec.id}" data-name="${(p.name||'').replace(/"/g,'&quot;')}" onclick="approveProp(event,this)">Approve</button>`;
+}
+const tEl=()=>document.getElementById('toast');
+function toast(m,t){const e=tEl();if(!e)return;e.className=t==='load'?'show':(t==='err'?'show err':'show');e.innerHTML=(t==='load'?'<span class="sp"></span>':'')+m;if(t!=='load'){clearTimeout(e._t);e._t=setTimeout(()=>e.className='',2400);}}
+
+let TOKEN_=localStorage.getItem('jv_token')||null;
+async function apiCall(op,payload){
+  const h={'Content-Type':'application/json'};if(TOKEN_)h['Authorization']='Bearer '+TOKEN_;
+  const r=await fetch('/.netlify/functions/airtable',{method:'POST',cache:'no-store',headers:h,body:JSON.stringify({op,...payload})});
+  const d=await r.json().catch(()=>({error:'Bad response'}));
+  if(r.status===401&&op!=='login'){TOKEN_=null;localStorage.removeItem('jv_token');showGate('Session expired — sign in again.');throw new Error('Session expired');}
+  if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+  return d;
+}
+function showGate(msg){document.getElementById('app').style.display='none';document.getElementById('signed').style.display='none';document.getElementById('gate').style.display='flex';const e=document.getElementById('gateErr');if(msg){e.textContent=msg;e.style.display='block';}}
+async function doLogin(){
+  const email=document.getElementById('gEmail').value.trim(),pass=document.getElementById('gPass').value,e=document.getElementById('gateErr'),b=document.getElementById('login');
+  if(!email||!pass){e.textContent='Enter your email and password.';e.style.display='block';return;}
+  e.style.display='none';b.disabled=true;b.textContent='Signing in…';
+  try{const d=await apiCall('login',{email,password:pass});TOKEN_=d.token;localStorage.setItem('jv_token',d.token);await enter();}
+  catch(err){e.textContent=err.message||'Sign in failed.';e.style.display='block';}
+  finally{b.disabled=false;b.textContent='Sign in';}
+}
+async function approveProp(ev,btn){
+  ev.stopPropagation();
+  const id=btn.dataset.id;btn.disabled=true;btn.textContent='…';toast('Recording approval…','load');
+  try{
+    await apiCall('update',{recordId:id,fields:{[A_STATUS]:EVP_STATUS,[A_GATE]:true},projectName:btn.dataset.name||'',changes:[{type:'Status change',label:'EVP approved',detail:'EVP Approval granted'}]});
+    if(PROPMAP[id]) PROPMAP[id].approved=true;
+    Object.keys(PROPMAP).forEach(k=>{if(PROPMAP[k].id===id)PROPMAP[k].approved=true;});
+    const pr=PROPSARR.find(x=>x.id===id); if(pr){pr.status='EVP Approval';pr.gate=true;}
+    applyAvail();
+    btn.outerHTML='<span class="apd">✓ Approved</span>';
+    toast('Approved — available now '+fmt(AVAIL)+'.');
+  }catch(e){btn.disabled=false;btn.textContent='Approve';toast(e.message,'err');}
+}
+
+async function loadDash(){
+  let d;
+  try{const r=await fetch('/.netlify/functions/data',{cache:'no-store'});if(!r.ok)throw 0;d=await r.json();if(d.error)throw 0;render(d,true);}
+  catch(e){render(FALLBACK,false);}
+}
+async function enter(){
+  document.getElementById('gate').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('signed').style.display='flex';
+  try{
+    const boot=await apiCall('bootstrap',{});
+    document.getElementById('who').textContent=(boot.user&&boot.user.name)||'';
+    buildMap(boot.props||[]);
+    ingest(boot);
+  }catch(e){toast(e.message,'err');}
+  await loadDash();              // render() reads PROPMAP for the buttons
+  if(PROPFULL.length && typeof CUR==='object' && CUR){      // swap snapshot countries for live ones
+    CUR.countries=buildLiveCountries(CUR.cycleLabel||'');
+    if((BOOTCYCLES&&BOOTCYCLES.length)){ CUR.foundations=buildLiveFoundations(CUR.cycleLabel||''); }
+    renderPriorities();
+    renderGoals(CUR);
+    renderAnticipated(CUR);
+    renderCountryShare(CUR);
+    renderPhases(CUR);
+  }
+  applyAvail();                  // overwrite the headline with the live Airtable figure
+  markLive();
+  try{LASTSIG=dataSig();}catch(e){}
+}
+function openProj(ev,id){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  const f=RAW[id]; if(!f)return;
+  const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fdate=d=>{if(!d)return'—';const x=new Date(d);return isNaN(x)?'—':x.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});};
+  const g=k=>aval(f[DF[k]]);
+  const nf=(l,v)=>`<div class="mf"><div class="l">${l}</div><div class="v">${v!==''&&v!=null?esc(v):'—'}</div></div>`;
+  const sec=(l,v)=>v?`<div class="msec"><h4>${l}</h4><p>${esc(v)}</p></div>`:'';
+  const sl=slabel((f[A_STATUS]&&(f[A_STATUS].name||f[A_STATUS]))||'');
+  document.getElementById('projBody').innerHTML=`
+    <div class="meyebrow">${esc(aval(f[A_CTY])||'No country')}${g('category')?' · '+esc(g('category')):''}</div>
+    <div class="mtitle">${esc(aval(f[A_NAME])||'(untitled)')}</div>
+    <div class="mmeta"><span class="mpill">${fmt(f[DF.reqAmt]||0)} requested</span><span class="mchip">${esc(sl)}</span>${f[DF.awarded]?`<span class="mchip cty">Awarded ${fmt(f[DF.awarded])}</span>`:''}</div>
+    <div class="mgrid">
+      ${nf('Project lead',g('lead'))}${nf('Total budget',f[DF.totalBudget]!=null&&f[DF.totalBudget]!==''?fmt(f[DF.totalBudget]):'')}
+      ${nf('Regional coach',g('coach'))}${nf('Coach email',g('coachEmail'))}
+      ${nf('Submitted by',g('subName'))}${nf('Submitter email',g('subEmail'))}
+      ${nf('Start',fdate(f[DF.start]))}${nf('End',fdate(f[DF.end]))}
+      ${nf('People impacted',g('people'))}${nf('Account # (Cedarstone)',g('account'))}
+      ${nf('Leaders impacted',g('leaders'))}${nf('Churches impacted',g('churches'))}
+    </div>
+    ${sec('Problem / need',g('problem'))}
+    ${sec('Objective 1',g('obj1'))}${sec('Objective 2',g('obj2'))}${sec('Objective 3',g('obj3'))}
+    ${sec('How success is measured',g('success'))}
+    ${sec('Sustainability',g('sustain'))}
+    ${sec('Fit with strategic plan',g('strategic'))}`;
+  document.getElementById('projModal').classList.add('open');
+}
+function closeProj(){document.getElementById('projModal').classList.remove('open');}
+{const _pc=document.getElementById('projClose'); if(_pc)_pc.onclick=closeProj;}
+{const _pm=document.getElementById('projModal'); if(_pm)_pm.onclick=e=>{if(e.target.id==='projModal')closeProj();};}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProj();});
+document.getElementById('login').onclick=doLogin;
+['gEmail','gPass'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();}));
+document.getElementById('signout').onclick=()=>{TOKEN_=null;localStorage.removeItem('jv_token');location.reload();};
+{const rb=document.getElementById('refresh'); if(rb) rb.onclick=async()=>{rb.disabled=true;rb.textContent='↻ …';toast('Refreshing…','load');try{await enter();toast('Up to date.');}catch(e){toast(e.message,'err');}finally{rb.disabled=false;rb.textContent='↻ Refresh';}};}
+
+// quiet auto-refresh ~every 60s: re-pull, redraw only if something changed, keep open rows
+let LASTSIG='';
+function dataSig(){return PROPFULL.map(p=>p.id+':'+p.status+':'+(p.gate?1:0)+':'+p.awarded).join('|')+'#'+BASEPOOL+'#'+(BOOTGOALS||[]).reduce((a,g)=>a+(g.fields['fldrzoRt4JsDZb8gQ']||0),0)+'#'+(BOOTCYCLES||[]).reduce((a,c)=>a+(c.fields['fldH1cWVAE20ntcob']||0),0);}
+async function silentRefresh(){
+  try{
+    const boot=await apiCall('bootstrap',{});
+    buildMap(boot.props||[]); ingest(boot);
+    const sig=dataSig();
+    if(sig===LASTSIG){applyAvail();markLive();return;}   // nothing changed
+    LASTSIG=sig;
+    const openNames=[...document.querySelectorAll('.prow.open')].map(el=>el.querySelector('.cty')&&el.querySelector('.cty').textContent);
+    if(typeof CUR==='object'&&CUR){CUR.countries=buildLiveCountries(CUR.cycleLabel||'');if(BOOTCYCLES&&BOOTCYCLES.length){CUR.foundations=buildLiveFoundations(CUR.cycleLabel||'');}renderPriorities();renderGoals(CUR);renderAnticipated(CUR);renderCountryShare(CUR);renderPhases(CUR);}
+    applyAvail();
+    openNames.forEach(nm=>{document.querySelectorAll('.prow').forEach(el=>{const c=el.querySelector('.cty');if(c&&c.textContent===nm){el.classList.add('open');const d=el.nextElementSibling;if(d&&d.classList.contains('pdetail'))d.classList.add('show');}});});
+    markLive();
+  }catch(e){/* stay quiet on background errors */}
+}
+function markLive(){
+  const bg=document.getElementById('badge'); if(bg) bg.innerHTML='<span class="badge live"><span class="d"></span>Live from Airtable</span>';
+  const st=document.getElementById('stamp'); if(st) st.textContent='Refreshed '+new Date().toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});
+}
+setInterval(()=>{ if(TOKEN_ && document.getElementById('app').style.display!=='none' && !document.hidden) silentRefresh(); }, 60000);
+if(TOKEN_){enter();}else{showGate();}
+</script>
+</body>
+</html>

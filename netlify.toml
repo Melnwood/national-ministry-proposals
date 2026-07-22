@@ -1,7 +1,6 @@
-# Netlify configuration for the JV Grant Cycle dashboard.
-# No build step is needed: the dashboard is a single HTML file and the
-# function uses Node's built-in fetch (no npm install required).
-
 [build]
   publish = "."
   functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"

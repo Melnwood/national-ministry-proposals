@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#FF6600">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="NM Travel Fund">
+<!-- travel build 2 -->
+<title>JV Travel Fund — Request</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F2E9;--card:#FBF8F1;--ink:#1E2A24;--muted:#5A655C;
+    --line:#E7DDCE;--line-d:#D8CDB8;--orange:#FF6600;--orange-soft:#FFEEE0;
+    --green:#1F7A5C;--green-soft:#E3F2EB;--red:#B0573B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Hanken Grotesk',-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:640px;margin:0 auto;padding:30px 20px 80px}
+  .brand{display:flex;align-items:center;gap:13px;margin-bottom:26px}
+  .mk{width:42px;height:42px;border-radius:11px;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:21px}
+  .brand h1{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin:0;letter-spacing:-.01em}
+  .brand .sub{font-size:12.5px;color:var(--muted)}
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:24px}
+  .hero h2{font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:0 0 8px;letter-spacing:-.01em}
+  .hero p{font-size:14px;color:var(--muted);margin:0 0 14px;line-height:1.55}
+  .fundbar{display:flex;align-items:baseline;gap:10px;padding-top:14px;border-top:1px dashed var(--line-d)}
+  .fundbar .lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--orange)}
+  .fundbar .val{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:20px;color:var(--orange)}
+  .fundbar .of{font-size:12.5px;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 24px 26px}
+  .fld{margin-bottom:16px}
+  .fld label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+  .fld label .req{color:var(--orange)}
+  .fld input,.fld textarea{width:100%;padding:11px 13px;border:1px solid var(--line-d);border-radius:9px;font-family:inherit;font-size:14.5px;background:#fff;color:var(--ink)}
+  .fld textarea{min-height:90px;resize:vertical;line-height:1.5}
+  .fld input:focus,.fld textarea:focus{outline:none;border-color:var(--orange)}
+  .moneywrap{position:relative}
+  .moneywrap .pre{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:14.5px;pointer-events:none}
+  .moneywrap input{padding-left:27px;font-family:'IBM Plex Mono',monospace}
+  .seg{display:flex;gap:8px}
+  .seg-opt{flex:1;padding:11px 10px;border:1px solid var(--line-d);border-radius:9px;background:#fff;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.12s}
+  .seg-opt:hover{border-color:var(--orange)}
+  .seg-opt.active{background:var(--orange-soft);border-color:var(--orange);color:var(--orange)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:480px){.row{grid-template-columns:1fr}}
+  .submit{width:100%;margin-top:8px;padding:14px;border:none;border-radius:11px;background:var(--orange);color:#fff;font-family:inherit;font-weight:700;font-size:15.5px;cursor:pointer;transition:.15s}
+  .submit:hover{filter:brightness(1.06)}.submit:disabled{opacity:.55;cursor:default}
+  .err{display:none;background:#FBE7E0;border:1px solid #E7B9A8;color:#8A3A24;border-radius:9px;padding:11px 14px;font-size:13.5px;margin-bottom:16px}
+  .err.show{display:block}
+  .done{display:none;text-align:center;padding:30px 10px}
+  .done.show{display:block}
+  .done .check{width:58px;height:58px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 16px}
+  .done h2{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin:0 0 8px}
+  .done p{font-size:14.5px;color:var(--muted);margin:0 0 20px;line-height:1.55}
+  .done button{padding:11px 22px;border:1px solid var(--line-d);border-radius:9px;background:#fff;font-family:inherit;font-weight:600;font-size:14px;color:var(--ink);cursor:pointer}
+  .foot{text-align:center;font-size:11.5px;color:var(--muted);margin-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="mk">JV</div>
+    <div><h1>Travel Fund Request</h1><div class="sub">SouthEast Christian Church · leader travel to the US</div></div>
+  </div>
+
+  <div class="card" id="formCard">
+    <div class="err" id="err"></div>
+    <div class="fld"><label>Have you already taken this trip?</label>
+      <div class="seg" id="seg">
+        <button type="button" class="seg-opt active" data-v="Upcoming">No — it's upcoming</button>
+        <button type="button" class="seg-opt" data-v="Already taken">Yes — already taken</button>
+      </div>
+    </div>
+    <div class="fld"><label>Your name <span class="req">*</span></label><input id="name" type="text" autocomplete="name" placeholder="First and last name"></div>
+    <div class="fld"><label>Email <span class="req">*</span></label><input id="email" type="email" autocomplete="email" placeholder="you@josiahventure.com"></div>
+    <div class="fld"><label>Country / team</label><input id="team" type="text" placeholder="e.g. Czech Republic, S-Team"></div>
+    <div class="fld"><label>What is the trip for? <span class="req">*</span></label><textarea id="purpose" placeholder="Briefly describe the purpose of your visit to the supporting church."></textarea></div>
+    <div class="row">
+      <div class="fld"><label id="lblDepart">Depart date</label><input id="depart" type="date"></div>
+      <div class="fld"><label id="lblRet">Return date</label><input id="ret" type="date"></div>
+    </div>
+    <div class="fld"><label id="lblAmt">Amount requested <span class="req">*</span></label><div class="moneywrap"><span class="pre">$</span><input id="reqAmt" type="number" step="50" min="0" placeholder="0"></div></div>
+    <div class="fld"><label>Anything else we should know?</label><textarea id="notes" placeholder="Optional — other funding, special circumstances, etc."></textarea></div>
+    <button class="submit" id="submit">Submit request</button>
+  </div>
+
+  <div class="done" id="done">
+    <div class="check">✓</div>
+    <h2>Request submitted</h2>
+    <p>Thanks! Your travel request has been sent to the team for review. You'll hear back about next steps.</p>
+    <button id="another">Submit another request</button>
+  </div>
+
+  <div class="foot">Josiah Venture · National Ministry Projects</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const money=n=>n==null||n===''?'—':'$'+Number(n).toLocaleString('en-US');
+async function api(op,payload){
+  const r=await fetch('/.netlify/functions/airtable',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({op,...(payload||{})})});
+  const d=await r.json().catch(()=>({error:'Bad response'}));
+  if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+  return d;
+}
+let timing='Upcoming';
+function relabel(){
+  const taken = timing==='Already taken';
+  $('#lblDepart').textContent = taken ? 'Trip start date' : 'Depart date';
+  $('#lblRet').textContent    = taken ? 'Trip end date'   : 'Return date';
+  $('#lblAmt').innerHTML       = (taken ? 'What did the trip cost?' : 'Amount requested') + ' <span class="req">*</span>';
+}
+document.querySelectorAll('#seg .seg-opt').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#seg .seg-opt').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); timing=b.dataset.v; relabel();
+  };
+});
+async function submit(){
+  const err=$('#err'); err.classList.remove('show');
+  const name=$('#name').value.trim(), email=$('#email').value.trim();
+  const purpose=$('#purpose').value.trim(), amount=Number($('#reqAmt').value);
+  const taken = timing==='Already taken';
+  if(!name||!email){err.textContent='Please add your name and email.';err.classList.add('show');return;}
+  if(!purpose){err.textContent='Please tell us what the trip is for.';err.classList.add('show');return;}
+  if(!amount||amount<=0){err.textContent=taken?'Please enter what the trip cost.':'Please enter the amount you are requesting.';err.classList.add('show');return;}
+  const b=$('#submit'); b.disabled=true; b.textContent='Submitting…';
+  try{
+    await api('travel_submit',{fields:{
+      name,email,team:$('#team').value.trim(),purpose,timing,
+      depart:$('#depart').value||'',ret:$('#ret').value||'',
+      reqAmt:amount, actualCost: taken ? amount : '',
+      notes:$('#notes').value.trim()
+    }});
+    $('#formCard').style.display='none';
+    $('#done').classList.add('show');
+  }catch(e){ err.textContent=e.message||'Could not submit. Please try again.'; err.classList.add('show'); }
+  finally{ b.disabled=false; b.textContent='Submit request'; }
+}
+$('#submit').onclick=submit;
+$('#another').onclick=()=>{ location.reload(); };
+relabel();
+</script>
+</body>
+</html>
