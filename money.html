@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#FF6600">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NM Money">
+<title>Where the money is</title>
+<!-- money page build 1 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F2E9;--paper-2:#FBF8F1;--ink:#1E2A24;--ink-soft:#46544C;
+    --green:#2E5E4E;--green-d:#1F4438;--gold:#C58B2E;--gold-soft:#E7C988;
+    --terra:#B0573B;--line:#DED7C6;--line-d:#CcC2AC;--blue:#436A8A;--purple:#7a64a0;
+    --shadow:0 1px 2px rgba(31,42,36,.06),0 8px 24px rgba(31,42,36,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:'Hanken Grotesk',-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 1px 1px,rgba(31,42,36,.04) 1px,transparent 0);background-size:22px 22px;}
+  .wrap{max-width:920px;margin:0 auto;padding:38px 24px 70px}
+  #gate{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  #gate .box{background:var(--paper-2);border:1px solid var(--line);border-radius:16px;padding:34px 32px;max-width:400px;width:100%;box-shadow:var(--shadow);text-align:center}
+  #gate h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:6px 0 6px}
+  #gate .sub{font-size:13.5px;color:var(--ink-soft);margin-bottom:20px}
+  #gate input{width:100%;padding:11px 13px;border:1px solid var(--line-d);border-radius:9px;font-family:inherit;font-size:14.5px;margin-bottom:11px;background:#fff}
+  #gate input:focus{outline:none;border-color:var(--gold)}
+  #gate button{width:100%;padding:12px;border:none;border-radius:9px;background:var(--green);color:#fff;font-family:inherit;font-weight:600;font-size:15px;cursor:pointer}
+  #gate .err{color:var(--terra);font-size:13px;margin-top:11px;display:none}
+  #gate .hint{font-size:12px;color:var(--ink-soft);margin-top:14px;line-height:1.45}
+  .signed{position:fixed;top:14px;right:16px;display:flex;gap:8px;align-items:center;z-index:20}
+  .signed .w{font-size:12px;color:var(--ink-soft)}
+  .signed button{font-family:inherit;font-size:12px;padding:6px 11px;border:1px solid var(--line-d);border-radius:7px;background:var(--paper-2);cursor:pointer;color:var(--ink)}
+  header{margin-bottom:30px}
+  .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  header h1{font-family:'Fraunces',serif;font-weight:600;font-size:38px;letter-spacing:-.5px;margin:5px 0 8px}
+  header h1 em{font-style:italic;color:var(--green)}
+  header .sub{font-size:15px;color:var(--ink-soft);max-width:640px}
+  .stamp{font-size:11.5px;color:var(--ink-soft);opacity:.75}
+  .phasebtn{display:inline-block;font-size:13px;font-weight:600;text-decoration:none;color:var(--green);border:1px solid var(--line-d);background:var(--paper-2);padding:7px 13px;border-radius:8px;margin-right:6px}
+  .phasebtn:hover{border-color:var(--green)}
+  h2{font-family:'Fraunces',serif;font-weight:600;font-size:24px;margin:38px 0 6px;letter-spacing:-.2px}
+  h2 em{font-style:italic;color:var(--green)}
+  .lead{font-size:14.5px;color:var(--ink-soft);max-width:660px;margin-bottom:16px;line-height:1.6}
+  .panel{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+  .walk{list-style:none}
+  .walk li{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line);gap:16px}
+  .walk li:last-child{border-bottom:none}
+  .walk .lbl{font-size:14.5px}
+  .walk .note{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
+  .walk .amt{font-size:17px;font-weight:600;white-space:nowrap}
+  .walk li.total{border-top:2px solid var(--ink);margin-top:4px;padding-top:14px}
+  .walk li.total .lbl{font-weight:600;font-size:16px}
+  .walk li.total .amt{font-size:26px;font-family:'Fraunces',serif;color:var(--green)}
+  .neg .amt{color:var(--terra)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);font-weight:700;padding:0 8px 8px 0;border-bottom:1px solid var(--line-d)}
+  th.r,td.r{text-align:right}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.cty{color:var(--ink-soft);font-size:12.5px}
+  tfoot td{border-top:2px solid var(--ink);border-bottom:none;font-weight:700;padding-top:11px}
+  .owe{color:var(--terra);font-weight:600}
+  .ok{color:var(--green)}
+  .tag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px}
+  .tag.open{background:#F6E0D8;color:#9A2E22}
+  .tag.done{background:#DCEAE0;color:var(--green-d)}
+  .tag.yes{background:#FBF0D8;color:#7a5410}
+  .flag{border-left:3px solid var(--terra);background:var(--paper-2);border-radius:0;padding:14px 18px;margin-bottom:12px}
+  .flag h4{font-size:14.5px;font-weight:600;margin-bottom:4px}
+  .flag p{font-size:13.5px;color:var(--ink-soft);line-height:1.55}
+  .flag .big{font-family:'Fraunces',serif;font-size:20px;color:var(--terra);font-weight:600}
+  .asof{font-size:12.5px;color:var(--ink-soft);margin-top:10px}
+  .asof.stale{color:var(--terra);font-weight:600}
+  .loading{color:var(--ink-soft);font-size:14px;padding:20px 0}
+  @media(max-width:640px){header h1{font-size:29px}.wrap{padding:26px 16px 60px}table{font-size:12.5px}}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="box">
+    <div class="eyebrow">National Ministries</div>
+    <h1>Where the <em>money</em> is</h1>
+    <div class="sub">Sign in to see the full grant and payment picture.</div>
+    <input type="email" id="gEmail" placeholder="Email" autocomplete="username">
+    <input type="password" id="gPass" placeholder="Password" autocomplete="current-password">
+    <button id="login">Sign in</button>
+    <div class="err" id="gateErr"></div>
+    <div class="hint">First time? Enter the email your administrator added and choose a password — it'll be set for you.</div>
+  </div>
+</div>
+<div class="signed" id="signed" style="display:none"><span class="w" id="who"></span><button id="refresh">&#8635; Refresh</button><button id="signout">Sign out</button></div>
+
+<div class="wrap" id="app" style="display:none">
+  <header>
+    <div class="eyebrow">National Ministries</div>
+    <h1>Where the <em>money</em> is</h1>
+    <p class="sub">Everything that has been granted, everything that has actually been sent, and everything still unanswered — in one place.</p>
+    <div class="stamp" id="stamp"></div><span class="stamp"> · money page build 1</span>
+    <div style="margin-top:12px"><a href="director.html" class="phasebtn">&larr; Dashboard</a><a href="reports.html" class="phasebtn">Report tracking</a><a href="phases.html" class="phasebtn">Grants by phase</a></div>
+  </header>
+
+  <h2>The bottom <em>line</em></h2>
+  <p class="lead">This starts from the real cash in account 510181 and takes away anything already promised. What's left is what can honestly be granted today.</p>
+  <div class="panel" id="bottomLine"><div class="loading">Loading…</div></div>
+
+  <h2>The 10% <em>question</em></h2>
+  <p class="lead" id="tenLead">Loading…</p>
+  <div class="panel" id="tenPanel"><div class="loading">Loading…</div></div>
+
+  <h2>Every grant <em>this cycle</em></h2>
+  <p class="lead">Each funded project, what was awarded, and what has actually reached the country account. A blank in "sent" means we have no payment detail on file — not that nothing was sent.</p>
+  <div class="panel" id="allGrants"><div class="loading">Loading…</div></div>
+
+  <h2>Still needs <em>a person</em></h2>
+  <p class="lead">Things no calculation can settle. Each one needs someone to find out and decide.</p>
+  <div id="openItems"><div class="loading">Loading…</div></div>
+</div>
+
+<script>
+const F={name:'fld1qi35letQtg6yC',cty:'fldpZ00pUwm1gB4zN',status:'fld1iHtOAuGDPvLVZ',req:'fld3bvuKr1SIXAwUf',
+  awarded:'fldeeQMQPRVyXbklW',paid:'fldHug3aktd9okS1W',q:'fldwMX4PlFq9fP6ky',cycle:'flda02NPGg4TFd8wp'};
+const CYCLE_2526='recly1V2df2g1k9Dr', FUNDED='Funds Distributed to Cedarstone Country Account 6';
+const $=s=>document.getElementById(s);
+const money=n=>(n==null||n==='')?'—':'$'+Math.round(Number(n)).toLocaleString('en-US');
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const aval=v=>v&&typeof v==='object'?(v.name||v.value||''):(v||'');
+let PROPS=[],BAL=null;
+
+let TOKEN_=localStorage.getItem('jv_token')||null;
+async function apiCall(op,payload){
+  const h={'Content-Type':'application/json'};if(TOKEN_)h['Authorization']='Bearer '+TOKEN_;
+  const r=await fetch('/.netlify/functions/airtable',{method:'POST',cache:'no-store',headers:h,body:JSON.stringify({op,...(payload||{})})});
+  const d=await r.json().catch(()=>({error:'Bad response'}));
+  if(r.status===401&&op!=='login'){TOKEN_=null;localStorage.removeItem('jv_token');showGate('Session expired — sign in again.');throw new Error('Session expired');}
+  if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+  return d;
+}
+function showGate(msg){$('app').style.display='none';$('signed').style.display='none';$('gate').style.display='flex';const e=$('gateErr');if(msg){e.textContent=msg;e.style.display='block';}}
+$('login').onclick=async()=>{
+  const email=$('gEmail').value.trim(),pass=$('gPass').value;
+  if(!email||!pass)return;
+  const b=$('login');b.disabled=true;b.textContent='Signing in…';
+  try{const d=await apiCall('login',{email,password:pass});TOKEN_=d.token;localStorage.setItem('jv_token',d.token);await enter();}
+  catch(e){const el=$('gateErr');el.textContent=e.message;el.style.display='block';}
+  finally{b.disabled=false;b.textContent='Sign in';}
+};
+$('gPass').addEventListener('keydown',e=>{if(e.key==='Enter')$('login').click();});
+$('signout').onclick=()=>{TOKEN_=null;localStorage.removeItem('jv_token');location.reload();};
+$('refresh').onclick=()=>enter();
+
+function inCycle(p){const l=p.fields[F.cycle];return Array.isArray(l)&&l.indexOf(CYCLE_2526)>-1;}
+function owedOf(p){const pd=p.fields[F.paid];if(pd==null||pd==='')return 0;const d=(Number(p.fields[F.awarded])||0)-Number(pd);return d>0?d:0;}
+
+function renderBottomLine(){
+  const bal=BAL&&BAL.balance!=null?BAL.balance:0;
+  const owed=PROPS.reduce((a,p)=>a+owedOf(p),0);
+  const pend=PROPS.filter(p=>String(aval(p.fields[F.status])).trim()==='Submitted');
+  const asked=pend.reduce((a,p)=>a+(Number(p.fields[F.req])||0),0);
+  const avail=bal-owed;
+  let stale='',cls='asof';
+  if(BAL&&BAL.asOf){const d=new Date(BAL.asOf),days=Math.floor((Date.now()-d)/86400000);
+    stale='Bank balance as of '+d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    if(days>21){stale+=' — '+days+' days ago. Update it from the latest statement.';cls='asof stale';}}
+  $('bottomLine').innerHTML=`<ul class="walk">
+    <li><span class="lbl">Cash in account 510181<span class="note">What the bank actually holds</span></span><span class="amt">${money(bal)}</span></li>
+    <li class="neg"><span class="lbl">Still owed on part-paid grants<span class="note">Promised to countries, not yet sent</span></span><span class="amt">− ${money(owed)}</span></li>
+    <li class="total"><span class="lbl">Available to grant</span><span class="amt">${money(avail)}</span></li>
+  </ul>
+  <div class="${cls}">${esc(stale)}</div>
+  <ul class="walk" style="margin-top:18px">
+    <li><span class="lbl">Countries are asking for<span class="note">${pend.length} request${pend.length===1?'':'s'} waiting for a decision</span></span><span class="amt">${money(asked)}</span></li>
+    <li class="neg"><span class="lbl">Short by<span class="note">If every pending request were funded in full</span></span><span class="amt">${money(Math.max(0,asked-avail))}</span></li>
+  </ul>`;
+}
+
+function renderTen(){
+  const open=PROPS.filter(p=>owedOf(p)>0).sort((a,b)=>owedOf(b)-owedOf(a));
+  const total=open.reduce((a,p)=>a+owedOf(p),0);
+  if(!open.length){
+    $('tenLead').textContent='Nothing is part-paid right now. Every grant that went out matches what was awarded.';
+    $('tenPanel').innerHTML='<div class="loading">No open payment questions.</div>';return;
+  }
+  $('tenLead').innerHTML=`Some grants went out at <b>90% of the award</b> instead of the full amount. Nobody has confirmed whether the remaining 10% is still coming or whether those grants are finished. Until that is answered, the difference is treated as money we still owe — the safer assumption, so no country is quietly shorted. Going forward the grant department takes the 10% off the top, so the awarded figure is the figure that gets sent and this stops recurring.`;
+  $('tenPanel').innerHTML=`<table><thead><tr><th>Grant</th><th class="r">Awarded</th><th class="r">Sent</th><th class="r">Still owed</th><th>Answer</th></tr></thead><tbody>
+  ${open.map(p=>{const q=aval(p.fields[F.q]);
+    const tag=/^Open/i.test(q)?'<span class="tag open">Unanswered</span>':(/^Yes/i.test(q)?'<span class="tag yes">Still to pay</span>':(/^No/i.test(q)?'<span class="tag done">Complete</span>':'<span class="tag open">Unanswered</span>'));
+    return `<tr><td>${esc(p.fields[F.name]||'(untitled)')}<span class="note"></span><div class="cty">${esc(aval(p.fields[F.cty]))}</div></td>
+    <td class="r">${money(p.fields[F.awarded])}</td><td class="r">${money(p.fields[F.paid])}</td>
+    <td class="r owe">${money(owedOf(p))}</td><td>${tag}</td></tr>`;}).join('')}
+  </tbody><tfoot><tr><td>${open.length} grants</td><td class="r"></td><td class="r"></td><td class="r owe">${money(total)}</td><td></td></tr></tfoot></table>`;
+}
+
+function renderAll(){
+  const funded=PROPS.filter(p=>String(aval(p.fields[F.status])).trim()===FUNDED&&inCycle(p))
+    .sort((a,b)=>(Number(b.fields[F.awarded])||0)-(Number(a.fields[F.awarded])||0));
+  const tA=funded.reduce((a,p)=>a+(Number(p.fields[F.awarded])||0),0);
+  const tP=funded.reduce((a,p)=>a+(Number(p.fields[F.paid])||0),0);
+  const tO=funded.reduce((a,p)=>a+owedOf(p),0);
+  $('allGrants').innerHTML=`<table><thead><tr><th>Grant</th><th>Country</th><th class="r">Awarded</th><th class="r">Sent</th><th class="r">Still owed</th></tr></thead><tbody>
+  ${funded.map(p=>`<tr><td>${esc(p.fields[F.name]||'(untitled)')}</td><td class="cty">${esc(aval(p.fields[F.cty]))}</td>
+    <td class="r">${money(p.fields[F.awarded])}</td><td class="r">${money(p.fields[F.paid])}</td>
+    <td class="r ${owedOf(p)>0?'owe':'ok'}">${owedOf(p)>0?money(owedOf(p)):'—'}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td>${funded.length} funded grants</td><td></td><td class="r">${money(tA)}</td><td class="r">${money(tP)}</td><td class="r owe">${money(tO)}</td></tr></tfoot></table>`;
+}
+
+function renderOpen(){
+  const owed=PROPS.reduce((a,p)=>a+owedOf(p),0);
+  const openCount=PROPS.filter(p=>/^Open/i.test(aval(p.fields[F.q]))).length;
+  let html='';
+  if(openCount) html+=`<div class="flag"><h4>The 10% on ${openCount} grants — <span class="big">${money(owed)}</span></h4>
+    <p>Is the held-back 10% still going to those countries, or are those grants finished at what was sent? Answering the payment question on each grant settles it. Until then this money stays counted as owed.</p></div>`;
+  html+=`<div class="flag"><h4>$18,500 went to individual staff, not grants</h4>
+    <p>On 18 March, fifteen transfers left this account into personal staff funds across twelve countries — $1,000 to $1,500 each. These are not grant projects and they are not tracked anywhere in this system. Someone needs to confirm what programme they belong to and whether this account is the right source for them.</p></div>`;
+  html+=`<div class="flag"><h4>The Cornerstone 2025-26 cycle is over-committed</h4>
+    <p>Awards recorded against this cycle now exceed the gift. Either more was granted than the gift covers, or projects have been linked to the wrong cycle. Worth checking before the next grant meeting — the cycle figures on the dashboard depend on it.</p></div>`;
+  html+=`<div class="flag"><h4>The bank balance only updates when someone types it in</h4>
+    <p>Every figure on this page starts from that one number. It went two months without being updated once, and the app confidently reported money that was no longer there. When a new statement arrives, update it on the Account Balance record — the date above turns red when it gets stale.</p></div>`;
+  $('openItems').innerHTML=html;
+}
+
+async function enter(){
+  $('gate').style.display='none';$('app').style.display='block';$('signed').style.display='flex';
+  const boot=await apiCall('bootstrap',{});
+  PROPS=boot.props||[];BAL=boot.bal||null;
+  if(boot.user)$('who').textContent=boot.user.name||boot.user.email||'';
+  $('stamp').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  renderBottomLine();renderTen();renderAll();renderOpen();
+}
+if(TOKEN_){enter().catch(()=>showGate());}else{showGate();}
+</script>
+</body>
+</html>
