@@ -56,7 +56,9 @@ const v = x => Array.isArray(x) ? x.map(v).join(', ') : (x && typeof x==='object
 function b64u(buf){ return Buffer.from(buf).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function sign(payload){ return b64u(crypto.createHmac('sha256', SECRET).update(payload).digest()); }
 function makeToken(user){
-  const payload = b64u(JSON.stringify({ email:user.email, name:user.name, exp:Date.now()+1000*60*60*12 })); // 12h
+  const payload = b64u(JSON.stringify({ email:user.email, name:user.name,
+    role:user.role||'', allCountries:!!user.allCountries, countryIds:user.countryIds||[],
+    exp:Date.now()+1000*60*60*12 })); // 12h
   return payload + '.' + sign(payload);
 }
 function verifyToken(token){
@@ -67,8 +69,41 @@ function verifyToken(token){
   if(!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
   let data; try{ data = JSON.parse(Buffer.from(payload.replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; }
   if(!data.exp || Date.now() > data.exp) return null;
-  return { email:data.email, name:data.name };
+  return { email:data.email, name:data.name, role:data.role||'', allCountries:!!data.allCountries, countryIds:data.countryIds||[] };
 }
+
+// ---- role scope ----
+// Oversight roles see everything and may act broadly; coach/country are scoped
+// to their assigned Countries. Enforced server-side (defense in depth on top of
+// the front-end tabs).
+const OVERSIGHT_ROLES = ['EVP','President','Grant team','CFO'];
+const isOversight = who => OVERSIGHT_ROLES.includes((who && who.role || '').trim());
+// Only country leaders are hard-scoped to their own countries. Coaches are
+// staff (they see the queue) until per-coach country assignment is populated.
+const isScopedCountry = who => (who && who.role || '').trim() === 'Country' && !(who && who.allCountries);
+const canDelete   = who => ['EVP','President','Grant team'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
+const canBalance  = who => ['EVP','President'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
+const PROP_COUNTRY_LINK = 'fldaHnvEM4RokRDth';
+function inScope(who, propFields){
+  if(isOversight(who) || (who && who.allCountries)) return true;
+  const allowed = new Set(who && who.countryIds || []);
+  if(!allowed.size) return false;
+  const link = propFields && propFields[PROP_COUNTRY_LINK];
+  return Array.isArray(link) && link.some(id => allowed.has(id));
+}
+// Keep the legacy Status single-select in sync when the app writes the canonical
+// Stage, so existing Airtable automations (report creation, notifications) that
+// still watch Status keep firing. Exact legacy strings (typos/spaces included).
+const STAGE_F = 'fld3Sh8TGO0Nukrgc', STATUS_F = 'fld1iHtOAuGDPvLVZ';
+const STAGE_TO_STATUS = {
+  'Submitted':'Submitted ', 'Council Decision':'EVP Approval',
+  'Approved — Deferred':'Grant is approved but no funding yet',
+  'Grant Team Approved':'Grant Team Approval (Dave & Pavel)3',
+  'Funding Identified':'Funding For Grant Identified 4',
+  'At Accounting':'Funds distributed to Council Account 5',
+  'Funded':'Funds Distributed to Cedarstone Country Account 6',
+  'Denied':'Grant Team Denial 3.1 ', 'Archived':'Achived'
+};
 function hashPw(password, salt){ return crypto.pbkdf2Sync(password, salt, 120000, 32, 'sha256').toString('hex'); }
 function eqStr(a, b){ const x=Buffer.from(a||''), y=Buffer.from(b||''); return x.length===y.length && crypto.timingSafeEqual(x, y); }
 
@@ -203,6 +238,15 @@ exports.handler = async (event) => {
   const authz = event.headers && (event.headers.authorization || event.headers.Authorization) || '';
   const who = verifyToken(authz.replace(/^Bearer\s+/i, ''));
   if(!who) return reply(401, { error:'Session expired — please sign in again.' });
+  // Tokens issued before roles were embedded won't carry a role; refresh it from
+  // Approvers so enforcement is correct without forcing everyone to re-sign-in.
+  if(who && !who.role){
+    try{
+      const ppl = await fetchAll(T_APP, {});
+      const me = ppl.find(p => ((p.fields[A.email]||'').trim().toLowerCase()) === ((who.email||'').trim().toLowerCase()));
+      if(me) attachScope(who, me);
+    }catch(e){ /* leave who as-is */ }
+  }
 
   try{
     if(body.op === 'bootstrap'){
@@ -261,10 +305,20 @@ exports.handler = async (event) => {
         actual:r.fields[TR.actual]||0,
         status:(r.fields[TR.status]&&(r.fields[TR.status].name||r.fields[TR.status]))||'Submitted'
       }));
+      // ---- scope for country leaders (their countries only) ----
+      if(isScopedCountry(who)){
+        const allowed = new Set(who.countryIds||[]);
+        const mineProps = props.filter(p => { const l = p.fields[PROP_COUNTRY_LINK]; return Array.isArray(l) && l.some(id => allowed.has(id)); });
+        const mineIds = new Set(mineProps.map(p => p.id));
+        const mineReports = reports.filter(r => mineIds.has(r.proposalId));
+        // scoped users get their own grants + reports only; sensitive aggregates withheld
+        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:[], reports:mineReports, travel:[], user:who });
+      }
       return reply(200, { cycles, props, logs, funds, bal, goals, countries_meta, reports, travel, user:who });
     }
 
     if(body.op === 'people_list'){
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
       const people = await fetchAll(T_APP, {});
       return reply(200, { people: people.map(r => ({
         id:r.id,
@@ -297,6 +351,13 @@ exports.handler = async (event) => {
 
     if(body.op === 'update'){
       if(!body.recordId || !body.fields) return reply(400, { error:'Missing recordId or fields.' });
+      // Scope: a country leader may only update grants for their own countries.
+      if(isScopedCountry(who)){
+        const cur = await at(BASE+'/'+T_PROP+'/'+body.recordId+'?returnFieldsByFieldId=true');
+        if(!inScope(who, cur.fields)) return reply(403, { error:'You can only update grants for your own country.' });
+      }
+      // Keep legacy Status in sync when the canonical Stage changes.
+      if(body.fields[STAGE_F] && STAGE_TO_STATUS[body.fields[STAGE_F]]) body.fields[STATUS_F] = STAGE_TO_STATUS[body.fields[STAGE_F]];
       const upd = await at(BASE+'/'+T_PROP+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields:body.fields, typecast:true }) });
       const changes = Array.isArray(body.changes) ? body.changes : [];
       if(changes.length){
@@ -315,6 +376,7 @@ exports.handler = async (event) => {
 
     if(body.op === 'set_balance'){
       // Update the account balance from the monthly CSV reconcile (EVP/Management).
+      if(!canBalance(who)) return reply(403, { error:'Only EVP can update the account balance.' });
       if(body.balance == null) return reply(400, { error:'Missing balance.' });
       const B = { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' };
       const fields = { [B.balance]:Number(body.balance) };
@@ -338,6 +400,7 @@ exports.handler = async (event) => {
     }
 
     if(body.op === 'delete'){
+      if(!canDelete(who)) return reply(403, { error:'You do not have permission to delete a project.' });
       if(!body.recordId) return reply(400, { error:'Missing recordId.' });
       await at(BASE+'/'+T_PROP+'/'+body.recordId, { method:'DELETE' });
       try{
