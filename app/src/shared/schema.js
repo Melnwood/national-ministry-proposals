@@ -167,3 +167,27 @@ export const REVIEW_CRITERIA = [
 ];
 
 export const GRANT_CATEGORIES = ['National Country Project', 'S-Team', 'Facilities'];
+
+// Impact area (Request Type) — exact option names (some carry a trailing space
+// in Airtable; keep as-is so typecast matches instead of creating a new option).
+export const REQUEST_TYPES = [
+  'Evangelism and Outreach Programs ', 'Leadership and Ministry Development ',
+  'Church Partnerships and Local Church Empowerment ', 'Digital and Media Development ',
+  'Infrastructure and Facility Development ', 'Worship and Indigenous Ministry Support Training',
+  'Skill Development', 'Donor Relations', 'Research',
+];
+
+// The applicant's own self-assessment checklist (Check List field).
+export const APPLICANT_CHECKLIST = [
+  'Mission Match (does this project fall in line with our vision and mission)',
+  'Donor Match (does this fall in line with what is important to the donor)',
+  'Forward Motion (does this project help push forward key plans in your strategic plan)',
+  'Ability to deliver (It may be a stretch but you could see getting 80% for sure )',
+  'Investment Return (will this project have ongoing impact)',
+  'Sustainability (do you have a clear plan to keep this project going without grant money in the future)',
+  'Family’s basic needs met consistently during project period.',
+];
+
+// Yes/No-style answers
+export const YESNO = ['Yes', 'No'];
+export const YESNO_MPD = ['Yes', 'No', 'MPD'];

@@ -547,7 +547,10 @@ exports.handler = async (event) => {
         submitted:'fldiAdRWxktreIrDZ', country:'fldaHnvEM4RokRDth', leaderName:'fldcwusDwTyQ5E5Qf', leaderEmail:'fldbs0FzyPWbS1waI',
         subName:'fldlfXrnrE7yAyNul', subEmail:'fld64OxiMWtnko2H7', category:'fldqZcI9IgfOPCdt3', requestType:'fldvmIx5iytXPIgve',
         problem:'fldb0TRzRi1nzkN7v', people:'fld8CdQ8Ens5m3NDs', leaders:'fldc2XplvqvAX8NlX', churches:'fld6ZWqZuuK9gcfab',
-        budget:'fldofeeQU3DlrHULR', objective:'fld17fOaX3yAe3s4O', success:'fldQKLTpf2M69gneF', sustain:'fldvktGeT6orNqBlA', fit:'fldTa8BUePK8Ifs02' };
+        budget:'fldofeeQU3DlrHULR', objective:'fld17fOaX3yAe3s4O', objective2:'fld2tSgq12UOBDMri', objective3:'fldquJXeXakScgMnU',
+        success:'fldQKLTpf2M69gneF', sustain:'fldvktGeT6orNqBlA', fit:'fldTa8BUePK8Ifs02',
+        team:'fldBqgoZhWMtEjsq0', lead:'flddNefZxzHMlvr9t', start:'fldVIJKaXqmUw8qFP', end:'fldxV1o8EVEXaitod',
+        otherFunding:'fldRu1psJOpQPSx5W', received:'fld95zxnULYIKO8nf', unused:'fld5TuhikpzrgI6G2', checklist:'fldYJSfdlEI8cBTOm' };
       const fields = {
         [PA.name]:String(f.name).trim(), [PA.requested]:Number(f.requested)||0,
         [PA.stage]:'Submitted', [PA.status]:'Submitted ', [PA.submitted]:true,
@@ -558,7 +561,12 @@ exports.handler = async (event) => {
       const setS = (k,v)=>{ if(v!=null&&String(v).trim()!=='') fields[k]=String(v).trim(); };
       setS(PA.category,f.category); setS(PA.requestType,f.requestType); setS(PA.problem,f.problem);
       setN(PA.people,f.people); setN(PA.leaders,f.leaders); setN(PA.churches,f.churches); setN(PA.budget,f.totalBudget);
-      setS(PA.objective,f.objective); setS(PA.success,f.success); setS(PA.sustain,f.sustainability); setS(PA.fit,f.strategicFit);
+      setS(PA.objective,f.objective); setS(PA.objective2,f.objective2); setS(PA.objective3,f.objective3);
+      setS(PA.success,f.success); setS(PA.sustain,f.sustainability); setS(PA.fit,f.strategicFit);
+      setS(PA.team,f.team); setS(PA.lead,f.projectLead); setS(PA.otherFunding,f.otherFunding);
+      setS(PA.received,f.receivedFunds); setS(PA.unused,f.unusedFunds);
+      if(f.start) fields[PA.start]=f.start; if(f.end) fields[PA.end]=f.end;
+      if(Array.isArray(f.checklist) && f.checklist.length) fields[PA.checklist]=f.checklist;
       const created = await at(BASE+'/'+T_PROP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
       const recId = created.records && created.records[0] && created.records[0].id;
       try{ await writeLog([{ fields:{ [L.entry]:String(f.name).trim()+' — application submitted', [L.type]:'Status change',

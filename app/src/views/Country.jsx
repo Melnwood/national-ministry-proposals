@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval, daysAgo } from '../shared/format.js';
-import { F, GRANT_CATEGORIES } from '../shared/schema.js';
+import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD } from '../shared/schema.js';
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
 
@@ -61,14 +61,22 @@ export function Country({ boot, session, onRefresh }) {
   );
 }
 
+const EMPTY_APP = {
+  name: '', category: GRANT_CATEGORIES[0], requestType: '', team: '', projectLead: '', start: '', end: '',
+  problem: '', people: '', leaders: '', churches: '',
+  requested: '', totalBudget: '', otherFunding: '', receivedFunds: '', unusedFunds: '',
+  objective: '', objective2: '', objective3: '',
+  strategicFit: '', success: '', sustainability: '', checklist: [],
+};
+
 function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
   const only = myCountryIds.length === 1 ? myCountryIds[0] : '';
-  const [v, setV] = useState({ name: '', category: GRANT_CATEGORIES[0], requested: '', totalBudget: '',
-    problem: '', people: '', leaders: '', churches: '', objective: '', success: '', sustainability: '', countryId: only });
+  const [v, setV] = useState({ ...EMPTY_APP, countryId: only });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
   const set = (k, val) => setV(s => ({ ...s, [k]: val }));
+  const toggleCheck = c => setV(s => ({ ...s, checklist: s.checklist.includes(c) ? s.checklist.filter(x => x !== c) : [...s.checklist, c] }));
 
   async function submit() {
     if (!v.name.trim()) { setErr('Give your project a name.'); return; }
@@ -76,10 +84,7 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
     if (!v.countryId) { setErr('Choose your country.'); return; }
     setBusy(true); setErr('');
     try {
-      await api('submit_application', { countryId: v.countryId, fields: {
-        name: v.name, category: v.category, requested: v.requested, totalBudget: v.totalBudget,
-        problem: v.problem, people: v.people, leaders: v.leaders, churches: v.churches,
-        objective: v.objective, success: v.success, sustainability: v.sustainability } });
+      await api('submit_application', { countryId: v.countryId, fields: v });
       setDone(true); onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not submit.'); setBusy(false); }
   }
@@ -95,6 +100,7 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
           </div>
         ) : (
           <div class="formbody">
+            <div class="formsec">The basics</div>
             {myCountryIds.length !== 1 && (
               <Fld label="Country"><select value={v.countryId} onChange={e => set('countryId', e.currentTarget.value)}>
                 <option value="">— choose —</option>
@@ -105,21 +111,59 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
             <div class="fldrow">
               <Fld label="Category"><select value={v.category} onChange={e => set('category', e.currentTarget.value)}>
                 {GRANT_CATEGORIES.map(c => <option value={c}>{c}</option>)}</select></Fld>
-              <Fld label="Amount requesting"><div class="moneyin"><span>$</span><input type="number" step="50" value={v.requested} onInput={e => set('requested', e.currentTarget.value)} /></div></Fld>
+              <Fld label="Impact area"><select value={v.requestType} onChange={e => set('requestType', e.currentTarget.value)}>
+                <option value="">— choose —</option>
+                {REQUEST_TYPES.map(t => <option value={t}>{t.trim()}</option>)}</select></Fld>
             </div>
-            <Fld label="What problem or need does this address?"><textarea rows="2" value={v.problem} onInput={e => set('problem', e.currentTarget.value)} /></Fld>
+            <div class="fldrow">
+              <Fld label="Team or department"><input value={v.team} onInput={e => set('team', e.currentTarget.value)} /></Fld>
+              <Fld label="Project lead"><input value={v.projectLead} onInput={e => set('projectLead', e.currentTarget.value)} /></Fld>
+            </div>
+            <div class="fldrow">
+              <Fld label="Start date"><input type="date" value={v.start} onInput={e => set('start', e.currentTarget.value)} /></Fld>
+              <Fld label="End date"><input type="date" value={v.end} onInput={e => set('end', e.currentTarget.value)} /></Fld>
+            </div>
+
+            <div class="formsec">The need &amp; who it reaches</div>
+            <Fld label="What specific problem or need does this project address?"><textarea rows="2" value={v.problem} onInput={e => set('problem', e.currentTarget.value)} /></Fld>
             <div class="fldrow3">
               <Fld label="People impacted"><input type="number" value={v.people} onInput={e => set('people', e.currentTarget.value)} /></Fld>
               <Fld label="Leaders impacted"><input type="number" value={v.leaders} onInput={e => set('leaders', e.currentTarget.value)} /></Fld>
               <Fld label="Churches impacted"><input type="number" value={v.churches} onInput={e => set('churches', e.currentTarget.value)} /></Fld>
             </div>
+
+            <div class="formsec">Budget</div>
             <div class="fldrow">
+              <Fld label="Amount requesting from the grant"><div class="moneyin"><span>$</span><input type="number" step="50" value={v.requested} onInput={e => set('requested', e.currentTarget.value)} /></div></Fld>
               <Fld label="Total project budget"><div class="moneyin"><span>$</span><input type="number" step="50" value={v.totalBudget} onInput={e => set('totalBudget', e.currentTarget.value)} /></div></Fld>
-              <div></div>
             </div>
-            <Fld label="Main objective"><textarea rows="2" value={v.objective} onInput={e => set('objective', e.currentTarget.value)} /></Fld>
-            <Fld label="How will you measure success?"><textarea rows="2" value={v.success} onInput={e => set('success', e.currentTarget.value)} /></Fld>
-            <Fld label="How will it continue after the grant ends?"><textarea rows="2" value={v.sustainability} onInput={e => set('sustainability', e.currentTarget.value)} /></Fld>
+            <Fld label="Other sources of funding for this project (if any)"><textarea rows="2" value={v.otherFunding} onInput={e => set('otherFunding', e.currentTarget.value)} /></Fld>
+            <div class="fldrow">
+              <Fld label="Received funds for this (or a similar) project in the last 2 years?"><select value={v.receivedFunds} onChange={e => set('receivedFunds', e.currentTarget.value)}>
+                <option value="">—</option>{YESNO.map(o => <option value={o}>{o}</option>)}</select></Fld>
+              <Fld label="Have unused funds from other projects?"><select value={v.unusedFunds} onChange={e => set('unusedFunds', e.currentTarget.value)}>
+                <option value="">—</option>{YESNO_MPD.map(o => <option value={o}>{o}</option>)}</select></Fld>
+            </div>
+
+            <div class="formsec">Objectives</div>
+            <Fld label="Objective 1"><textarea rows="2" value={v.objective} onInput={e => set('objective', e.currentTarget.value)} /></Fld>
+            <Fld label="Objective 2"><textarea rows="2" value={v.objective2} onInput={e => set('objective2', e.currentTarget.value)} /></Fld>
+            <Fld label="Objective 3"><textarea rows="2" value={v.objective3} onInput={e => set('objective3', e.currentTarget.value)} /></Fld>
+
+            <div class="formsec">The plan</div>
+            <Fld label="How does this project fit into your strategic plans?"><textarea rows="2" value={v.strategicFit} onInput={e => set('strategicFit', e.currentTarget.value)} /></Fld>
+            <Fld label="How will the success of the project be measured?"><textarea rows="2" value={v.success} onInput={e => set('success', e.currentTarget.value)} /></Fld>
+            <Fld label="How will the project be sustained after the grant ends?"><textarea rows="2" value={v.sustainability} onInput={e => set('sustainability', e.currentTarget.value)} /></Fld>
+
+            <div class="formsec">Your own assessment</div>
+            <div class="checklist">
+              {APPLICANT_CHECKLIST.map(c => (
+                <label class={`check${v.checklist.includes(c) ? ' on' : ''}`} key={c}>
+                  <input type="checkbox" checked={v.checklist.includes(c)} onChange={() => toggleCheck(c)} /><span>{c}</span>
+                </label>
+              ))}
+            </div>
+
             {err && <div class="editerr">{err}</div>}
             <div class="modal-foot dim">A 10% grant fee is taken from the amount awarded.</div>
             <div class="dc-confirm">

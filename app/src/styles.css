@@ -264,6 +264,9 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .formbody .moneyin input { padding-left:24px; font-family:'IBM Plex Mono',monospace; }
 .fldrow3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
 @media(max-width:520px){ .fldrow3{ grid-template-columns:1fr; } }
+.formsec { font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin:20px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+.formsec:first-child { margin-top:0; }
+.formbody .checklist .check { font-size:13px; }
 
 /* ── management / reconcile ── */
 .curbal { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
