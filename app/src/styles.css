@@ -256,9 +256,10 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .ghostbtn.big, .btn-approve { padding:10px 18px; font-size:14px; }
 .formbody { padding:14px 24px 22px; }
 .formbody .fld { display:block; margin-bottom:13px; }
-.formbody input, .formbody select, .formbody textarea {
+.formbody input:not([type=checkbox]):not([type=radio]), .formbody select, .formbody textarea {
   width:100%; padding:10px 12px; border:1px solid var(--line-d); border-radius:9px;
   font-family:inherit; font-size:14.5px; background:#fff; color:var(--ink); }
+.formbody .check input[type=checkbox] { width:auto; flex:0 0 auto; margin-top:2px; accent-color:var(--green); }
 .formbody textarea { resize:vertical; line-height:1.5; }
 .formbody input:focus, .formbody select:focus, .formbody textarea:focus { outline:none; border-color:var(--orange); }
 .formbody .moneyin input { padding-left:24px; font-family:'IBM Plex Mono',monospace; }
