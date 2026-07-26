@@ -6,6 +6,7 @@ import { SignIn } from './views/SignIn.jsx';
 import { GrantTeam } from './views/GrantTeam.jsx';
 import { Council } from './views/Council.jsx';
 import { Foundations } from './views/Foundations.jsx';
+import { Reports } from './views/Reports.jsx';
 
 // The workspace tabs and which roles can open each. A role with no match falls
 // back to seeing everything (useful before roles are fully populated).
@@ -13,6 +14,7 @@ const TABS = [
   { key: 'council',     label: 'Council',     roles: ['evp', 'president'] },
   { key: 'grant',       label: 'Grant Team',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
+  { key: 'reports',     label: 'Reports',     roles: ['evp', 'president', 'grant', 'cfo'] },
 ];
 
 export function App() {
@@ -80,6 +82,7 @@ export function Workspace({ boot, session, onRefresh }) {
       {tab === 'council' && <Council boot={boot} onRefresh={onRefresh} />}
       {tab === 'grant' && <GrantTeam boot={boot} session={session} onRefresh={onRefresh} />}
       {tab === 'foundations' && <Foundations boot={boot} />}
+      {tab === 'reports' && <Reports boot={boot} />}
     </div>
   );
 }

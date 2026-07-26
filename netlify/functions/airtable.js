@@ -225,11 +225,18 @@ exports.handler = async (event) => {
       const reports = reportRecs.map(r => {
         const link = r.fields['fldWLpL3N2yIRfn0t'];
         const t = r.fields['fldVK0eF1dBGNnMG0'];
+        const completedBy = r.fields['fldemspw6LSoGMnIQ'] || '';
         return {
+          id: r.id,
           proposalId: (Array.isArray(link) && link.length) ? link[0] : '',
           type: (t && (t.name || (typeof t === 'string' ? t : ''))) || '',
+          due: r.fields['fldkjC4V3NmC4ylDy'] || '',
           submitted: r.fields['fldTytlPqwAo01YtX'] || '',
-          due: r.fields['fldkjC4V3NmC4ylDy'] || ''
+          completedBy,
+          done: !!completedBy,                 // reliable "actually submitted" signal
+          leaders: r.fields['fldP8DjBL1S5l1WWA'] || 0,
+          churches: r.fields['fldkksYMIC3YMdsNx'] || 0,
+          people: r.fields['fldisUoMECHpHZwp5'] || 0
         };
       }).filter(x => x.proposalId);
       const countries_meta = countryRecs.map(r => {

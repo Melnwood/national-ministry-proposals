@@ -215,3 +215,13 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .grants-toggle { margin-top:16px; font-family:inherit; font-size:13px; font-weight:600; color:var(--ink-soft);
   background:none; border:none; cursor:pointer; padding:0; }
 .grants-toggle:hover { color:var(--orange); }
+
+/* ── report tracking ── */
+.kind { display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; }
+.kind.mid { background:#DEE9F6; color:#345; }
+.kind.final { background:#EBE0F7; color:#63369a; }
+.rbadge { display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+.rbadge.overdue { background:#F6DDD3; color:#9A2E22; }
+.rbadge.due-soon { background:#FBF0D8; color:#7a5410; }
+.rbadge.upcoming { background:var(--line); color:var(--ink-soft); }
+.rbadge.submitted { background:var(--green-soft); color:var(--green-d); }
