@@ -52,6 +52,8 @@ export const F = {
     dateFunded:      'fldvXoWNaxcBX8qXq',
     budgetFiles:     'fld3cTDxR62CssdGY', // Budget breakdown (attachments)
     notes:           'fldYl71wMPNhPB2Ce',
+    decisionMessage: 'fldt1Hu5YY1ZvvqMD', // Council's message to the country (approve/defer/deny)
+    lastConfirmed:   'fldfglTUkyAGpIRf7', // When the country last confirmed a parked project
     problem:         'fldb0TRzRi1nzkN7v', // What problem/need does this address?
     peopleImpact:    'fld8CdQ8Ens5m3NDs', // How many people directly impacted? (target)
     leadersImpact:   'fldc2XplvqvAX8NlX', // How many leaders directly impacted? (target)

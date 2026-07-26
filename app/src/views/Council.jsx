@@ -49,6 +49,7 @@ function DecisionCard({ p, cycles, onDone }) {
     setBusy(true); setErr('');
     const fields = {}; const changes = [];
     const name = projectName(p);
+    if (message.trim()) fields[F.proposal.decisionMessage] = message.trim();
     if (kind === 'approve') {
       fields[F.proposal.stage] = 'Grant Team Approved';
       fields[F.proposal.awarded] = Number(amount) || 0;
@@ -59,6 +60,7 @@ function DecisionCard({ p, cycles, onDone }) {
     } else if (kind === 'defer') {
       fields[F.proposal.stage] = 'Approved — Deferred';
       if (amount) fields[F.proposal.awarded] = Number(amount) || 0;
+      fields[F.proposal.lastConfirmed] = new Date().toISOString().slice(0, 10);
       changes.push({ type: 'Status change', label: 'Approved — deferred',
         detail: `Council approved ${name} but deferred funding to a later cycle${message ? ` — ${message}` : ''}` });
     } else if (kind === 'deny') {

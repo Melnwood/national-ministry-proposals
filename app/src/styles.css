@@ -233,3 +233,18 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .check:hover { border-color:var(--line-d); }
 .check.on { border-color:var(--green); background:var(--green-soft); }
 .check input { margin-top:2px; accent-color:var(--green); flex:0 0 auto; }
+
+/* ── country view ── */
+.dcard.denied { border-left:4px solid var(--red); }
+.denybanner { margin-top:14px; background:#FBEAE3; border:1px solid #E7C3B4; border-radius:10px; padding:14px 16px; }
+.denybanner .dt { color:var(--red); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+.denybanner p { font-size:14px; line-height:1.5; color:#7a2e1c; }
+.deferbox { margin-top:14px; background:#EFE7F8; border:1px solid #D8C7EC; border-radius:10px; padding:14px 16px;
+  display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.deferbox .dt { color:#63369a; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+.deferbox p { font-size:13.5px; line-height:1.5; color:var(--ink-soft); max-width:520px; }
+.confirmnote { font-size:12px; color:var(--muted); margin-top:8px; }
+.confirmnote.stale { color:var(--red); font-weight:600; }
+.reports-mini { margin-top:14px; }
+.reports-mini .dt { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+.rmini-row { display:flex; gap:10px; align-items:center; font-size:13px; padding:4px 0; }
