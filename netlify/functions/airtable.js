@@ -313,6 +313,30 @@ exports.handler = async (event) => {
       return reply(200, { fields:upd.fields, user:who });
     }
 
+    if(body.op === 'set_balance'){
+      // Update the account balance from the monthly CSV reconcile (EVP/Management).
+      if(body.balance == null) return reply(400, { error:'Missing balance.' });
+      const B = { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' };
+      const fields = { [B.balance]:Number(body.balance) };
+      if(body.asOf) fields[B.asOf] = body.asOf;
+      if(body.note != null) fields[B.note] = String(body.note);
+      const existing = await fetchAll(T_BAL, {});
+      let rec;
+      if(existing.length){
+        rec = await at(BASE+'/'+T_BAL+'/'+existing[0].id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      } else {
+        if(!fields[B.account]) fields[B.account] = '510181 - National Expansion Projects';
+        const created = await at(BASE+'/'+T_BAL, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+        rec = created.records && created.records[0];
+      }
+      try{
+        await writeLog([{ fields:{ [L.entry]:'Account balance updated', [L.type]:'Status change',
+          [L.detail]:(who.name||who.email)+' set the account balance to $'+Number(body.balance).toLocaleString('en-US')+(body.asOf?(' as of '+body.asOf):''),
+          [L.user]:who.name||'', [L.email]:who.email||'' } }]);
+      }catch(logErr){ /* best effort */ }
+      return reply(200, { ok:true, balance:Number(body.balance), asOf:body.asOf||'', user:who });
+    }
+
     if(body.op === 'delete'){
       if(!body.recordId) return reply(400, { error:'Missing recordId.' });
       await at(BASE+'/'+T_PROP+'/'+body.recordId, { method:'DELETE' });

@@ -248,3 +248,16 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .reports-mini { margin-top:14px; }
 .reports-mini .dt { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
 .rmini-row { display:flex; gap:10px; align-items:center; font-size:13px; padding:4px 0; }
+
+/* ── management / reconcile ── */
+.curbal { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+.filebtn { display:inline-block; padding:11px 18px; border:1px solid var(--orange); color:var(--orange); background:var(--orange-soft);
+  border-radius:9px; font-weight:700; font-size:14px; cursor:pointer; }
+.filebtn:hover { filter:brightness(.98); }
+.okmsg { margin-top:14px; background:var(--green-soft); border:1px solid #bfe0cf; color:var(--green-d); border-radius:9px; padding:10px 13px; font-size:13.5px; }
+.reconcile { margin-top:18px; border-top:1px dashed var(--line-d); padding-top:16px; }
+.rec-summary { display:flex; gap:30px; flex-wrap:wrap; }
+.cstat-v.big { font-size:22px; color:var(--green); }
+td.ok { color:var(--green); }
+.flag-mini { display:inline-block; margin-left:8px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+  background:#F6DDD3; color:#9A2E22; padding:1px 6px; border-radius:5px; }
