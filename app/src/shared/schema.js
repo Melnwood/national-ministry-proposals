@@ -116,6 +116,10 @@ export const STAGES = [
 ];
 
 export const STAGE_BY_KEY = Object.fromEntries(STAGES.map(s => [s.key, s]));
+export const STAGE_BY_LABEL = Object.fromEntries(STAGES.map(s => [s.label, s]));
+// The active pipeline (excludes terminal outcomes) — used for the funnel view.
+export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','grantApproved','fundsFound','cfo','accounting'];
+export const TERMINAL_STAGE_KEYS = ['funded','denied','archived'];
 // Reverse lookup: legacy Status text (trimmed) → canonical stage key.
 export const LEGACY_STATUS_TO_STAGE = STAGES.reduce((m, s) => {
   s.legacy.forEach(v => { m[v.trim()] = s.key; });
