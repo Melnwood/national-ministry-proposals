@@ -91,7 +91,7 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
 
   return (
     <div class="modal-scrim" onClick={onClose}>
-      <div class="modal" onClick={e => e.stopPropagation()}>
+      <div class="modal wide" onClick={e => e.stopPropagation()}>
         <div class="modal-head"><div><h2>Apply for a project grant</h2></div><button class="ghostbtn" onClick={onClose}>Close ✕</button></div>
         {done ? (
           <div style="padding:8px 24px 24px">
@@ -200,7 +200,7 @@ function TravelGrantForm({ user, onClose }) {
 
   return (
     <div class="modal-scrim" onClick={onClose}>
-      <div class="modal" onClick={e => e.stopPropagation()}>
+      <div class="modal wide" onClick={e => e.stopPropagation()}>
         <div class="modal-head"><div><h2>Apply for a travel grant</h2><div class="sub2">SouthEast Christian travel fund</div></div><button class="ghostbtn" onClick={onClose}>Close ✕</button></div>
         {done ? (
           <div style="padding:8px 24px 24px">
