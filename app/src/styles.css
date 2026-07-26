@@ -478,3 +478,6 @@ table.history td.nm { font-weight:600; }
 .ch-total { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:16px; color:var(--green-d); font-variant-numeric:tabular-nums; flex:0 0 auto; }
 .ch-acc-body { border-top:1px solid var(--line); }
 .ch-acc-body table { margin:0; }
+
+.ch-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+.ch-cycle { font-size:12.5px; font-weight:600; color:var(--orange); white-space:nowrap; flex:0 0 auto; }

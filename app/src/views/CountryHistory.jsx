@@ -86,25 +86,35 @@ function ByPhase({ phases, currentYear, priorYear }) {
 }
 
 function ByCountry({ countries }) {
+  const [open, setOpen] = useState(() => new Set());
   if (!countries.length) return <div class="panel"><p style="color:var(--muted)">No grant history yet.</p></div>;
+
+  const allOpen = open.size >= countries.length;
+  const toggle = name => setOpen(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; });
+
   return (
     <>
-      <p class="lead">Each country with its total. Click one to open it and see every grant it's received, from the beginning.</p>
+      <div class="ch-toolbar">
+        <p class="lead" style="margin:0">Each country with its total. Click one to open it and see every grant it's received, from the beginning.</p>
+        <button class="linkbtn" onClick={() => setOpen(allOpen ? new Set() : new Set(countries.map(c => c.name)))}>
+          {allOpen ? 'Collapse all' : 'Expand all'}
+        </button>
+      </div>
       <div class="ch-list">
-        {countries.map(c => <CountryAccordion key={c.name} c={c} />)}
+        {countries.map(c => <CountryAccordion key={c.name} c={c} open={open.has(c.name)} onToggle={() => toggle(c.name)} />)}
       </div>
     </>
   );
 }
 
-function CountryAccordion({ c }) {
-  const [open, setOpen] = useState(false);
+function CountryAccordion({ c, open, onToggle }) {
   return (
     <div class={`ch-acc${open ? ' open' : ''}`}>
-      <button class="ch-acc-head" onClick={() => setOpen(o => !o)}>
+      <button class="ch-acc-head" onClick={onToggle}>
         <span class="ch-chev">{open ? '▾' : '▸'}</span>
         <span class="ch-name">{c.name}</span>
         <span class="ch-sub">{c.phase} · {c.count} {c.count === 1 ? 'grant' : 'grants'}</span>
+        {c.current ? <span class="ch-cycle">{money(c.current)} this cycle</span> : null}
         <span class="ch-total">{money(c.total)}</span>
       </button>
       {open && (
