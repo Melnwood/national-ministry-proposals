@@ -165,8 +165,7 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
             </div>
 
             {err && <div class="editerr">{err}</div>}
-            <div class="modal-foot dim">A 10% grant fee is taken from the amount awarded.</div>
-            <div class="dc-confirm">
+            <div class="dc-confirm" style="margin-top:16px">
               <button class="ghostbtn" onClick={onClose} disabled={busy}>Cancel</button>
               <button class="savebtn" onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit application'}</button>
             </div>
