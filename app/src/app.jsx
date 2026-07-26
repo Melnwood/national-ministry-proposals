@@ -10,6 +10,7 @@ import { Reports } from './views/Reports.jsx';
 import { Coach } from './views/Coach.jsx';
 import { Country } from './views/Country.jsx';
 import { Management } from './views/Management.jsx';
+import { CountryHistory } from './views/CountryHistory.jsx';
 import { Accounting } from './views/Accounting.jsx';
 import { NotificationBell } from './views/NotificationBell.jsx';
 
@@ -26,6 +27,7 @@ const TABS = [
   { key: 'accounting',  label: 'Accounting',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'reports',     label: 'Reports',     roles: ['evp', 'president', 'grant', 'cfo'] },
+  { key: 'history',     label: 'Country History', roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'manage',      label: 'Management',  roles: ['evp'] },
 ];
 
@@ -136,6 +138,7 @@ export function Workspace({ boot, session, onRefresh }) {
       {tab === 'accounting' && <Accounting boot={boot} session={viewSession} onRefresh={onRefresh} />}
       {tab === 'foundations' && <Foundations boot={boot} />}
       {tab === 'reports' && <Reports boot={boot} />}
+      {tab === 'history' && <CountryHistory boot={boot} />}
       {tab === 'manage' && <Management boot={boot} onRefresh={onRefresh} />}
     </div>
   );

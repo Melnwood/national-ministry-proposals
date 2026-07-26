@@ -457,3 +457,8 @@ table.ongoing td.nm { font-weight:600; }
   display:flex; align-items:center; justify-content:center;
 }
 .rp-photo.ph span { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+
+/* ── Country history dashboard ── */
+table.history tr.zero td { color:var(--muted); }
+table.history tr.zero td.nm { font-weight:400; }
+table.history td.nm { font-weight:600; }
