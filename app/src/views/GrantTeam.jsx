@@ -3,11 +3,13 @@ import { api } from '../shared/api.js';
 import { money, date, aval } from '../shared/format.js';
 import { STAGES, STAGE_BY_KEY, ACTIVE_STAGE_KEYS, TERMINAL_STAGE_KEYS, F } from '../shared/schema.js';
 import { moneySummary, byStage, projectName, country, coach, requested, awarded, paid, owed, stageKey, stageLabel } from '../shared/grants.js';
+import { FoundationReport } from './FoundationReport.jsx';
 
 export function GrantTeam({ boot, session, onRefresh }) {
   const props = boot.props || [];
   const [filter, setFilter] = useState(null);   // stage key, or null = all
   const [openId, setOpenId] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const summary = useMemo(() => moneySummary(props, boot.bal), [props, boot.bal]);
   const { groups } = useMemo(() => byStage(props), [props]);
@@ -28,6 +30,10 @@ export function GrantTeam({ boot, session, onRefresh }) {
 
   return (
     <>
+      <div class="gt-actions">
+        <button class="reportbtn" onClick={() => setReportOpen(true)}>📄 Foundation report</button>
+      </div>
+
       {/* Money picture */}
       <section class="money">
         <div class="mtile">
@@ -93,6 +99,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
       </div>
 
       {openGrant && <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />}
+      {reportOpen && <FoundationReport boot={boot} onClose={() => setReportOpen(false)} />}
     </>
   );
 }

@@ -324,3 +324,97 @@ td.ok { color:var(--green); }
 .bell-dot.t-decision { background:var(--blue,#436A8A); }
 .bell-msg { line-height:1.4; }
 .bell-when { font-size:11.5px; color:var(--muted); margin-top:3px; }
+
+/* ── Foundation report ── */
+.gt-actions { display:flex; justify-content:flex-end; margin-bottom:14px; }
+.reportbtn {
+  background:var(--paper-2); border:1px solid var(--line-d); border-radius:10px;
+  padding:9px 15px; font-family:inherit; font-size:14px; font-weight:600; color:var(--ink);
+  cursor:pointer; box-shadow:var(--shadow);
+}
+.reportbtn:hover { border-color:var(--orange); color:var(--orange); }
+
+.report-scrim {
+  position:fixed; inset:0; background:rgba(31,42,36,.42); z-index:60;
+  display:flex; align-items:flex-start; justify-content:center; padding:26px 16px; overflow:auto;
+}
+.report-wrap {
+  background:var(--paper-2); border:1px solid var(--line); border-radius:16px;
+  width:100%; max-width:800px; box-shadow:var(--shadow); overflow:hidden;
+}
+.report-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; border-bottom:1px solid var(--line); background:var(--paper);
+}
+.rb-title { font-weight:700; font-size:15px; }
+.rb-right { display:flex; gap:8px; }
+
+.report-picker { padding:28px 30px 34px; }
+.report-picker h2 { font-family:'Fraunces',serif; font-weight:600; font-size:23px; margin-bottom:6px; }
+.report-picker .lead { color:var(--ink-soft); font-size:14.5px; margin-bottom:20px; max-width:56ch; }
+.report-picker .fld { display:block; margin-bottom:16px; }
+.savebtn.big { padding:12px 22px; font-size:15px; margin-top:6px; }
+
+/* the printable document */
+.reportpage { padding:38px 44px 30px; background:#fff; color:var(--ink); }
+.rp-head { text-align:center; border-bottom:2px solid var(--line-d); padding-bottom:20px; margin-bottom:22px; }
+.rp-mark {
+  width:44px; height:44px; border-radius:11px; background:var(--orange); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Fraunces',serif; font-weight:600; font-size:21px; margin:0 auto 10px;
+}
+.rp-org { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.rp-head h1 { font-family:'Fraunces',serif; font-weight:600; font-size:34px; margin:6px 0 4px; }
+.rp-for { font-size:15px; color:var(--ink-soft); }
+.rp-intro { font-size:15.5px; line-height:1.65; margin-bottom:22px; text-align:center; max-width:60ch; margin-left:auto; margin-right:auto; }
+
+.rp-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+.rp-tile { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px 14px; text-align:center; }
+.rp-tile-n { font-family:'Fraunces',serif; font-weight:600; font-size:26px; color:var(--green-d); line-height:1.1; }
+.rp-tile-l { font-size:12.5px; color:var(--muted); margin-top:4px; }
+.rp-countries { font-size:13.5px; color:var(--ink-soft); margin-bottom:26px; }
+.rp-countries .dt { display:inline; font-weight:700; color:var(--ink); margin-right:6px; }
+
+.rp-sec { margin-bottom:26px; }
+.rp-sec h2 { font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+.rp-sec-head { display:flex; align-items:center; justify-content:space-between; }
+.rp-sec-head h2 { flex:1; }
+
+.rp-goals, .rp-projects { width:100%; border-collapse:collapse; font-size:14px; }
+.rp-goals th, .rp-projects th { text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--line); }
+.rp-goals td, .rp-projects td { padding:8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+.rp-goals .r, .rp-projects .r { text-align:right; }
+.rp-barwrap { display:inline-block; width:70px; height:7px; background:var(--line); border-radius:4px; overflow:hidden; vertical-align:middle; margin-right:7px; }
+.rp-bar { height:100%; background:var(--green); }
+.rp-pct { font-size:12.5px; color:var(--ink-soft); }
+.rp-projects .rp-total td { border-top:2px solid var(--line-d); border-bottom:none; }
+
+.rp-summary { font-size:15px; line-height:1.7; margin-bottom:12px; }
+.rp-note { font-size:14px; color:var(--ink-soft); background:var(--paper); border:1px dashed var(--line-d); border-radius:10px; padding:12px 14px; }
+
+.rp-story { border-left:3px solid var(--orange-soft); padding:2px 0 2px 16px; margin-bottom:20px; }
+.rp-story-head { margin-bottom:6px; }
+.rp-cty { color:var(--ink-soft); }
+.rp-kind { display:inline-block; margin-left:8px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border:1px solid var(--line); border-radius:20px; padding:1px 8px; }
+.rp-lead-para { font-size:14.5px; line-height:1.65; margin-bottom:8px; }
+.rp-obj { font-size:14px; line-height:1.6; color:var(--ink-soft); margin-bottom:5px; }
+.rp-mini { font-size:13.5px; line-height:1.55; color:var(--ink-soft); margin-bottom:5px; }
+.rp-mini .dt, .rp-obj .dt { font-weight:700; color:var(--ink); margin-right:5px; }
+.rp-story-nums { display:flex; gap:14px; margin-top:6px; }
+.rp-story-nums span { font-size:12.5px; font-weight:600; color:var(--green-d); }
+
+.rp-foot { text-align:center; font-size:14px; color:var(--ink-soft); border-top:2px solid var(--line-d); padding-top:18px; margin-top:10px; font-style:italic; }
+.rp-org2 { font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:8px; font-style:normal; }
+
+@media (max-width:640px) { .rp-tiles { grid-template-columns:repeat(2,1fr); } .reportpage { padding:26px 20px; } }
+
+@media print {
+  body * { visibility:hidden !important; }
+  .reportpage, .reportpage * { visibility:visible !important; }
+  .report-scrim { position:absolute; inset:0; padding:0; background:#fff; overflow:visible; }
+  .report-wrap { max-width:none; border:none; box-shadow:none; border-radius:0; }
+  .reportpage { position:absolute; left:0; top:0; width:100%; padding:0 12px; }
+  .noprint { display:none !important; }
+  .rp-tile, .rp-story { break-inside:avoid; }
+  .rp-sec { break-inside:avoid-page; }
+}

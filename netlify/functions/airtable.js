@@ -218,6 +218,123 @@ async function notifyEvent(event, recordId, opts={}){
   }
 }
 
+// ── Foundation report ─────────────────────────────────────────────────────────
+// Gathers everything an outward-facing stewardship report needs for one grant
+// cycle: the gift, how it was used, impact numbers vs. the foundation's goals,
+// and the narrative field-reports (impact stories, lessons, progress) written by
+// the country teams. Joins are by record-id link, never by name.
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const RF = { proposal:'fldWLpL3N2yIRfn0t', cycle:'fldKa2XwRf3vLTdhW', type:'fldVK0eF1dBGNnMG0',
+  completedBy:'fldemspw6LSoGMnIQ', story:'fldoOYDPd2tbnzvgC', challenges:'fldqkWPn3hAFQXoFu',
+  lessons:'fldpM9VAWPVjMeUCm', nextSteps:'fld8gyR2KNGkiDG44', comments:'fldrm8Cyk8Z1lA1vy',
+  spent:'fld25e4OC4ObhbyZw', people:'fldisUoMECHpHZwp5', leaders:'fldP8DjBL1S5l1WWA', churches:'fldkksYMIC3YMdsNx',
+  prog1:'fldFhbKWiC1KjMiMh', prog2:'fldxr8mGkdALSFJPW', prog3:'fld53pqkxduIIDSzM' };
+const CYF = { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz' };
+const PPF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
+  requested:'fld3bvuKr1SIXAwUf', stage:STAGE_F, cycles:'flda02NPGg4TFd8wp' };
+const GLF = { type:'fldynRy5JVc8MHzmn', target:'fldC8KQzgngaBtmmL', actual:'fldrzoRt4JsDZb8gQ', cycle:'fldvzwukj9URXZoG7' };
+const sname = x => (x && (x.name || (typeof x === 'string' ? x : ''))) || '';
+const nnum  = x => { const n = Number(x); return isNaN(n) ? 0 : n; };
+const linkHas = (v, id) => Array.isArray(v) && v.some(x => (((x && x.id) ? x.id : x)) === id);
+
+async function gatherCycle(cycleId){
+  const cycleRec = await at(BASE+'/'+T_CYCLE+'/'+cycleId+'?returnFieldsByFieldId=true');
+  const cf = cycleRec.fields || {};
+  const [allProps, allReports, allGoals] = await Promise.all([
+    fetchAll(T_PROP, {}), fetchAll(T_REPORT, {}), fetchAll(T_GOALS, {})
+  ]);
+  const props   = allProps.filter(p => linkHas(p.fields[PPF.cycles], cycleId));
+  const reports = allReports.filter(r => linkHas(r.fields[RF.cycle], cycleId));
+  const goals   = allGoals.filter(g => linkHas(g.fields[GLF.cycle], cycleId));
+  const propById = Object.fromEntries(props.map(p => [p.id, p]));
+
+  const funded = props.filter(p => sname(p.fields[PPF.stage]) === 'Funded');
+  const countries = [...new Set(props.map(p => (p.fields[PPF.country] || '').toString().trim()).filter(Boolean))].sort();
+
+  const projects = props.map(p => ({
+    name: p.fields[PPF.name] || '(untitled)',
+    country: (p.fields[PPF.country] || '').toString(),
+    awarded: nnum(p.fields[PPF.awarded]),
+    requested: nnum(p.fields[PPF.requested]),
+    stage: sname(p.fields[PPF.stage]),
+  })).sort((a, b) => b.awarded - a.awarded);
+
+  const stories = reports.map(r => {
+    const rf = r.fields || {};
+    const link = rf[RF.proposal] || [];
+    const propId = (Array.isArray(link) && link.length) ? (((link[0] && link[0].id) ? link[0].id : link[0])) : '';
+    const p = propById[propId];
+    const objectives = [rf[RF.prog1], rf[RF.prog2], rf[RF.prog3]].map(x => (x || '').trim()).filter(Boolean);
+    return {
+      name: p ? (p.fields[PPF.name] || '') : '(a funded project)',
+      country: p ? (p.fields[PPF.country] || '').toString() : '',
+      kind: /final/i.test(sname(rf[RF.type])) ? 'Final' : /mid/i.test(sname(rf[RF.type])) ? 'Mid' : sname(rf[RF.type]),
+      completedBy: rf[RF.completedBy] || '',
+      story: (rf[RF.story] || '').trim(),
+      challenges: (rf[RF.challenges] || '').trim(),
+      lessons: (rf[RF.lessons] || '').trim(),
+      nextSteps: (rf[RF.nextSteps] || '').trim(),
+      comments: (rf[RF.comments] || '').trim(),
+      objectives,
+      leaders: nnum(rf[RF.leaders]), churches: nnum(rf[RF.churches]), people: nnum(rf[RF.people]),
+    };
+  }).filter(s => s.story || s.lessons || s.challenges || s.nextSteps || s.comments || s.objectives.length);
+
+  const goalRows = goals.map(g => {
+    const type = sname(g.fields[GLF.type]);
+    const rollup = nnum(g.fields[GLF.actual]);
+    return { type, target: nnum(g.fields[GLF.target]), actual: /project/i.test(type) ? funded.length : rollup };
+  }).sort((a, b) => b.target - a.target);
+
+  const sumReports = key => reports.reduce((a, r) => a + nnum(r.fields[RF[key]]), 0);
+
+  return {
+    cycle: { id: cycleId, foundation: sname(cf[CYF.foundation]) || 'This foundation', year: cf[CYF.name] || '', gift: nnum(cf[CYF.total]) },
+    totals: {
+      awarded: props.reduce((a, p) => a + nnum(p.fields[PPF.awarded]), 0),
+      projectCount: props.length, fundedCount: funded.length, countryCount: countries.length,
+      leaders: sumReports('leaders'), churches: sumReports('churches'), people: sumReports('people'),
+    },
+    countries, goals: goalRows, projects, stories,
+  };
+}
+
+// Ask Claude to write the donor-facing impact narrative from the field reports.
+// Guarded: a no-op returning null until ANTHROPIC_API_KEY is set in Netlify.
+async function writeImpactSummary(data){
+  if(!ANTHROPIC_KEY) return null;
+  const t = data.totals || {}, c = data.cycle || {};
+  const stories = (data.stories || []).slice(0, 40).map(s => {
+    const parts = [`PROJECT: ${s.name}${s.country ? ' — ' + s.country : ''}`];
+    if(s.story)      parts.push(`Impact story: ${s.story}`);
+    if(s.objectives && s.objectives.length) parts.push(`Progress: ${s.objectives.join(' | ')}`);
+    if(s.lessons)    parts.push(`Lessons learned: ${s.lessons}`);
+    if(s.challenges) parts.push(`Challenges: ${s.challenges}`);
+    return parts.join('\n');
+  }).join('\n\n');
+  const facts = `The foundation is "${c.foundation}". Their grant for ${c.year || 'this cycle'} was ${usd(c.gift)}. `
+    + `It funded ${t.fundedCount} project(s) across ${t.countryCount} countries. `
+    + `Across the field reports, the funded work has so far impacted ${t.leaders} leaders, ${t.churches} churches, and ${t.people} people.`;
+  const prompt = `You are writing a warm, sincere impact/stewardship report addressed directly to a foundation that gave money to Josiah Venture's national ministry work in Central and Eastern Europe. The purpose is to help the foundation see how their gift was used and the real impact it made possible.
+
+Facts you may use (do not invent numbers or facts beyond these and the reports):
+${facts}
+
+Field reports from the country teams:
+${stories || '(No narrative field reports were submitted yet.)'}
+
+Write 3–4 short paragraphs, addressed to the foundation ("your gift", "because of your partnership"). (1) Open with genuine thanks. (2) Tell the story of the impact their money made possible, in human terms, drawing specifics from the reports above. (3) Name one or two specific projects or moments from the reports. (4) Close with gratitude and a note of shared mission. Warm and sincere, not flowery or salesy. Plain text only — no headings, no markdown, no bullet points.`;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-opus-5', max_tokens: 1800, output_config: { effort: 'low' },
+      messages: [{ role: 'user', content: prompt }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error((d.error && d.error.message) || 'The AI summary service returned an error.');
+  return (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+}
+
 exports.handler = async (event) => {
   // ---- BUDGET FILE PROXY (GET, serves the attachment through our own domain so ad/content blockers don't block it) ----
   if(event.httpMethod === 'GET'){
@@ -582,6 +699,23 @@ exports.handler = async (event) => {
       try{ await writeLog([{ fields:{ [L.entry]:String(f.name).trim()+' — application submitted', [L.type]:'Status change',
         [L.detail]:(who.name||who.email)+' submitted a new grant application', [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:recId||'' } }]); }catch(e){}
       return reply(200, { ok:true, id:recId, user:who });
+    }
+
+    if(body.op === 'cycle_report'){
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
+      if(!body.cycleId) return reply(400, { error:'Missing cycleId.' });
+      const data = await gatherCycle(body.cycleId);
+      return reply(200, { ...data, user:who });
+    }
+
+    if(body.op === 'cycle_summary'){
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
+      if(!ANTHROPIC_KEY) return reply(200, { needsKey:true, user:who });
+      // Reuse the report data the front-end already fetched when present; only
+      // re-gather from Airtable if it wasn't passed.
+      const data = (body.data && body.data.stories) ? body.data : await gatherCycle(body.cycleId);
+      const summary = await writeImpactSummary(data);
+      return reply(200, { summary, generated:true, user:who });
     }
 
     return reply(400, { error:'Unknown op.' });
