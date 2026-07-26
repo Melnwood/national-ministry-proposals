@@ -15,7 +15,7 @@ export function Coach({ boot, session, onRefresh }) {
     let list = (boot.props || []).filter(p => QUEUE_STAGES.has(stageKey(p)));
     // A coach sees only their own grants (by Regional Coach Name); oversight
     // roles (EVP/president) see the whole queue.
-    if (isCoach && me) list = list.filter(p => coachName(p).trim().toLowerCase().includes(me) || me.includes(coachName(p).trim().toLowerCase()));
+    if (isCoach && me && !session.previewing) list = list.filter(p => coachName(p).trim().toLowerCase().includes(me) || me.includes(coachName(p).trim().toLowerCase()));
     return list.sort((a, b) => requested(b) - requested(a));
   }, [boot.props, me, isCoach]);
 

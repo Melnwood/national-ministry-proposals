@@ -15,7 +15,7 @@ export function Country({ boot, session, onRefresh }) {
 
   const grants = useMemo(() => {
     let list = boot.props || [];
-    if (isCountry && myCountryIds.length) {
+    if (isCountry && myCountryIds.length && !session.previewing) {
       list = list.filter(p => {
         const link = p.fields[F.proposal.country];
         return Array.isArray(link) && link.some(id => myCountryIds.includes(id && id.id ? id.id : id));
@@ -66,7 +66,7 @@ const EMPTY_APP = {
   problem: '', people: '', leaders: '', churches: '',
   requested: '', totalBudget: '', otherFunding: '', receivedFunds: '', unusedFunds: '',
   objective: '', objective2: '', objective3: '',
-  strategicFit: '', success: '', sustainability: '', checklist: [],
+  strategicFit: '', success: '', sustainability: '', checklist: [], budgetFile: null,
 };
 
 function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
@@ -86,11 +86,20 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
     if (!v.countryId) { setErr('Choose your country.'); return; }
     setErr(''); setStep('assessment');
   }
+  function onBudgetFile(e) {
+    const file = e.currentTarget.files && e.currentTarget.files[0];
+    if (!file) { set('budgetFile', null); return; }
+    if (file.size > 8 * 1024 * 1024) { setErr('Budget file must be under 8 MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = () => set('budgetFile', { filename: file.name, contentType: file.type, data: String(reader.result).split(',')[1] });
+    reader.readAsDataURL(file);
+  }
+
   async function finalSubmit() {
     if (!v.checklist.length) { setErr('Choose the ones that apply — this is required.'); return; }
     setBusy(true); setErr('');
     try {
-      await api('submit_application', { countryId: v.countryId, fields: v });
+      await api('submit_application', { countryId: v.countryId, fields: v, budgetFile: v.budgetFile });
       setDone(true); onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not submit.'); setBusy(false); }
   }
@@ -144,6 +153,10 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
               <Fld label="Total project budget"><div class="moneyin"><span>$</span><input type="number" step="50" value={v.totalBudget} onInput={e => set('totalBudget', e.currentTarget.value)} /></div></Fld>
             </div>
             <Fld label="Other sources of funding for this project (if any)"><textarea rows="2" value={v.otherFunding} onInput={e => set('otherFunding', e.currentTarget.value)} /></Fld>
+            <Fld label="Detailed budget breakdown (optional file)">
+              <input type="file" accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,image/*" onChange={onBudgetFile} />
+              {v.budgetFile && <span class="mini dim">Attached: {v.budgetFile.filename}</span>}
+            </Fld>
             <div class="fldrow">
               <Fld label="Received funds for this (or a similar) project in the last 2 years?"><select value={v.receivedFunds} onChange={e => set('receivedFunds', e.currentTarget.value)}>
                 <option value="">—</option>{YESNO.map(o => <option value={o}>{o}</option>)}</select></Fld>

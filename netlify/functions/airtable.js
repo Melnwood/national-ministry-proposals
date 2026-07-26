@@ -569,6 +569,16 @@ exports.handler = async (event) => {
       if(Array.isArray(f.checklist) && f.checklist.length) fields[PA.checklist]=f.checklist;
       const created = await at(BASE+'/'+T_PROP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
       const recId = created.records && created.records[0] && created.records[0].id;
+      // Optional budget-breakdown file → upload straight to the attachment field.
+      if(recId && body.budgetFile && body.budgetFile.data){
+        try{
+          await fetch('https://content.airtable.com/v0/'+BASE+'/'+recId+'/fld3cTDxR62CssdGY/uploadAttachment', {
+            method:'POST', headers:{ Authorization:'Bearer '+TOKEN, 'Content-Type':'application/json' },
+            body: JSON.stringify({ contentType: body.budgetFile.contentType||'application/octet-stream',
+              file: body.budgetFile.data, filename: body.budgetFile.filename||'budget' })
+          });
+        }catch(upErr){ /* attachment is best-effort; never block the application */ }
+      }
       try{ await writeLog([{ fields:{ [L.entry]:String(f.name).trim()+' — application submitted', [L.type]:'Status change',
         [L.detail]:(who.name||who.email)+' submitted a new grant application', [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:recId||'' } }]); }catch(e){}
       return reply(200, { ok:true, id:recId, user:who });
