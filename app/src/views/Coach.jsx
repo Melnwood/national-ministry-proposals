@@ -59,7 +59,7 @@ function ReviewCard({ p, onDone }) {
     const changes = [{ type: 'Status change', label: 'Coach review submitted',
       detail: `Coach review submitted for ${name} (${checked.size} criteria noted)` }];
     try {
-      await api('update', { recordId: p.id, fields, changes, projectName: name });
+      await api('update', { recordId: p.id, fields, changes, projectName: name, notify: { event: 'coach_submit' } });
       onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not submit.'); setBusy(false); }
   }

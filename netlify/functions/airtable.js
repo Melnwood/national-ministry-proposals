@@ -25,7 +25,8 @@ const TR = { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKE
              timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C' };
 const FUND_AMT_F = 'fldcZFJwHyfu5IgCl', FUND_STAT_F = 'fldXwNvQuraOWvgq7'; // Available Funds amount + status
 const T_NOTIF = 'tblEpClYAomtd5t2l';  // Notifications
-const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS' };
+const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS', link:'fldkcJpvziAQoRSWz' };
+const SITE_URL = 'https://national-ministry-proposals.netlify.app'; // recipients sign in and land on their own page
 const AT     = 'https://api.airtable.com/v0/';
 const TOKEN  = process.env.AIRTABLE_TOKEN;
 const SECRET = process.env.SESSION_SECRET;
@@ -136,33 +137,81 @@ async function writeNotifs(records){
     await at(BASE+'/'+T_NOTIF, { method:'POST', body:JSON.stringify({ records:records.slice(i,i+10), typecast:true }) });
   }
 }
+// Send an email straight from the app via Resend (https://resend.com). Stays a
+// no-op until RESEND_API_KEY is set in Netlify, so notifications work in-app
+// regardless. No npm dependency — just a fetch.
+const RESEND_KEY = process.env.RESEND_API_KEY;
+const MAIL_FROM  = process.env.MAIL_FROM || 'JV National Ministries <onboarding@resend.dev>';
+async function sendEmail(to, subject, message, link){
+  if(!RESEND_KEY || !to) return;
+  const btn = link ? `<p style="margin:22px 0"><a href="${link}" style="background:#FF6600;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-family:sans-serif;font-size:15px">Open your page</a></p>` : '';
+  const html = `<div style="font-family:sans-serif;font-size:15px;color:#1E2A24;line-height:1.6;max-width:520px">
+    <p>${message}</p>${btn}
+    <p style="color:#5A655C;font-size:12.5px;margin-top:24px">Josiah Venture · National Ministries</p></div>`;
+  try{
+    await fetch('https://api.resend.com/emails', { method:'POST',
+      headers:{ Authorization:'Bearer '+RESEND_KEY, 'Content-Type':'application/json' },
+      body: JSON.stringify({ from:MAIL_FROM, to:[to], subject, html }) });
+  }catch(e){ /* email is best-effort; never block */ }
+}
 const usd = n => '$'+Math.round(Number(n)||0).toLocaleString('en-US');
 
-// Fan out tailored notifications when a grant is transferred: EVP/council, the
-// country leader, and the country coach each get their own message.
-async function notifyTransfer(recordId){
-  const PF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
-               leaderEmail:'fldbs0FzyPWbS1waI', submitterEmail:'fld64OxiMWtnko2H7', coachEmail:'fld4lLrDwB5x0ck72' };
-  const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
-  const f = rec.fields || {};
-  const name = f[PF.name] || 'a grant', country = f[PF.country] || '', amt = usd(f[PF.awarded]);
-  const leader = (f[PF.leaderEmail] || f[PF.submitterEmail] || '').trim();
-  const coach  = (f[PF.coachEmail] || '').trim();
-
-  // EVP / council lead team = Approvers with an EVP or President role.
-  let council = [];
+// Fan out tailored notifications for a pipeline event. The app writes one
+// Notification record per recipient (with a link to their page); a single
+// Airtable automation emails each new record. Same event → different message
+// for each person.
+const PNF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
+              leaderEmail:'fldbs0FzyPWbS1waI', submitterEmail:'fld64OxiMWtnko2H7', coachEmail:'fld4lLrDwB5x0ck72',
+              decisionMsg:'fldt1Hu5YY1ZvvqMD' };
+async function councilEmails(){
   try{
     const ppl = await fetchAll(T_APP, {});
-    council = ppl.filter(p => ['EVP','President'].includes((p.fields[A.role]||'').trim()))
-                 .map(p => (p.fields[A.email]||'').trim()).filter(Boolean);
-  }catch(e){}
+    return ppl.filter(p => ['EVP','President'].includes((p.fields[A.role]||'').trim()))
+              .map(p => (p.fields[A.email]||'').trim()).filter(Boolean);
+  }catch(e){ return []; }
+}
+async function notifyEvent(event, recordId, opts={}){
+  const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
+  const f = rec.fields || {};
+  const name = f[PNF.name] || 'a grant', country = f[PNF.country] || '', amt = usd(f[PNF.awarded]);
+  const leader = (f[PNF.leaderEmail] || f[PNF.submitterEmail] || '').trim();
+  const coach  = (f[PNF.coachEmail] || '').trim();
+  const decisionMsg = f[PNF.decisionMsg] || '';
+  const where = country ? ` (${country})` : '';
 
   const notifs = [];
-  const add = (email, msg) => { if(email) notifs.push({ fields:{ [N.email]:email, [N.msg]:msg, [N.type]:'Transfer', [N.prop]:[recordId] } }); };
-  council.forEach(e => add(e, `Funds sent: ${name}${country?` (${country})`:''} — ${amt} transferred to the country's Cedarstone account.`));
-  add(leader, `Your grant "${name}" has been funded — ${amt} is on its way to your account.`);
-  add(coach,  `${name}${country?` (${country})`:''}, which you reviewed, has been funded — ${amt} sent.`);
-  if(notifs.length) await writeNotifs(notifs);
+  const add = (email, msg, type) => { if(email) notifs.push({ fields:{ [N.email]:email, [N.msg]:msg, [N.type]:type||'Decision', [N.prop]:[recordId], [N.link]:SITE_URL } }); };
+
+  if(event === 'coach_submit'){
+    const council = await councilEmails();
+    council.forEach(e => add(e, `Ready to decide: ${coach||'a coach'} submitted their review of "${name}"${where}.`, 'Decision'));
+  } else if(event === 'decision'){
+    const council = await councilEmails();
+    if(opts.kind === 'deny'){
+      add(leader, `Your grant "${name}" was not approved. Open your page to read the council's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Decision');
+    } else if(opts.kind === 'defer'){
+      add(leader, `"${name}" was approved but deferred to a later cycle. Confirm on your page that you still want it.`, 'Decision');
+    } else { // approve
+      add(leader, `Good news — "${name}" was approved by the council${amt!=='$0'?` for ${amt}`:''}.`, 'Decision');
+      council.forEach(e => add(e, `Approved: "${name}"${where} — now with the grant team to fund.`, 'Decision'));
+    }
+  } else if(event === 'transfer'){
+    const council = await councilEmails();
+    council.forEach(e => add(e, `Funds sent: "${name}"${where} — ${amt} transferred to the country's Cedarstone account.`, 'Transfer'));
+    add(leader, `Your grant "${name}" has been funded — ${amt} is on its way to your account.`, 'Transfer');
+    add(coach,  `"${name}"${where}, which you reviewed, has been funded — ${amt} sent.`, 'Transfer');
+  }
+  if(notifs.length){
+    await writeNotifs(notifs);
+    for(const n of notifs){
+      const type = n.fields[N.type];
+      const subject = type === 'Transfer' ? 'Your JV grant has been funded'
+        : (opts.kind === 'deny') ? 'An update on your JV grant application'
+        : type === 'Decision' ? 'An update on your JV grant'
+        : 'JV National Ministries';
+      await sendEmail(n.fields[N.email], subject, n.fields[N.msg], n.fields[N.link]);
+    }
+  }
 }
 
 exports.handler = async (event) => {
@@ -406,9 +455,9 @@ exports.handler = async (event) => {
           }})));
         }catch(logErr){ /* logging is best-effort; never block the approval */ }
       }
-      // Fan out notifications for events that need them (currently: transfer).
-      if(body.notify && body.notify.event === 'transfer'){
-        try{ await notifyTransfer(body.recordId); }catch(notifErr){ /* never block the transfer */ }
+      // Fan out notifications for pipeline handoffs (transfer, decision, coach submit…).
+      if(body.notify && body.notify.event){
+        try{ await notifyEvent(body.notify.event, body.recordId, body.notify); }catch(notifErr){ /* never block the update */ }
       }
       return reply(200, { fields:upd.fields, user:who });
     }

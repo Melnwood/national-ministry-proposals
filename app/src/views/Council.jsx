@@ -70,7 +70,7 @@ function DecisionCard({ p, cycles, onDone }) {
         detail: `Council denied ${name} — ${message}` });
     }
     try {
-      await api('update', { recordId: p.id, fields, changes, projectName: name });
+      await api('update', { recordId: p.id, fields, changes, projectName: name, notify: { event: 'decision', kind } });
       onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not save.'); setBusy(false); }
   }
