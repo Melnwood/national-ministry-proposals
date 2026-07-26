@@ -1,20 +1,28 @@
-import { useMemo } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { money } from '../shared/format.js';
 import { buildCountryHistory } from '../shared/history.js';
 
 // Leadership dashboard (Ben & Amanda + grant team): how much each country has
-// received in grants over time, grouped by country phase, with this cycle and
-// last cycle broken out so you can see who's been funded recently and who hasn't.
+// received in grants over time. Two ways to see it — grouped BY PHASE (with
+// phase and country totals), or BY COUNTRY (every grant a country has ever had,
+// with its cycle year and foundation).
 export function CountryHistory({ boot }) {
-  const { phases, currentYear, priorYear, totals } = useMemo(
+  const { phases, countries, currentYear, priorYear, totals } = useMemo(
     () => buildCountryHistory(boot.props || [], boot.cycles || [], boot.countries_meta || []),
     [boot.props, boot.cycles, boot.countries_meta]
   );
+  const [mode, setMode] = useState('phase'); // 'phase' | 'country'
 
   return (
     <>
+      <div class="gt-actions">
+        <nav class="subtabs">
+          <button class={`subtab${mode === 'phase' ? ' on' : ''}`} onClick={() => setMode('phase')}>By phase</button>
+          <button class={`subtab${mode === 'country' ? ' on' : ''}`} onClick={() => setMode('country')}>By country</button>
+        </nav>
+      </div>
+
       <div class="secthead">Grants by country <span class="dim">— what each country has received over time</span></div>
-      <p class="lead">Total granted to each country, grouped by country phase, with this cycle and last cycle side by side. Countries showing “—” haven't received a grant.</p>
 
       <section class="money">
         <div class="mtile">
@@ -34,6 +42,17 @@ export function CountryHistory({ boot }) {
         </div>
       </section>
 
+      {mode === 'phase' ? <ByPhase phases={phases} currentYear={currentYear} priorYear={priorYear} />
+                        : <ByCountry countries={countries} />}
+    </>
+  );
+}
+
+function ByPhase({ phases, currentYear, priorYear }) {
+  if (!phases.length) return <div class="panel"><p style="color:var(--muted)">No grant history yet.</p></div>;
+  return (
+    <>
+      <p class="lead">Grouped by country phase, with this cycle and last cycle side by side. Countries showing “—” haven't received a grant.</p>
       {phases.map(ph => (
         <div key={ph.phase}>
           <div class="secthead">
@@ -43,11 +62,8 @@ export function CountryHistory({ boot }) {
             <table class="grants history">
               <thead>
                 <tr>
-                  <th>Country</th>
-                  <th class="r">Grants</th>
-                  <th class="r">Total received</th>
-                  <th class="r">{currentYear || 'This cycle'}</th>
-                  <th class="r">{priorYear || 'Last cycle'}</th>
+                  <th>Country</th><th class="r">Grants</th><th class="r">Total received</th>
+                  <th class="r">{currentYear || 'This cycle'}</th><th class="r">{priorYear || 'Last cycle'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -65,8 +81,52 @@ export function CountryHistory({ boot }) {
           </div>
         </div>
       ))}
-
-      {!phases.length && <div class="panel"><p style="color:var(--muted)">No grant history yet.</p></div>}
     </>
+  );
+}
+
+function ByCountry({ countries }) {
+  if (!countries.length) return <div class="panel"><p style="color:var(--muted)">No grant history yet.</p></div>;
+  return (
+    <>
+      <p class="lead">Each country with its total. Click one to open it and see every grant it's received, from the beginning.</p>
+      <div class="ch-list">
+        {countries.map(c => <CountryAccordion key={c.name} c={c} />)}
+      </div>
+    </>
+  );
+}
+
+function CountryAccordion({ c }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div class={`ch-acc${open ? ' open' : ''}`}>
+      <button class="ch-acc-head" onClick={() => setOpen(o => !o)}>
+        <span class="ch-chev">{open ? '▾' : '▸'}</span>
+        <span class="ch-name">{c.name}</span>
+        <span class="ch-sub">{c.phase} · {c.count} {c.count === 1 ? 'grant' : 'grants'}</span>
+        <span class="ch-total">{money(c.total)}</span>
+      </button>
+      {open && (
+        <div class="ch-acc-body tablewrap">
+          <table class="grants history">
+            <thead>
+              <tr><th>Cycle</th><th>Foundation</th><th>Project</th><th>Status</th><th class="r">Amount</th></tr>
+            </thead>
+            <tbody>
+              {c.grants.map(g => (
+                <tr>
+                  <td class="cty">{g.year || '—'}</td>
+                  <td class="cty">{g.foundation || '—'}</td>
+                  <td class="nm">{g.project}</td>
+                  <td>{g.funded ? <span class="badge stg-funded">Funded</span> : <span class="dim">{g.stage || '—'}</span>}</td>
+                  <td class="r"><b>{money(g.amount)}</b></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }

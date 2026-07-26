@@ -462,3 +462,19 @@ table.ongoing td.nm { font-weight:600; }
 table.history tr.zero td { color:var(--muted); }
 table.history tr.zero td.nm { font-weight:400; }
 table.history td.nm { font-weight:600; }
+
+/* ── Country history: by-country accordion ── */
+.ch-list { display:flex; flex-direction:column; gap:8px; }
+.ch-acc { border:1px solid var(--line); border-radius:12px; background:var(--card); overflow:hidden; }
+.ch-acc.open { border-color:var(--line-d); box-shadow:var(--shadow); }
+.ch-acc-head {
+  width:100%; display:flex; align-items:center; gap:12px; padding:14px 16px;
+  background:none; border:none; cursor:pointer; font:inherit; text-align:left;
+}
+.ch-acc-head:hover { background:var(--paper); }
+.ch-chev { color:var(--muted); font-size:11px; width:12px; flex:0 0 auto; }
+.ch-name { font-weight:600; font-size:15px; flex:0 0 auto; }
+.ch-sub { color:var(--muted); font-size:13px; flex:1; }
+.ch-total { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:16px; color:var(--green-d); font-variant-numeric:tabular-nums; flex:0 0 auto; }
+.ch-acc-body { border-top:1px solid var(--line); }
+.ch-acc-body table { margin:0; }
