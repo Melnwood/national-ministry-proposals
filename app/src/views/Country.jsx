@@ -75,13 +75,19 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
+  const [step, setStep] = useState('form'); // 'form' → 'assessment'
   const set = (k, val) => setV(s => ({ ...s, [k]: val }));
   const toggleCheck = c => setV(s => ({ ...s, checklist: s.checklist.includes(c) ? s.checklist.filter(x => x !== c) : [...s.checklist, c] }));
 
-  async function submit() {
+  // Clicking submit validates the questionnaire, then opens the assessment gate.
+  function goAssess() {
     if (!v.name.trim()) { setErr('Give your project a name.'); return; }
     if (!v.requested || Number(v.requested) <= 0) { setErr('Enter the amount you are requesting.'); return; }
     if (!v.countryId) { setErr('Choose your country.'); return; }
+    setErr(''); setStep('assessment');
+  }
+  async function finalSubmit() {
+    if (!v.checklist.length) { setErr('Choose the ones that apply — this is required.'); return; }
     setBusy(true); setErr('');
     try {
       await api('submit_application', { countryId: v.countryId, fields: v });
@@ -155,23 +161,36 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
             <Fld label="How will the success of the project be measured?"><textarea rows="2" value={v.success} onInput={e => set('success', e.currentTarget.value)} /></Fld>
             <Fld label="How will the project be sustained after the grant ends?"><textarea rows="2" value={v.sustainability} onInput={e => set('sustainability', e.currentTarget.value)} /></Fld>
 
-            <div class="formsec">Your own assessment</div>
-            <div class="checklist">
-              {APPLICANT_CHECKLIST.map(c => (
-                <label class={`check${v.checklist.includes(c) ? ' on' : ''}`} key={c}>
-                  <input type="checkbox" checked={v.checklist.includes(c)} onChange={() => toggleCheck(c)} /><span>{c}</span>
-                </label>
-              ))}
-            </div>
-
-            {err && <div class="editerr">{err}</div>}
+            {step === 'form' && err && <div class="editerr">{err}</div>}
             <div class="dc-confirm" style="margin-top:16px">
-              <button class="ghostbtn" onClick={onClose} disabled={busy}>Cancel</button>
-              <button class="savebtn" onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit application'}</button>
+              <button class="ghostbtn" onClick={onClose}>Cancel</button>
+              <button class="savebtn" onClick={goAssess}>Submit application</button>
             </div>
           </div>
         )}
       </div>
+
+      {step === 'assessment' && !done && (
+        <div class="modal-scrim" onClick={() => setStep('form')}>
+          <div class="modal" onClick={e => e.stopPropagation()}>
+            <div class="modal-head"><div><h2>Your assessment</h2><div class="sub2">Before you submit, tell us how this measures up.</div></div><button class="ghostbtn" onClick={() => setStep('form')}>Back</button></div>
+            <div class="formbody">
+              <div class="checklist">
+                {APPLICANT_CHECKLIST.map(c => (
+                  <label class={`check${v.checklist.includes(c) ? ' on' : ''}`} key={c}>
+                    <input type="checkbox" checked={v.checklist.includes(c)} onChange={() => toggleCheck(c)} /><span>{c}</span>
+                  </label>
+                ))}
+              </div>
+              {err && <div class="editerr">{err}</div>}
+              <div class="dc-confirm" style="margin-top:16px">
+                <button class="ghostbtn" onClick={() => setStep('form')} disabled={busy}>Back</button>
+                <button class="savebtn" onClick={finalSubmit} disabled={busy || !v.checklist.length}>{busy ? 'Submitting…' : 'Confirm & submit'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
