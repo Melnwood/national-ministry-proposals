@@ -88,14 +88,14 @@ function ReviewCard({ p, onDone }) {
       </div>
 
       <label class="fld" style="margin-top:14px">
-        <span class="flbl">Your thoughts (goes to the council)</span>
-        <textarea rows="3" value={notes} onInput={e => setNotes(e.currentTarget.value)}
+        <span class="flbl">Your thoughts (goes to Ben &amp; the Council Lead Team)</span>
+        <textarea class="notes-input" rows="7" value={notes} onInput={e => setNotes(e.currentTarget.value)}
           placeholder="What did you learn talking with the leader? Why would this be a good investment?" />
       </label>
 
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
-        <button class="savebtn" disabled={busy} onClick={submit}>{busy ? 'Submitting…' : 'Submit review to council'}</button>
+        <button class="savebtn" disabled={busy} onClick={submit}>{busy ? 'Submitting…' : 'Submit for Ben and Council Lead Team'}</button>
       </div>
     </div>
   );

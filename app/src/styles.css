@@ -240,6 +240,9 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .check:hover { border-color:var(--line-d); }
 .check.on { border-color:var(--green); background:var(--green-soft); }
 .check input { margin-top:2px; accent-color:var(--green); flex:0 0 auto; }
+.notes-input { width:100%; min-height:150px; padding:12px 14px; border:1px solid var(--line-d); border-radius:10px;
+  font-family:inherit; font-size:14.5px; line-height:1.6; background:#fff; color:var(--ink); resize:vertical; }
+.notes-input:focus { outline:none; border-color:var(--orange); }
 
 /* ── country view ── */
 .dcard.denied { border-left:4px solid var(--red); }
