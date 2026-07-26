@@ -35,7 +35,8 @@ export const F = {
     country:         'fldaHnvEM4RokRDth', // Country (linked)
     countryText:     'fldpZ00pUwm1gB4zN', // Country (text) — plain name for display
     cycles:          'flda02NPGg4TFd8wp', // Grant Cycles (linked)
-    status:          'fld1iHtOAuGDPvLVZ', // Status (legacy single-select — see STAGES)
+    status:          'fld1iHtOAuGDPvLVZ', // Status (LEGACY single-select — kept as history)
+    stage:           'fld3Sh8TGO0Nukrgc', // Stage (canonical pipeline — source of truth)
     requested:       'fld3bvuKr1SIXAwUf', // How much funding are you requesting?
     totalBudget:     'fldofeeQU3DlrHULR', // Total project budget
     awarded:         'fldeeQMQPRVyXbklW', // Grant Amount Awarded
