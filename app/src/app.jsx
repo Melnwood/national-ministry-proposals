@@ -10,6 +10,7 @@ import { Reports } from './views/Reports.jsx';
 import { Coach } from './views/Coach.jsx';
 import { Country } from './views/Country.jsx';
 import { Management } from './views/Management.jsx';
+import { Accounting } from './views/Accounting.jsx';
 
 // The workspace tabs and which roles can open each. A role with no match falls
 // back to seeing everything (useful before roles are fully populated).
@@ -18,6 +19,7 @@ const TABS = [
   { key: 'coach',       label: 'Coach Review', roles: ['coach', 'evp', 'president'] },
   { key: 'council',     label: 'Council Lead Team', roles: ['evp', 'president'] },
   { key: 'grant',       label: 'Grant Team',  roles: ['evp', 'president', 'grant', 'cfo'] },
+  { key: 'accounting',  label: 'Accounting',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'reports',     label: 'Reports',     roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'manage',      label: 'Management',  roles: ['evp', 'president'] },
@@ -91,6 +93,7 @@ export function Workspace({ boot, session, onRefresh }) {
       {tab === 'coach' && <Coach boot={boot} session={session} onRefresh={onRefresh} />}
       {tab === 'council' && <Council boot={boot} onRefresh={onRefresh} />}
       {tab === 'grant' && <GrantTeam boot={boot} session={session} onRefresh={onRefresh} />}
+      {tab === 'accounting' && <Accounting boot={boot} session={session} onRefresh={onRefresh} />}
       {tab === 'foundations' && <Foundations boot={boot} />}
       {tab === 'reports' && <Reports boot={boot} />}
       {tab === 'manage' && <Management boot={boot} onRefresh={onRefresh} />}

@@ -50,6 +50,7 @@ export const F = {
     createdTime:     'fldkSi7mZ7RhhqPvC',
     dateApproved:    'fldY11pVrXtTEKIKR',
     dateFunded:      'fldvXoWNaxcBX8qXq',
+    cedarstoneAccount:'fldrqg7gy2oEhfdvw', // Account Number at Cedarstone (where funds get sent)
     budgetFiles:     'fld3cTDxR62CssdGY', // Budget breakdown (attachments)
     notes:           'fldYl71wMPNhPB2Ce',
     decisionMessage: 'fldt1Hu5YY1ZvvqMD', // Council's message to the country (approve/defer/deny)
