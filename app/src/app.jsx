@@ -15,15 +15,18 @@ import { NotificationBell } from './views/NotificationBell.jsx';
 
 // The workspace tabs and which roles can open each. A role with no match falls
 // back to seeing everything (useful before roles are fully populated).
+// CFO and President are grant-department users — they live in the Grant Team
+// view and its sibling tabs. The council decision + management tabs are EVP-only
+// (Ben & Amanda). Grant/Accounting/Foundations/Reports = the grant department.
 const TABS = [
-  { key: 'country',     label: 'My Country',   roles: ['country', 'evp', 'president'] },
-  { key: 'coach',       label: 'Coach Review', roles: ['coach', 'evp', 'president'] },
-  { key: 'council',     label: 'Council Lead Team', roles: ['evp', 'president'] },
+  { key: 'country',     label: 'My Country',   roles: ['country', 'evp'] },
+  { key: 'coach',       label: 'Coach Review', roles: ['coach', 'evp'] },
+  { key: 'council',     label: 'Council Lead Team', roles: ['evp'] },
   { key: 'grant',       label: 'Grant Team',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'accounting',  label: 'Accounting',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'reports',     label: 'Reports',     roles: ['evp', 'president', 'grant', 'cfo'] },
-  { key: 'manage',      label: 'Management',  roles: ['evp', 'president'] },
+  { key: 'manage',      label: 'Management',  roles: ['evp'] },
 ];
 
 export function App() {
@@ -60,7 +63,7 @@ export function App() {
   return <Workspace boot={boot} session={session} onRefresh={loadSession} />;
 }
 
-const HOME = { country: 'country', coach: 'coach', evp: 'council', president: 'council', grant: 'grant', cfo: 'grant' };
+const HOME = { country: 'country', coach: 'coach', evp: 'council', president: 'grant', grant: 'grant', cfo: 'grant' };
 // Roles a leadership user can preview the app as.
 const VIEW_AS = [
   { key: 'country', label: 'Country leader' },
@@ -73,7 +76,8 @@ const VIEW_AS = [
 
 export function Workspace({ boot, session, onRefresh }) {
   const realRole = session.role && session.role.key;
-  const canPreview = realRole === 'evp' || realRole === 'president';
+  // Full-oversight preview ("View as") stays with EVP / council (Ben & Amanda).
+  const canPreview = realRole === 'evp';
   const [viewRole, setViewRole] = useState(realRole);
   const roleKey = canPreview ? viewRole : realRole;
 

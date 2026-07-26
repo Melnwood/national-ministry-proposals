@@ -5,11 +5,29 @@ import { STAGES, STAGE_BY_KEY, ACTIVE_STAGE_KEYS, TERMINAL_STAGE_KEYS, F } from 
 import { moneySummary, byStage, projectName, country, coach, requested, awarded, paid, owed, stageKey, stageLabel } from '../shared/grants.js';
 import { FoundationReport } from './FoundationReport.jsx';
 
+// Approved but funding NOT yet identified — the projects the grant team can pay
+// for if money frees up. Once funding is identified the project has left this
+// list; council-pending, funded, denied and archived are all excluded too.
+const ONGOING_STAGES = new Set(['deferred', 'grantApproved']);
+
 export function GrantTeam({ boot, session, onRefresh }) {
   const props = boot.props || [];
   const [filter, setFilter] = useState(null);   // stage key, or null = all
   const [openId, setOpenId] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [view, setView] = useState('pipeline'); // 'pipeline' | 'ongoing'
+
+  const ongoing = useMemo(() => {
+    const order = { deferred: 0, grantApproved: 1 };
+    return props
+      .filter(p => ONGOING_STAGES.has(stageKey(p)))
+      .sort((a, b) => {
+        // longest-waiting first (by approval / created date), then stage order
+        const da = new Date(dateOf(a)).getTime(), db = new Date(dateOf(b)).getTime();
+        if (da !== db) return da - db;
+        return (order[stageKey(a)] ?? 9) - (order[stageKey(b)] ?? 9);
+      });
+  }, [props]);
 
   const summary = useMemo(() => moneySummary(props, boot.bal), [props, boot.bal]);
   const { groups } = useMemo(() => byStage(props), [props]);
@@ -31,9 +49,16 @@ export function GrantTeam({ boot, session, onRefresh }) {
   return (
     <>
       <div class="gt-actions">
+        <nav class="subtabs">
+          <button class={`subtab${view === 'pipeline' ? ' on' : ''}`} onClick={() => setView('pipeline')}>Pipeline</button>
+          <button class={`subtab${view === 'ongoing' ? ' on' : ''}`} onClick={() => setView('ongoing')}>
+            Ongoing projects{ongoing.length ? <span class="pillcount">{ongoing.length}</span> : null}
+          </button>
+        </nav>
         <button class="reportbtn" onClick={() => setReportOpen(true)}>📄 Foundation report</button>
       </div>
 
+      {view === 'pipeline' && (<>
       {/* Money picture */}
       <section class="money">
         <div class="mtile">
@@ -97,10 +122,82 @@ export function GrantTeam({ boot, session, onRefresh }) {
           </tbody>
         </table>
       </div>
+      </>)}
+
+      {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} />}
 
       {openGrant && <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />}
       {reportOpen && <FoundationReport boot={boot} onClose={() => setReportOpen(false)} />}
     </>
+  );
+}
+
+// Date a project has been waiting on funding — approval date, else created.
+function dateOf(p) { const f = p.fields || {}; return f[F.proposal.dateApproved] || f[F.proposal.createdTime] || ''; }
+
+function OngoingPanel({ list, onOpen, preview }) {
+  return (
+    <>
+      <div class="secthead">Fund if money frees up <span class="dim">— {list.length} approved, waiting on funding</span></div>
+      <p class="lead">These are approved but not yet funded. If money comes free, they're ready to fund. If one has waited a long time, ask whether it's still needed.</p>
+
+      {!list.length && <div class="panel"><p style="color:var(--muted)">Nothing approved is waiting on funding right now.</p></div>}
+
+      {list.length > 0 && (
+        <div class="tablewrap">
+          <table class="grants ongoing">
+            <thead>
+              <tr><th>Grant</th><th>Country</th><th>Coach</th><th class="r">Amount</th><th>Waiting since</th><th></th></tr>
+            </thead>
+            <tbody>
+              {list.map(p => <OngoingRow key={p.id} p={p} onOpen={onOpen} preview={preview} />)}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function OngoingRow({ p, onOpen, preview }) {
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
+  const amt = awarded(p) || requested(p);
+  const name = projectName(p);
+
+  async function askStillNeeded(e) {
+    e.stopPropagation();
+    if (preview) { setSent(true); return; }
+    setBusy(true); setErr('');
+    try {
+      await api('update', {
+        recordId: p.id, fields: {},
+        changes: [{ type: 'Status change', label: 'Funding follow-up requested',
+          detail: `Grant team asked Ben, Amanda and the coach whether "${name}" still needs funding` }],
+        projectName: name, notify: { event: 'funding_followup' },
+      });
+      setSent(true);
+    } catch (ex) { setErr(ex.message || 'Could not send.'); }
+    setBusy(false);
+  }
+
+  return (
+    <tr class="clk" onClick={() => onOpen(p.id)}>
+      <td class="nm">{name}</td>
+      <td class="cty">{country(p)}</td>
+      <td class="cty">{coach(p) || '—'}</td>
+      <td class="r">{amt ? money(amt) : '—'}</td>
+      <td class="cty">{dateOf(p) ? date(dateOf(p)) : '—'}</td>
+      <td class="r" onClick={e => e.stopPropagation()}>
+        {sent
+          ? <span class="sent-ok">✓ Asked{preview ? ' (preview)' : ''}</span>
+          : <button class="mini-ask" disabled={busy} onClick={askStillNeeded} title="Message Ben, Amanda & the coach to check if this is still needed">
+              {busy ? 'Sending…' : 'Ask if still needed'}
+            </button>}
+        {err && <div class="editerr sm">{err}</div>}
+      </td>
+    </tr>
   );
 }
 

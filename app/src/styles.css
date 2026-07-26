@@ -418,3 +418,42 @@ td.ok { color:var(--green); }
   .rp-tile, .rp-story { break-inside:avoid; }
   .rp-sec { break-inside:avoid-page; }
 }
+
+/* ── Grant Team: sub-tabs + ongoing panel ── */
+.gt-actions { justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.subtabs { display:flex; gap:4px; background:var(--paper-2); border:1px solid var(--line); border-radius:11px; padding:3px; }
+.subtab {
+  border:none; background:transparent; color:var(--ink-soft); cursor:pointer;
+  font-family:inherit; font-size:13.5px; font-weight:600; padding:7px 14px; border-radius:8px;
+  display:inline-flex; align-items:center; gap:7px;
+}
+.subtab.on { background:#fff; color:var(--ink); box-shadow:var(--shadow); }
+.pillcount { background:var(--orange); color:#fff; font-size:11.5px; font-weight:700; border-radius:20px; padding:1px 7px; line-height:1.5; }
+
+table.ongoing td.nm { font-weight:600; }
+.mini-ask {
+  background:var(--orange-soft); color:var(--orange); border:1px solid #F3C9A8; border-radius:8px;
+  font-family:inherit; font-size:12.5px; font-weight:600; padding:6px 11px; cursor:pointer; white-space:nowrap;
+}
+.mini-ask:hover { background:var(--orange); color:#fff; border-color:var(--orange); }
+.mini-ask:disabled { opacity:.6; cursor:default; }
+.sent-ok { font-size:12.5px; font-weight:600; color:var(--green); white-space:nowrap; }
+.editerr.sm { font-size:11.5px; margin-top:4px; padding:4px 7px; }
+
+/* ── Foundation report: picker extras ── */
+.linkbtn { border:none; background:none; color:var(--orange); font:inherit; font-weight:600; cursor:pointer; padding:0; text-decoration:underline; }
+.picker-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+.ghostbtn.big { padding:12px 20px; font-size:15px; }
+.sample-ribbon {
+  background:var(--gold); color:#fff; font-size:12.5px; font-weight:600; text-align:center;
+  padding:8px 14px; letter-spacing:.01em;
+}
+
+/* ── Foundation report: photo strip ── */
+.rp-photos { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:4px 0 12px; }
+.rp-photo { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid var(--line); display:block; }
+.rp-photo.ph {
+  background:repeating-linear-gradient(135deg, var(--paper) 0 10px, var(--paper-2) 10px 20px);
+  display:flex; align-items:center; justify-content:center;
+}
+.rp-photo.ph span { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }

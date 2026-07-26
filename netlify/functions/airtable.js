@@ -196,6 +196,11 @@ async function notifyEvent(event, recordId, opts={}){
       add(leader, `Good news — "${name}" was approved by the council${amt!=='$0'?` for ${amt}`:''}.`, 'Decision');
       council.forEach(e => add(e, `Approved: "${name}"${where} — now with the grant team to fund.`, 'Decision'));
     }
+  } else if(event === 'funding_followup'){
+    // Grant team asks whether an approved-but-unfunded project still needs money.
+    const council = await councilEmails();
+    council.forEach(e => add(e, `Still needed? "${name}"${where} was approved but is still waiting on funding. Please check whether the money is still needed, or if it has waited long enough that it no longer is.`, 'Decision'));
+    add(coach, `Can you follow up on "${name}"${where}? It was approved but funding hasn't been found yet — is the money still needed, or has it been too long?`, 'Decision');
   } else if(event === 'cleared'){
     const team = await roleEmails(['Grant team']);
     team.forEach(e => add(e, `Cleared to transfer: "${name}"${where} — ${amt} is ready to send to the country's Cedarstone account.`, 'Transfer'));
@@ -210,6 +215,7 @@ async function notifyEvent(event, recordId, opts={}){
     for(const n of notifs){
       const type = n.fields[N.type];
       const subject = type === 'Transfer' ? 'Your JV grant has been funded'
+        : event === 'funding_followup' ? 'Is this grant still needed?'
         : (opts.kind === 'deny') ? 'An update on your JV grant application'
         : type === 'Decision' ? 'An update on your JV grant'
         : 'JV National Ministries';
@@ -228,7 +234,8 @@ const RF = { proposal:'fldWLpL3N2yIRfn0t', cycle:'fldKa2XwRf3vLTdhW', type:'fldV
   completedBy:'fldemspw6LSoGMnIQ', story:'fldoOYDPd2tbnzvgC', challenges:'fldqkWPn3hAFQXoFu',
   lessons:'fldpM9VAWPVjMeUCm', nextSteps:'fld8gyR2KNGkiDG44', comments:'fldrm8Cyk8Z1lA1vy',
   spent:'fld25e4OC4ObhbyZw', people:'fldisUoMECHpHZwp5', leaders:'fldP8DjBL1S5l1WWA', churches:'fldkksYMIC3YMdsNx',
-  prog1:'fldFhbKWiC1KjMiMh', prog2:'fldxr8mGkdALSFJPW', prog3:'fld53pqkxduIIDSzM' };
+  prog1:'fldFhbKWiC1KjMiMh', prog2:'fldxr8mGkdALSFJPW', prog3:'fld53pqkxduIIDSzM',
+  attachments:'fldN6cvQXDhM9aCpX' };
 const CYF = { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz' };
 const PPF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
   requested:'fld3bvuKr1SIXAwUf', stage:STAGE_F, cycles:'flda02NPGg4TFd8wp' };
@@ -265,6 +272,13 @@ async function gatherCycle(cycleId){
     const propId = (Array.isArray(link) && link.length) ? (((link[0] && link[0].id) ? link[0].id : link[0])) : '';
     const p = propById[propId];
     const objectives = [rf[RF.prog1], rf[RF.prog2], rf[RF.prog3]].map(x => (x || '').trim()).filter(Boolean);
+    // Up to 3 photos from the report's Supporting Attachments (images only).
+    // NOTE: Airtable attachment URLs expire after a couple hours — fine for a
+    // report generated and viewed/printed now; add a proxy (like budget_file)
+    // if we ever need long-lived links.
+    const atts = Array.isArray(rf[RF.attachments]) ? rf[RF.attachments] : [];
+    const photos = atts.filter(a => /^image\//i.test(a && a.type || ''))
+      .slice(0, 3).map(a => (a.thumbnails && a.thumbnails.large && a.thumbnails.large.url) || a.url).filter(Boolean);
     return {
       name: p ? (p.fields[PPF.name] || '') : '(a funded project)',
       country: p ? (p.fields[PPF.country] || '').toString() : '',
@@ -275,7 +289,7 @@ async function gatherCycle(cycleId){
       lessons: (rf[RF.lessons] || '').trim(),
       nextSteps: (rf[RF.nextSteps] || '').trim(),
       comments: (rf[RF.comments] || '').trim(),
-      objectives,
+      objectives, photos,
       leaders: nnum(rf[RF.leaders]), churches: nnum(rf[RF.churches]), people: nnum(rf[RF.people]),
     };
   }).filter(s => s.story || s.lessons || s.challenges || s.nextSteps || s.comments || s.objectives.length);
