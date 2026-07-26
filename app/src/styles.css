@@ -159,3 +159,36 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .modal-foot.actions { display:flex; justify-content:flex-end; gap:10px; align-items:center; padding-top:16px; }
 .savebtn { padding:10px 20px; border:none; border-radius:9px; background:var(--orange); color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; }
 .savebtn:disabled { opacity:.5; cursor:default; }
+
+/* ── workspace nav ── */
+.topbar-right { display:flex; gap:8px; align-items:center; }
+.tabs { display:flex; gap:4px; margin-bottom:26px; border-bottom:1px solid var(--line); }
+.tab { font-family:inherit; font-size:14px; font-weight:600; color:var(--muted); background:none; border:none;
+  padding:10px 16px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+.tab:hover { color:var(--ink); }
+.tab.on { color:var(--orange); border-bottom-color:var(--orange); }
+.lead { font-size:14px; color:var(--ink-soft); max-width:680px; margin-bottom:18px; line-height:1.55; }
+
+/* ── decision cards ── */
+.cards { display:flex; flex-direction:column; gap:16px; }
+.dcard { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); }
+.dc-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
+.dc-head h3 { font-family:'Fraunces',serif; font-weight:600; font-size:18px; }
+.dc-meta { font-size:12.5px; color:var(--muted); margin-top:4px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 4px; }
+.chip { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--green-soft); color:var(--green-d); }
+.dc-notes { margin-top:12px; }
+.dc-notes .dt, .dc-ctx .dt { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:4px; }
+.dc-notes p, .dc-ctx p { font-size:13.5px; line-height:1.55; white-space:pre-wrap; }
+.dc-notes p.muted { color:var(--muted); font-style:italic; }
+.dc-ctx { margin-top:12px; }
+.dc-actions { display:flex; gap:9px; margin-top:16px; }
+.btn-approve, .btn-defer, .btn-deny { font-family:inherit; font-weight:700; font-size:13.5px; padding:9px 18px; border-radius:9px; cursor:pointer; border:1px solid transparent; }
+.btn-approve { background:var(--green); color:#fff; }
+.btn-defer { background:var(--paper-2); color:var(--ink); border-color:var(--line-d); }
+.btn-deny { background:#FBEAE3; color:var(--red); border-color:#E7C3B4; }
+.btn-deny.solid { background:var(--red); color:#fff; border-color:var(--red); }
+.dc-form { margin-top:16px; border-top:1px dashed var(--line-d); padding-top:16px; }
+.dc-form textarea { width:100%; padding:10px 12px; border:1px solid var(--line-d); border-radius:9px; font-family:inherit; font-size:14px; resize:vertical; background:#fff; }
+.dc-form textarea:focus { outline:none; border-color:var(--orange); }
+.dc-confirm { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }

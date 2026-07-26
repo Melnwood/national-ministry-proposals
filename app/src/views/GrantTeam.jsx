@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
-import { signOut } from '../shared/auth.js';
 import { money, date, aval } from '../shared/format.js';
 import { STAGES, STAGE_BY_KEY, ACTIVE_STAGE_KEYS, TERMINAL_STAGE_KEYS, F } from '../shared/schema.js';
 import { moneySummary, byStage, projectName, country, coach, requested, awarded, paid, owed, stageKey, stageLabel } from '../shared/grants.js';
@@ -28,19 +27,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
   const openGrant = openId ? props.find(p => p.id === openId) : null;
 
   return (
-    <div class="shell wide">
-      <div class="topbar">
-        <div class="brand">
-          <div class="mk">JV</div>
-          <div><h1>Grant Team</h1><div class="sub">National Ministries · grant lifecycle</div></div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span class="who">{session.user.name || session.user.email}{session.role ? ` · ${session.role.label}` : ''}</span>
-          {onRefresh && <button class="ghostbtn" onClick={onRefresh}>↻ Refresh</button>}
-          <button class="ghostbtn" onClick={signOut}>Sign out</button>
-        </div>
-      </div>
-
+    <>
       {/* Money picture */}
       <section class="money">
         <div class="mtile">
@@ -106,7 +93,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
       </div>
 
       {openGrant && <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />}
-    </div>
+    </>
   );
 }
 

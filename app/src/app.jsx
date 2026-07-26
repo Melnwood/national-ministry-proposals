@@ -4,10 +4,14 @@ import { signOut } from './shared/auth.js';
 import { ROLE_BY_AIRTABLE } from './shared/schema.js';
 import { SignIn } from './views/SignIn.jsx';
 import { GrantTeam } from './views/GrantTeam.jsx';
+import { Council } from './views/Council.jsx';
 
-// Roles that see the grant-team window (Phase 1). Coach + country get their own
-// views in later phases.
-const GRANT_TEAM_ROLES = new Set(['grant', 'evp', 'cfo', 'president']);
+// The workspace tabs and which roles can open each. A role with no match falls
+// back to seeing everything (useful before roles are fully populated).
+const TABS = [
+  { key: 'council', label: 'Council',    roles: ['evp', 'president'] },
+  { key: 'grant',   label: 'Grant Team', roles: ['evp', 'president', 'grant', 'cfo'] },
+];
 
 export function App() {
   const [status, setStatus] = useState(getToken() ? 'loading' : 'signedout');
@@ -40,28 +44,39 @@ export function App() {
     return <div class="gate"><div class="box"><div class="mk">JV</div><div class="sub">Loading your dashboard…</div></div></div>;
   }
 
-  const roleKey = session.role && session.role.key;
-  if (GRANT_TEAM_ROLES.has(roleKey) || !roleKey) {
-    return <GrantTeam boot={boot} session={session} onRefresh={loadSession} />;
-  }
-  return <Placeholder session={session} />;
+  return <Workspace boot={boot} session={session} onRefresh={loadSession} />;
 }
 
-// Coach / country roles until their views land (Phases 3–4).
-function Placeholder({ session }) {
-  const { user, role } = session;
+export function Workspace({ boot, session, onRefresh }) {
+  const roleKey = session.role && session.role.key;
+  const tabs = TABS.filter(t => !roleKey || t.roles.includes(roleKey));
+  const available = tabs.length ? tabs : TABS;   // coach/country: no tab yet → show all for now
+  const [tab, setTab] = useState(available[0].key);
+
   return (
-    <div class="shell">
+    <div class="shell wide">
       <div class="topbar">
-        <div class="brand"><div class="mk">JV</div>
-          <div><h1>National Ministries</h1><div class="sub">Grant lifecycle · v2</div></div></div>
-        <button class="ghostbtn" onClick={signOut}>Sign out</button>
+        <div class="brand">
+          <div class="mk">JV</div>
+          <div><h1>National Ministries</h1><div class="sub">Grant lifecycle · v2</div></div>
+        </div>
+        <div class="topbar-right">
+          <span class="who">{session.user.name || session.user.email}{session.role ? ` · ${session.role.label}` : ''}</span>
+          <button class="ghostbtn" onClick={onRefresh}>↻ Refresh</button>
+          <button class="ghostbtn" onClick={signOut}>Sign out</button>
+        </div>
       </div>
-      <div class="panel">
-        <p style="font-size:15px;">Signed in as <b>{user.name || user.email}</b>{' '}
-          <span class="rolechip">{role ? role.label : 'role not set'}</span></p>
-        <p style="font-size:13.5px;color:var(--ink-soft);margin-top:12px;">Your {role ? role.label : ''} view is coming in a later phase.</p>
-      </div>
+
+      {available.length > 1 && (
+        <nav class="tabs">
+          {available.map(t => (
+            <button class={`tab${tab === t.key ? ' on' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>
+          ))}
+        </nav>
+      )}
+
+      {tab === 'council' && <Council boot={boot} onRefresh={onRefresh} />}
+      {tab === 'grant' && <GrantTeam boot={boot} session={session} onRefresh={onRefresh} />}
     </div>
   );
 }

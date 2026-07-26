@@ -52,6 +52,9 @@ export const F = {
     dateFunded:      'fldvXoWNaxcBX8qXq',
     budgetFiles:     'fld3cTDxR62CssdGY', // Budget breakdown (attachments)
     notes:           'fldYl71wMPNhPB2Ce',
+    problem:         'fldb0TRzRi1nzkN7v', // What problem/need does this address?
+    peopleImpact:    'fld8CdQ8Ens5m3NDs', // How many people directly impacted?
+    strategicFit:    'fldTa8BUePK8Ifs02', // How does this fit your strategic plans?
     decisionLog:     'fldkAS21IxnJwUwHq', // Decision Log (linked)
     reportLink:      'fldUEWeiL0wyXPTxZ', // Project Report (linked)
     // ── coach (existing records use Regional Coach Name; Assigned Coach is the
@@ -91,6 +94,7 @@ export const F = {
     pid:    'fldB1xE98xE2LdsW2',
     proposal:'fldDCLcDUyODA0AvP', // linked
   },
+  cycle:   { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz' },
   balance: { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' },
   funds:   { source:'fldVacsCCr02d612m', amount:'fldcZFJwHyfu5IgCl', status:'fldXwNvQuraOWvgq7', note:'fldNn57TqCs35zJnj' },
   countries: { name:'fldzgWM7sqaFDM4Cl', phase:'flduog58oXfNq2aEt', recordId:'fldca6uVjtxsluVK1', approvers:'fldwpCrK2Mr68tQh5' },
