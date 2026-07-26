@@ -16,7 +16,7 @@ import { Management } from './views/Management.jsx';
 const TABS = [
   { key: 'country',     label: 'My Country',   roles: ['country', 'evp', 'president'] },
   { key: 'coach',       label: 'Coach Review', roles: ['coach', 'evp', 'president'] },
-  { key: 'council',     label: 'Council',     roles: ['evp', 'president'] },
+  { key: 'council',     label: 'Council Lead Team', roles: ['evp', 'president'] },
   { key: 'grant',       label: 'Grant Team',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'reports',     label: 'Reports',     roles: ['evp', 'president', 'grant', 'cfo'] },
