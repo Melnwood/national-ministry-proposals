@@ -24,6 +24,8 @@ const TR = { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKE
              reqAmt:'fldRwm5T4wcLIeIuL', appAmt:'fldGoVMNTpc2jf0v5', status:'fldtcWGoQLVOQcG5P', notes:'fldbcUSKRon6HgyDC',
              timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C' };
 const FUND_AMT_F = 'fldcZFJwHyfu5IgCl', FUND_STAT_F = 'fldXwNvQuraOWvgq7'; // Available Funds amount + status
+const T_NOTIF = 'tblEpClYAomtd5t2l';  // Notifications
+const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS' };
 const AT     = 'https://api.airtable.com/v0/';
 const TOKEN  = process.env.AIRTABLE_TOKEN;
 const SECRET = process.env.SESSION_SECRET;
@@ -128,6 +130,39 @@ async function writeLog(records){
   for(let i=0;i<records.length;i+=10){
     await at(BASE+'/'+T_LOG, { method:'POST', body:JSON.stringify({ records:records.slice(i,i+10), typecast:true }) });
   }
+}
+async function writeNotifs(records){
+  for(let i=0;i<records.length;i+=10){
+    await at(BASE+'/'+T_NOTIF, { method:'POST', body:JSON.stringify({ records:records.slice(i,i+10), typecast:true }) });
+  }
+}
+const usd = n => '$'+Math.round(Number(n)||0).toLocaleString('en-US');
+
+// Fan out tailored notifications when a grant is transferred: EVP/council, the
+// country leader, and the country coach each get their own message.
+async function notifyTransfer(recordId){
+  const PF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
+               leaderEmail:'fldbs0FzyPWbS1waI', submitterEmail:'fld64OxiMWtnko2H7', coachEmail:'fld4lLrDwB5x0ck72' };
+  const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
+  const f = rec.fields || {};
+  const name = f[PF.name] || 'a grant', country = f[PF.country] || '', amt = usd(f[PF.awarded]);
+  const leader = (f[PF.leaderEmail] || f[PF.submitterEmail] || '').trim();
+  const coach  = (f[PF.coachEmail] || '').trim();
+
+  // EVP / council lead team = Approvers with an EVP or President role.
+  let council = [];
+  try{
+    const ppl = await fetchAll(T_APP, {});
+    council = ppl.filter(p => ['EVP','President'].includes((p.fields[A.role]||'').trim()))
+                 .map(p => (p.fields[A.email]||'').trim()).filter(Boolean);
+  }catch(e){}
+
+  const notifs = [];
+  const add = (email, msg) => { if(email) notifs.push({ fields:{ [N.email]:email, [N.msg]:msg, [N.type]:'Transfer', [N.prop]:[recordId] } }); };
+  council.forEach(e => add(e, `Funds sent: ${name}${country?` (${country})`:''} — ${amt} transferred to the country's Cedarstone account.`));
+  add(leader, `Your grant "${name}" has been funded — ${amt} is on its way to your account.`);
+  add(coach,  `${name}${country?` (${country})`:''}, which you reviewed, has been funded — ${amt} sent.`);
+  if(notifs.length) await writeNotifs(notifs);
 }
 
 exports.handler = async (event) => {
@@ -371,7 +406,28 @@ exports.handler = async (event) => {
           }})));
         }catch(logErr){ /* logging is best-effort; never block the approval */ }
       }
+      // Fan out notifications for events that need them (currently: transfer).
+      if(body.notify && body.notify.event === 'transfer'){
+        try{ await notifyTransfer(body.recordId); }catch(notifErr){ /* never block the transfer */ }
+      }
       return reply(200, { fields:upd.fields, user:who });
+    }
+
+    if(body.op === 'notifications'){
+      const recs = await fetchAll(T_NOTIF, {});
+      const mine = recs.filter(r => ((r.fields[N.email]||'').trim().toLowerCase()) === ((who.email||'').trim().toLowerCase()));
+      const out = mine.map(r => ({ id:r.id, at:r.createdTime, message:r.fields[N.msg]||'',
+        type:v(r.fields[N.type])||'', read:!!r.fields[N.read] }))
+        .sort((a,b)=> new Date(b.at)-new Date(a.at)).slice(0,50);
+      return reply(200, { notifications:out, unread:out.filter(n=>!n.read).length, user:who });
+    }
+
+    if(body.op === 'notif_read'){
+      const ids = Array.isArray(body.ids) ? body.ids : (body.id ? [body.id] : []);
+      for(let i=0;i<ids.length;i+=10){
+        await at(BASE+'/'+T_NOTIF, { method:'PATCH', body:JSON.stringify({ records: ids.slice(i,i+10).map(id=>({ id, fields:{ [N.read]:true } })), typecast:true }) });
+      }
+      return reply(200, { ok:true, user:who });
     }
 
     if(body.op === 'set_balance'){

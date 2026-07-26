@@ -60,7 +60,7 @@ function TransferCard({ p, onDone }) {
     const changes = [{ type: 'Funding assignment', label: 'Funds transferred',
       detail: `${name} — ${money(amt)} transferred to Cedarstone account ${acct || '(not on file)'}` }];
     try {
-      await api('update', { recordId: p.id, fields, changes, projectName: name });
+      await api('update', { recordId: p.id, fields, changes, projectName: name, notify: { event: 'transfer' } });
       onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not record the transfer.'); setBusy(false); }
   }

@@ -11,6 +11,7 @@ import { Coach } from './views/Coach.jsx';
 import { Country } from './views/Country.jsx';
 import { Management } from './views/Management.jsx';
 import { Accounting } from './views/Accounting.jsx';
+import { NotificationBell } from './views/NotificationBell.jsx';
 
 // The workspace tabs and which roles can open each. A role with no match falls
 // back to seeing everything (useful before roles are fully populated).
@@ -76,6 +77,7 @@ export function Workspace({ boot, session, onRefresh }) {
         </div>
         <div class="topbar-right">
           <span class="who">{session.user.name || session.user.email}{session.role ? ` · ${session.role.label}` : ''}</span>
+          <NotificationBell />
           <button class="ghostbtn" onClick={onRefresh}>↻ Refresh</button>
           <button class="ghostbtn" onClick={signOut}>Sign out</button>
         </div>
