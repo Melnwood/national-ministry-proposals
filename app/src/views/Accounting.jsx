@@ -95,12 +95,15 @@ function SignoffCard({ p, canStamp, onDone }) {
     const name = projectName(p);
     const fieldKey = which === 'evp' ? 'evpApproval' : 'mCouncilApproval';
     const label = which === 'evp' ? 'EVP stamped' : 'Council Lead Team stamped';
+    // If the other stamp is already set, this one clears it for transfer.
+    const completesBoth = which === 'evp' ? council : evp;
     try {
       await api('update', {
         recordId: p.id,
         fields: { [F.proposal[fieldKey]]: true },
         changes: [{ type: 'Status change', label, detail: `${name} — ${label} (cleared toward transfer)` }],
         projectName: name,
+        ...(completesBoth ? { notify: { event: 'cleared' } } : {}),
       });
       onDone && onDone();
     } catch (e) { setBusy(''); }

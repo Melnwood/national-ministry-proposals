@@ -163,13 +163,14 @@ const usd = n => '$'+Math.round(Number(n)||0).toLocaleString('en-US');
 const PNF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
               leaderEmail:'fldbs0FzyPWbS1waI', submitterEmail:'fld64OxiMWtnko2H7', coachEmail:'fld4lLrDwB5x0ck72',
               decisionMsg:'fldt1Hu5YY1ZvvqMD' };
-async function councilEmails(){
+async function roleEmails(roles){
   try{
     const ppl = await fetchAll(T_APP, {});
-    return ppl.filter(p => ['EVP','President'].includes((p.fields[A.role]||'').trim()))
+    return ppl.filter(p => roles.includes((p.fields[A.role]||'').trim()))
               .map(p => (p.fields[A.email]||'').trim()).filter(Boolean);
   }catch(e){ return []; }
 }
+const councilEmails = () => roleEmails(['EVP','President']);
 async function notifyEvent(event, recordId, opts={}){
   const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
   const f = rec.fields || {};
@@ -195,6 +196,9 @@ async function notifyEvent(event, recordId, opts={}){
       add(leader, `Good news — "${name}" was approved by the council${amt!=='$0'?` for ${amt}`:''}.`, 'Decision');
       council.forEach(e => add(e, `Approved: "${name}"${where} — now with the grant team to fund.`, 'Decision'));
     }
+  } else if(event === 'cleared'){
+    const team = await roleEmails(['Grant team']);
+    team.forEach(e => add(e, `Cleared to transfer: "${name}"${where} — ${amt} is ready to send to the country's Cedarstone account.`, 'Transfer'));
   } else if(event === 'transfer'){
     const council = await councilEmails();
     council.forEach(e => add(e, `Funds sent: "${name}"${where} — ${amt} transferred to the country's Cedarstone account.`, 'Transfer'));
