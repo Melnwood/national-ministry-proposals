@@ -1,0 +1,7 @@
+# v2 app build artifacts — never commit these
+app/node_modules/
+app/dist/
+node_modules/
+
+# OS / editor cruft
+.DS_Store

@@ -32,7 +32,20 @@ const PROP_CREATED = 'fldkSi7mZ7RhhqPvC';
 const L = { type:'fldWdXntN7qxzP27w', detail:'fldxS6j7X32kek3sA', user:'fldhcgVDw0620rPOq',
             email:'fldHgUJthRzbKAFBj', pid:'fldB1xE98xE2LdsW2', entry:'fldY2QaCQeesowSUP' };
 const A = { email:'fldE3WddwlJbCRq7U', name:'fldmHfuuitDTDnPXR', salt:'fldzmEAe6cH17xFRw', hash:'fldv0hVikFT0fJlCx',
-            role:'fldX8zlGcfHjCXzUx' };
+            role:'fldX8zlGcfHjCXzUx', countries:'fldiXyPUnQ476bAYo', allCountries:'fldA6ibSWz73jves6' };
+
+// Attach role + country scope to a signed-in user, read from their Approvers
+// record. Additive and backward-compatible: existing pages ignore these fields;
+// the v2 app uses them to route to the right role view and (later) to enforce
+// what each person may see. Falls back to an empty scope if anything fails.
+function attachScope(user, rec){
+  try{
+    user.role = rec.fields[A.role] || '';
+    user.allCountries = !!rec.fields[A.allCountries];
+    user.countryIds = Array.isArray(rec.fields[A.countries]) ? rec.fields[A.countries] : [];
+  }catch(e){ user.role = user.role || ''; }
+  return user;
+}
 // Who may reset another person's sign-in. Add an email here to grant that power.
 const ADMINS = ['mellenwood@josiahventure.com'];
 
@@ -142,7 +155,7 @@ exports.handler = async (event) => {
     } else {
       if(!eqStr(hashPw(password, salt), hash)) return reply(401, { error:'Email or password not recognized.' });
     }
-    const user = { email: rec.fields[A.email] || email, name };
+    const user = attachScope({ email: rec.fields[A.email] || email, name }, rec);
     try{
       await writeLog([{ fields:{ [L.entry]:name+' signed in', [L.type]:'Login',
         [L.detail]: firstTime ? 'Set password and signed in' : 'Signed in', [L.user]:name, [L.email]:user.email } }]);
@@ -202,6 +215,10 @@ exports.handler = async (event) => {
       ]);
       // non-critical: never let these crash the whole bootstrap
       const goals = await safe(fetchAll(T_GOALS, {}));
+      // Attach the signed-in user's role + country scope, read from Approvers.
+      const peopleRecs = await safe(fetchAll(T_APP, {}));
+      const meRec = peopleRecs.find(p => ((p.fields[A.email]||'').trim().toLowerCase()) === ((who.email||'').trim().toLowerCase()));
+      if(meRec) attachScope(who, meRec);
       const logRecs = await safe(fetchAll(T_LOG, {}));
       const countryRecs = await safe(fetchAll(T_COUNTRIES, {}));
       const reportRecs = await safe(fetchAll(T_REPORT, {}));

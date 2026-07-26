@@ -1,0 +1,62 @@
+/* Design tokens — the warm "paper" system carried over from the current app,
+   defined once here instead of re-declared in every page. */
+:root {
+  --paper:#F6F2E9; --paper-2:#FBF8F1; --card:#FBF8F1;
+  --ink:#1E2A24; --ink-soft:#46544C; --muted:#5A655C;
+  --line:#E7DDCE; --line-d:#D8CDB8;
+  --orange:#FF6600; --orange-soft:#FFEEE0;
+  --green:#1F7A5C; --green-soft:#E3F2EB; --green-d:#1F4438;
+  --red:#B0573B; --gold:#C58B2E;
+  --shadow:0 1px 2px rgba(31,42,36,.06), 0 8px 24px rgba(31,42,36,.06);
+  --radius:14px;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  background:var(--paper); color:var(--ink);
+  font-family:'Hanken Grotesk', -apple-system, system-ui, sans-serif;
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 1px 1px, rgba(31,42,36,.04) 1px, transparent 0);
+  background-size:22px 22px;
+}
+.serif { font-family:'Fraunces', Georgia, serif; }
+.mono  { font-family:'IBM Plex Mono', monospace; }
+
+/* ── sign-in gate ── */
+.gate { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:20px; }
+.gate .box {
+  background:var(--paper-2); border:1px solid var(--line); border-radius:16px;
+  padding:34px 32px; max-width:400px; width:100%; box-shadow:var(--shadow); text-align:center;
+}
+.gate .mk {
+  width:46px; height:46px; border-radius:12px; background:var(--orange); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 auto 14px;
+}
+.gate h1 { font-family:'Fraunces',serif; font-weight:600; font-size:24px; margin-bottom:5px; }
+.gate .sub { font-size:13.5px; color:var(--ink-soft); margin-bottom:20px; }
+.gate input {
+  width:100%; padding:11px 13px; border:1px solid var(--line-d); border-radius:9px;
+  font-family:inherit; font-size:14.5px; margin-bottom:11px; background:#fff; color:var(--ink);
+}
+.gate input:focus { outline:none; border-color:var(--orange); }
+.gate button {
+  width:100%; padding:12px; border:none; border-radius:9px; background:var(--orange);
+  color:#fff; font-family:inherit; font-weight:600; font-size:15px; cursor:pointer;
+}
+.gate button:disabled { opacity:.55; cursor:default; }
+.gate .err { color:var(--red); font-size:13px; margin-top:11px; min-height:1em; }
+.gate .hint { font-size:12px; color:var(--ink-soft); margin-top:14px; line-height:1.45; }
+
+/* ── signed-in shell (placeholder until role views land) ── */
+.shell { max-width:920px; margin:0 auto; padding:40px 24px 70px; }
+.topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; }
+.brand { display:flex; align-items:center; gap:12px; }
+.brand .mk { width:40px; height:40px; border-radius:11px; background:var(--orange); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; font-size:20px; }
+.brand h1 { font-family:'Fraunces',serif; font-weight:600; font-size:20px; }
+.brand .sub { font-size:12px; color:var(--muted); }
+.ghostbtn { font-family:inherit; font-size:12.5px; padding:7px 12px; border:1px solid var(--line-d);
+  border-radius:8px; background:var(--paper-2); cursor:pointer; color:var(--ink); }
+.panel { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:24px 26px; box-shadow:var(--shadow); }
+.rolechip { display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+  padding:3px 10px; border-radius:999px; background:var(--orange-soft); color:var(--orange); }

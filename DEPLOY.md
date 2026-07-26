@@ -1,6 +1,10 @@
 # National Ministry Proposals — deploy notes
 
-Live site: https://national-ministry-projects-grant-dep.netlify.app
+Live site: https://national-ministry-proposals.netlify.app
+
+(This repo deploys to the `national-ministry-proposals` Netlify project. An older
+site, `national-ministry-projects-grant-dep.netlify.app`, is stale and now 404s —
+ignore it.)
 
 ## How deploys work
 
