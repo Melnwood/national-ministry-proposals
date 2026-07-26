@@ -1,6 +1,22 @@
+# Netlify config — v2 cutover.
+# Builds the Preact single-page app in app/ and publishes app/dist. The
+# serverless function stays at netlify/functions and keeps working. Until this
+# branch merges, main still publishes the old flat HTML pages.
 [build]
-  publish = "."
+  command = "cd app && npm ci && npm run build"
+  publish = "app/dist"
   functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
 
 [functions]
   node_bundler = "esbuild"
+
+# Single-page app: serve the app shell for any non-file path so deep links work.
+# Netlify resolves /.netlify/functions/* BEFORE redirects, so the API is not
+# affected by this catch-all.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
