@@ -192,3 +192,26 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .dc-form textarea { width:100%; padding:10px 12px; border:1px solid var(--line-d); border-radius:9px; font-family:inherit; font-size:14px; resize:vertical; background:#fff; }
 .dc-form textarea:focus { outline:none; border-color:var(--orange); }
 .dc-confirm { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
+
+/* ── foundations ── */
+.fnd { margin-bottom:34px; }
+.fnd-head { display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding-bottom:8px; border-bottom:2px solid var(--line-d); margin-bottom:16px; }
+.fnd-head h2 { font-family:'Fraunces',serif; font-weight:600; font-size:22px; }
+.fnd-total { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:16px; color:var(--green); }
+.cycle { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow); margin-bottom:14px; }
+.cycle-top { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+.cycle-year { font-family:'Fraunces',serif; font-weight:600; font-size:19px; min-width:78px; }
+.cycle-stats { display:flex; gap:26px; flex-wrap:wrap; }
+.cstat-l { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+.cstat-v { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:16px; margin-top:2px; }
+.cstat-v.neg { color:var(--red); }
+.goals { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px 26px; margin:18px 0 4px; }
+.goal-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.goal-name { font-size:12.5px; font-weight:600; }
+.goal-nums { font-family:'IBM Plex Mono',monospace; font-size:13px; }
+.bar { height:8px; background:var(--line); border-radius:99px; overflow:hidden; }
+.bar-fill { height:100%; background:var(--orange); border-radius:99px; transition:width .3s; min-width:2px; }
+.bar-fill.met { background:var(--green); }
+.grants-toggle { margin-top:16px; font-family:inherit; font-size:13px; font-weight:600; color:var(--ink-soft);
+  background:none; border:none; cursor:pointer; padding:0; }
+.grants-toggle:hover { color:var(--orange); }

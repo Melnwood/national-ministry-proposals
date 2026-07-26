@@ -53,7 +53,9 @@ export const F = {
     budgetFiles:     'fld3cTDxR62CssdGY', // Budget breakdown (attachments)
     notes:           'fldYl71wMPNhPB2Ce',
     problem:         'fldb0TRzRi1nzkN7v', // What problem/need does this address?
-    peopleImpact:    'fld8CdQ8Ens5m3NDs', // How many people directly impacted?
+    peopleImpact:    'fld8CdQ8Ens5m3NDs', // How many people directly impacted? (target)
+    leadersImpact:   'fldc2XplvqvAX8NlX', // How many leaders directly impacted? (target)
+    churchesImpact:  'fld6ZWqZuuK9gcfab', // How many churches directly impacted? (target)
     strategicFit:    'fldTa8BUePK8Ifs02', // How does this fit your strategic plans?
     decisionLog:     'fldkAS21IxnJwUwHq', // Decision Log (linked)
     reportLink:      'fldUEWeiL0wyXPTxZ', // Project Report (linked)
@@ -94,7 +96,11 @@ export const F = {
     pid:    'fldB1xE98xE2LdsW2',
     proposal:'fldDCLcDUyODA0AvP', // linked
   },
-  cycle:   { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz' },
+  cycle:   { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz', projects:'fld4GE2gj9YRXIrQv' },
+  goal:    { type:'fldynRy5JVc8MHzmn', target:'fldC8KQzgngaBtmmL', actual:'fldrzoRt4JsDZb8gQ',
+             cycleYear:'fldgijFFoi0e2LfjR', foundationCycle:'fldfKb4Blj2HsDvee', cycle:'fldvzwukj9URXZoG7' },
+  report:  { type:'fldVK0eF1dBGNnMG0', proposal:'fldWLpL3N2yIRfn0t', submitted:'fldTytlPqwAo01YtX', due:'fldkjC4V3NmC4ylDy',
+             completedBy:'fldemspw6LSoGMnIQ', leaders:'fldP8DjBL1S5l1WWA', churches:'fldkksYMIC3YMdsNx', people:'fldisUoMECHpHZwp5' },
   balance: { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' },
   funds:   { source:'fldVacsCCr02d612m', amount:'fldcZFJwHyfu5IgCl', status:'fldXwNvQuraOWvgq7', note:'fldNn57TqCs35zJnj' },
   countries: { name:'fldzgWM7sqaFDM4Cl', phase:'flduog58oXfNq2aEt', recordId:'fldca6uVjtxsluVK1', approvers:'fldwpCrK2Mr68tQh5' },
