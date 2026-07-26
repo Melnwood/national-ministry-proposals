@@ -7,10 +7,12 @@ import { GrantTeam } from './views/GrantTeam.jsx';
 import { Council } from './views/Council.jsx';
 import { Foundations } from './views/Foundations.jsx';
 import { Reports } from './views/Reports.jsx';
+import { Coach } from './views/Coach.jsx';
 
 // The workspace tabs and which roles can open each. A role with no match falls
 // back to seeing everything (useful before roles are fully populated).
 const TABS = [
+  { key: 'coach',       label: 'Coach Review', roles: ['coach', 'evp', 'president'] },
   { key: 'council',     label: 'Council',     roles: ['evp', 'president'] },
   { key: 'grant',       label: 'Grant Team',  roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
@@ -54,8 +56,10 @@ export function App() {
 export function Workspace({ boot, session, onRefresh }) {
   const roleKey = session.role && session.role.key;
   const tabs = TABS.filter(t => !roleKey || t.roles.includes(roleKey));
-  const available = tabs.length ? tabs : TABS;   // coach/country: no tab yet → show all for now
-  const [tab, setTab] = useState(available[0].key);
+  const available = tabs.length ? tabs : TABS;   // no role match → show all for now
+  const HOME = { coach: 'coach', evp: 'council', president: 'council', grant: 'grant', cfo: 'grant' };
+  const home = available.some(t => t.key === HOME[roleKey]) ? HOME[roleKey] : available[0].key;
+  const [tab, setTab] = useState(home);
 
   return (
     <div class="shell wide">
@@ -79,6 +83,7 @@ export function Workspace({ boot, session, onRefresh }) {
         </nav>
       )}
 
+      {tab === 'coach' && <Coach boot={boot} session={session} onRefresh={onRefresh} />}
       {tab === 'council' && <Council boot={boot} onRefresh={onRefresh} />}
       {tab === 'grant' && <GrantTeam boot={boot} session={session} onRefresh={onRefresh} />}
       {tab === 'foundations' && <Foundations boot={boot} />}

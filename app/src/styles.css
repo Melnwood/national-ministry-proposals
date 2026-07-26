@@ -225,3 +225,11 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .rbadge.due-soon { background:#FBF0D8; color:#7a5410; }
 .rbadge.upcoming { background:var(--line); color:var(--ink-soft); }
 .rbadge.submitted { background:var(--green-soft); color:var(--green-d); }
+
+/* ── coach checklist ── */
+.checklist { margin-top:14px; }
+.check { display:flex; align-items:flex-start; gap:10px; padding:9px 11px; border:1px solid var(--line); border-radius:9px;
+  margin-bottom:7px; cursor:pointer; font-size:13.5px; line-height:1.4; background:#fff; transition:.12s; }
+.check:hover { border-color:var(--line-d); }
+.check.on { border-color:var(--green); background:var(--green-soft); }
+.check input { margin-top:2px; accent-color:var(--green); flex:0 0 auto; }
