@@ -374,6 +374,7 @@ exports.handler = async (event) => {
       const countries_meta = countryRecs.map(r => {
         const ph = r.fields['flduog58oXfNq2aEt'];
         return {
+          id: r.id,
           name: r.fields['fldzgWM7sqaFDM4Cl'] || '',
           phase: (ph && (ph.name || (typeof ph === 'string' ? ph : ''))) || ''
         };
@@ -399,8 +400,9 @@ exports.handler = async (event) => {
         const mineProps = props.filter(p => { const l = p.fields[PROP_COUNTRY_LINK]; return Array.isArray(l) && l.some(id => allowed.has(id)); });
         const mineIds = new Set(mineProps.map(p => p.id));
         const mineReports = reports.filter(r => mineIds.has(r.proposalId));
-        // scoped users get their own grants + reports only; sensitive aggregates withheld
-        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:[], reports:mineReports, travel:[], user:who });
+        // scoped users get their own grants + reports + their own country; sensitive aggregates withheld
+        const myCountries = countries_meta.filter(c => allowed.has(c.id));
+        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:[], user:who });
       }
       return reply(200, { cycles, props, logs, funds, bal, goals, countries_meta, reports, travel, user:who });
     }
@@ -533,6 +535,35 @@ exports.handler = async (event) => {
         user:r.fields[L.user] || '', email:r.fields[L.email] || '', proposalId:r.fields[L.pid] || ''
       }));
       return reply(200, { records:out });
+    }
+
+    if(body.op === 'submit_application'){
+      // A country leader applies for a project grant from their own page.
+      const f = body.fields || {};
+      if(!f.name || !f.requested) return reply(400, { error:'Project name and amount are required.' });
+      let countryId = body.countryId || (who.countryIds && who.countryIds[0]) || '';
+      if(isScopedCountry(who) && countryId && !(who.countryIds||[]).includes(countryId)) countryId = (who.countryIds||[])[0] || '';
+      const PA = { name:'fld1qi35letQtg6yC', requested:'fld3bvuKr1SIXAwUf', stage:STAGE_F, status:STATUS_F,
+        submitted:'fldiAdRWxktreIrDZ', country:'fldaHnvEM4RokRDth', leaderName:'fldcwusDwTyQ5E5Qf', leaderEmail:'fldbs0FzyPWbS1waI',
+        subName:'fldlfXrnrE7yAyNul', subEmail:'fld64OxiMWtnko2H7', category:'fldqZcI9IgfOPCdt3', requestType:'fldvmIx5iytXPIgve',
+        problem:'fldb0TRzRi1nzkN7v', people:'fld8CdQ8Ens5m3NDs', leaders:'fldc2XplvqvAX8NlX', churches:'fld6ZWqZuuK9gcfab',
+        budget:'fldofeeQU3DlrHULR', objective:'fld17fOaX3yAe3s4O', success:'fldQKLTpf2M69gneF', sustain:'fldvktGeT6orNqBlA', fit:'fldTa8BUePK8Ifs02' };
+      const fields = {
+        [PA.name]:String(f.name).trim(), [PA.requested]:Number(f.requested)||0,
+        [PA.stage]:'Submitted', [PA.status]:'Submitted ', [PA.submitted]:true,
+        [PA.leaderName]:who.name||'', [PA.leaderEmail]:who.email||'', [PA.subName]:who.name||'', [PA.subEmail]:who.email||''
+      };
+      if(countryId) fields[PA.country] = [countryId];
+      const setN = (k,v)=>{ if(v!=null&&v!=='') fields[k]=Number(v)||0; };
+      const setS = (k,v)=>{ if(v!=null&&String(v).trim()!=='') fields[k]=String(v).trim(); };
+      setS(PA.category,f.category); setS(PA.requestType,f.requestType); setS(PA.problem,f.problem);
+      setN(PA.people,f.people); setN(PA.leaders,f.leaders); setN(PA.churches,f.churches); setN(PA.budget,f.totalBudget);
+      setS(PA.objective,f.objective); setS(PA.success,f.success); setS(PA.sustain,f.sustainability); setS(PA.fit,f.strategicFit);
+      const created = await at(BASE+'/'+T_PROP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+      const recId = created.records && created.records[0] && created.records[0].id;
+      try{ await writeLog([{ fields:{ [L.entry]:String(f.name).trim()+' — application submitted', [L.type]:'Status change',
+        [L.detail]:(who.name||who.email)+' submitted a new grant application', [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:recId||'' } }]); }catch(e){}
+      return reply(200, { ok:true, id:recId, user:who });
     }
 
     return reply(400, { error:'Unknown op.' });
