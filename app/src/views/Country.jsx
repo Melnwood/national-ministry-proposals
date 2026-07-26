@@ -45,7 +45,7 @@ export function Country({ boot, session, onRefresh }) {
         </div>
         <div class="applybtns">
           <button class="btn-approve" onClick={() => setApply('project')}>Apply for a project grant</button>
-          <button class="ghostbtn big" onClick={() => setApply('travel')}>Apply for a travel grant</button>
+          <button class="ghostbtn big" onClick={() => setApply('travel')}>Apply for the SECC Travel Grant</button>
         </div>
       </div>
 
@@ -233,7 +233,7 @@ function TravelGrantForm({ user, onClose }) {
   return (
     <div class="modal-scrim" onClick={onClose}>
       <div class="modal wide" onClick={e => e.stopPropagation()}>
-        <div class="modal-head"><div><h2>Apply for a travel grant</h2><div class="sub2">SouthEast Christian travel fund</div></div><button class="ghostbtn" onClick={onClose}>Close ✕</button></div>
+        <div class="modal-head"><div><h2>Apply for the SECC Travel Grant</h2><div class="sub2">SouthEast Christian travel fund</div></div><button class="ghostbtn" onClick={onClose}>Close ✕</button></div>
         {done ? (
           <div style="padding:8px 24px 24px">
             <div class="okmsg">Your travel request has been submitted for review.</div>
