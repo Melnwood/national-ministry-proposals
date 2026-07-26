@@ -14,6 +14,10 @@ export const requested   = p => num(field(p, 'requested'));
 export const awarded     = p => num(field(p, 'awarded'));
 export const paid        = p => num(field(p, 'paid'));
 
+// Coach name: prefer the populated Regional Coach Name; the new Assigned Coach
+// link field returns record ids, so it's only useful once we resolve names.
+export const coach = p => aval(field(p, 'regionalCoach')) || '';
+
 export const stageLabel = p => aval(field(p, 'stage')) || '';
 export const stageKey   = p => (STAGE_BY_LABEL[stageLabel(p)] || {}).key || null;
 

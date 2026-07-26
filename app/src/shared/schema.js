@@ -54,6 +54,10 @@ export const F = {
     notes:           'fldYl71wMPNhPB2Ce',
     decisionLog:     'fldkAS21IxnJwUwHq', // Decision Log (linked)
     reportLink:      'fldUEWeiL0wyXPTxZ', // Project Report (linked)
+    // ── coach (existing records use Regional Coach Name; Assigned Coach is the
+    //     new auto-routed link field, empty on legacy records) ──
+    regionalCoach:   'fldstKKgW2SeCjYxG', // Regional Coach Name (singleSelect — populated)
+    coachEmail:      'fld4lLrDwB5x0ck72', // Coach Email
     // ── coach review (already modeled in the base) ──
     assignedCoach:   'fldfjS1Eu0VUL1B01', // Assigned Coach (linked; auto-routed by country)
     coachReview:     'fldpS6lGiif53cWuo', // Coach Review (assessment criteria, multi-select)

@@ -138,3 +138,24 @@ table.grants td.owe { color:var(--red); }
 .notes .dt { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:5px; }
 .notes p { font-size:13.5px; line-height:1.55; color:var(--ink); white-space:pre-wrap; }
 .modal-foot { padding:12px 24px 22px; font-size:12px; }
+.modal-head .sub2 { font-size:12.5px; color:var(--muted); margin-top:5px; }
+
+/* ── editor in the detail modal ── */
+.editor { padding:16px 24px 6px; }
+.fld { display:block; margin-bottom:14px; }
+.fldrow { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.flbl { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+.editor select, .moneyin input {
+  width:100%; padding:10px 12px; border:1px solid var(--line-d); border-radius:9px;
+  font-family:inherit; font-size:14.5px; background:#fff; color:var(--ink);
+}
+.editor select:focus, .moneyin input:focus { outline:none; border-color:var(--orange); }
+.moneyin { position:relative; }
+.moneyin span { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:14px; }
+.moneyin input { padding-left:24px; font-family:'IBM Plex Mono',monospace; }
+.mini { display:inline-block; margin-top:6px; font-size:11.5px; }
+button.mini { border:none; background:none; color:var(--orange); cursor:pointer; font-family:inherit; padding:0; text-decoration:underline; }
+.editerr { margin:0 24px; background:#FBE7E0; border:1px solid #E7B9A8; color:#8A3A24; border-radius:9px; padding:9px 12px; font-size:13px; }
+.modal-foot.actions { display:flex; justify-content:flex-end; gap:10px; align-items:center; padding-top:16px; }
+.savebtn { padding:10px 20px; border:none; border-radius:9px; background:var(--orange); color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; }
+.savebtn:disabled { opacity:.5; cursor:default; }
