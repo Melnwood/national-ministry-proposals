@@ -77,7 +77,8 @@ export const F = {
     mCouncilApproval:'fldmvzGjvzDOSGlux', // Council Lead Team Approval
     mGrantApproval:  'fldki02HCBpVQdnL6', // Grant Team Approval
     mFundsIdentified:'fldVjJksMFBi3W1zb', // Grant Team Identify Funds
-    mCfoApproval:    'flddfW9RJUgq04kQn', // CFO Approval (last gate before money moves)
+    evpApproval:     'fldMRxlxWLMghpyVE', // EVP Approval (release stamp #1; #2 is mCouncilApproval)
+    mCfoApproval:    'flddfW9RJUgq04kQn', // CFO Approval (legacy — CFO stamp removed from the flow)
     mTransferReq:    'fldrsKyo3bDjcPkot', // Transfer Requested to Council Account
     mTransferOut:    'fldp5F3Q4B8xphHGl', // Transfer from Council account to country account
   },
@@ -125,7 +126,6 @@ export const STAGES = [
   { key:'deferred',   label:'Approved — Deferred',  owner:'grant',   legacy:['Grant is approved but no funding yet','Pause'] },
   { key:'grantApproved', label:'Grant Team Approved', owner:'grant', legacy:['Grant Team Approval (Dave & Pavel)3'] },
   { key:'fundsFound', label:'Funding Identified',   owner:'grant',   legacy:['Funding For Grant Identified 4'] },
-  { key:'cfo',        label:'CFO Review',           owner:'cfo',     legacy:[] },
   { key:'accounting', label:'At Accounting',        owner:'grant',   legacy:['Funds distributed to Council Account 5'] },
   { key:'funded',     label:'Funded',               owner:null,      legacy:['Funds Distributed to Cedarstone Country Account 6'] },
   { key:'denied',     label:'Denied',               owner:null,      legacy:['Grant Team Denial 3.1 '] },
@@ -135,7 +135,7 @@ export const STAGES = [
 export const STAGE_BY_KEY = Object.fromEntries(STAGES.map(s => [s.key, s]));
 export const STAGE_BY_LABEL = Object.fromEntries(STAGES.map(s => [s.label, s]));
 // The active pipeline (excludes terminal outcomes) — used for the funnel view.
-export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','grantApproved','fundsFound','cfo','accounting'];
+export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','grantApproved','fundsFound','accounting'];
 export const TERMINAL_STAGE_KEYS = ['funded','denied','archived'];
 // Reverse lookup: legacy Status text (trimmed) → canonical stage key.
 export const LEGACY_STATUS_TO_STAGE = STAGES.reduce((m, s) => {

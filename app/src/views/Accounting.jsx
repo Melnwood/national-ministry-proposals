@@ -5,31 +5,34 @@ import { F } from '../shared/schema.js';
 import { projectName, country, awarded, requested, stageKey } from '../shared/grants.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
+const isChecked = (p, key) => p.fields[F.proposal[key]] === true;
 
 export function Accounting({ boot, session, onRefresh }) {
   const props = boot.props || [];
   const role = (session.role && session.role.key) || '';
-  const isCFO = role === 'cfo' || role === 'evp' || role === 'president';
+  const canStamp = role === 'evp' || role === 'president';
 
-  const ready = useMemo(() => props.filter(p => stageKey(p) === 'accounting'), [props]);
-  const awaitingCFO = useMemo(() => props.filter(p => stageKey(p) === 'cfo'), [props]);
+  const atAccounting = useMemo(() => props.filter(p => stageKey(p) === 'accounting'), [props]);
+  const cleared = atAccounting.filter(p => isChecked(p, 'evpApproval') && isChecked(p, 'mCouncilApproval'));
+  const awaiting = atAccounting.filter(p => !(isChecked(p, 'evpApproval') && isChecked(p, 'mCouncilApproval')));
 
   return (
     <>
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
-      <p class="lead">Grants that are approved, funded, and cleared by the CFO — ready to send to the country's Cedarstone account. Everything you need to make the transfer is here, so nothing runs through email.</p>
+      <p class="lead">A grant is cleared to send once the EVP and the Council Lead Team have both stamped it. Then everything Accounting needs to make the transfer is right here — no email required.</p>
 
-      <div class="secthead" style="font-size:15px">Ready to transfer <span class="dim">— {ready.length}</span></div>
-      {!ready.length && <div class="panel"><p style="color:var(--muted)">Nothing is waiting for a transfer right now.</p></div>}
+      <div class="secthead" style="font-size:15px">Ready to transfer <span class="dim">— {cleared.length}</span></div>
+      {!cleared.length && <div class="panel"><p style="color:var(--muted)">Nothing is cleared for transfer yet.</p></div>}
       <div class="cards">
-        {ready.map(p => <TransferCard key={p.id} p={p} onDone={onRefresh} />)}
+        {cleared.map(p => <TransferCard key={p.id} p={p} onDone={onRefresh} />)}
       </div>
 
-      {awaitingCFO.length > 0 && (
+      {awaiting.length > 0 && (
         <>
-          <div class="secthead" style="font-size:15px;margin-top:30px">Awaiting CFO sign-off <span class="dim">— {awaitingCFO.length}</span></div>
+          <div class="secthead" style="font-size:15px;margin-top:30px">Awaiting sign-off <span class="dim">— {awaiting.length}</span></div>
+          <p class="lead">Needs both stamps before Accounting can send it.</p>
           <div class="cards">
-            {awaitingCFO.map(p => <CFOCard key={p.id} p={p} canStamp={isCFO} onDone={onRefresh} />)}
+            {awaiting.map(p => <SignoffCard key={p.id} p={p} canStamp={canStamp} onDone={onRefresh} />)}
           </div>
         </>
       )}
@@ -37,7 +40,7 @@ export function Accounting({ boot, session, onRefresh }) {
   );
 }
 
-function acctNo(p) { return aval(p.fields[F.proposal.cedarstoneAccount]) || ''; }
+const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
 
 function TransferCard({ p, onDone }) {
   const [busy, setBusy] = useState(false);
@@ -65,16 +68,13 @@ function TransferCard({ p, onDone }) {
   return (
     <div class="dcard">
       <div class="dc-head">
-        <div>
-          <h3>{projectName(p)}</h3>
-          <div class="dc-meta">{country(p)}</div>
-        </div>
+        <div><h3>{projectName(p)}</h3><div class="dc-meta">{country(p)}</div></div>
         <div class="xfer-amt">{money(amt)}</div>
       </div>
       <div class="acctrow">
         <div><div class="cstat-l">Cedarstone account</div>
           <div class={`acctno${acct ? '' : ' missing'}`}>{acct || 'Not on file — check with the country'}</div></div>
-        <div><div class="cstat-l">CFO cleared</div><div class="cstat-v">{p.fields[F.proposal.mCfoApproval] ? '✓ Yes' : '—'}</div></div>
+        <div><div class="cstat-l">Cleared by</div><div class="cstat-v" style="font-size:13px">EVP ✓ · Council Lead Team ✓</div></div>
       </div>
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
@@ -84,32 +84,43 @@ function TransferCard({ p, onDone }) {
   );
 }
 
-function CFOCard({ p, canStamp, onDone }) {
-  const [busy, setBusy] = useState(false);
+function SignoffCard({ p, canStamp, onDone }) {
+  const [busy, setBusy] = useState('');
   const amt = awarded(p) || requested(p);
+  const evp = isChecked(p, 'evpApproval');
+  const council = isChecked(p, 'mCouncilApproval');
 
-  async function stamp() {
-    setBusy(true);
+  async function stamp(which) {
+    setBusy(which);
     const name = projectName(p);
+    const fieldKey = which === 'evp' ? 'evpApproval' : 'mCouncilApproval';
+    const label = which === 'evp' ? 'EVP stamped' : 'Council Lead Team stamped';
     try {
       await api('update', {
         recordId: p.id,
-        fields: { [F.proposal.stage]: 'At Accounting', [F.proposal.mCfoApproval]: true },
-        changes: [{ type: 'Status change', label: 'CFO cleared to pay', detail: `${name} cleared by CFO for transfer (${money(amt)})` }],
+        fields: { [F.proposal[fieldKey]]: true },
+        changes: [{ type: 'Status change', label, detail: `${name} — ${label} (cleared toward transfer)` }],
         projectName: name,
       });
       onDone && onDone();
-    } catch (e) { setBusy(false); }
+    } catch (e) { setBusy(''); }
   }
 
   return (
-    <div class="dcard muted-card">
+    <div class="dcard">
       <div class="dc-head">
         <div><h3>{projectName(p)}</h3><div class="dc-meta">{country(p)} · {money(amt)}</div></div>
-        {canStamp
-          ? <button class="btn-approve" disabled={busy} onClick={stamp}>{busy ? '…' : 'Stamp: cleared to pay'}</button>
-          : <span class="badge stg-cfo">Awaiting CFO</span>}
+      </div>
+      <div class="stamps">
+        <Stamp label="EVP" done={evp} which="evp" canStamp={canStamp} busy={busy} onStamp={stamp} />
+        <Stamp label="Council Lead Team" done={council} which="council" canStamp={canStamp} busy={busy} onStamp={stamp} />
       </div>
     </div>
   );
+}
+
+function Stamp({ label, done, which, canStamp, busy, onStamp }) {
+  if (done) return <div class="stamp done">✓ {label} stamped</div>;
+  if (canStamp) return <button class="stamp-btn" disabled={busy === which} onClick={() => onStamp(which)}>{busy === which ? '…' : `Stamp as ${label}`}</button>;
+  return <div class="stamp pending">Awaiting {label}</div>;
 }
