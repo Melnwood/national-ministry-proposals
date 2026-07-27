@@ -9,7 +9,7 @@ import { docxToText } from '../shared/docx.js';
 // theirs). Upload the .docx — the text is extracted right in the browser —
 // or paste/edit by hand, then save. The saved plan powers the AI strategic
 // fit check on new grant applications.
-export function PlanManager({ countries, lead }) {
+export function PlanManager({ countries, lead, noHead }) {
   const [editing, setEditing] = useState(null); // country meta row
   const [saved, setSaved] = useState({});       // countryId → 'today' after a save
 
@@ -20,7 +20,7 @@ export function PlanManager({ countries, lead }) {
 
   return (
     <section style="margin-bottom:34px">
-      <div class="secthead">Strategic plans <span class="dim">— the yearly plan each grant is judged against</span></div>
+      {!noHead && <div class="secthead">Strategic plans <span class="dim">— the yearly plan each grant is judged against</span></div>}
       <p class="lead">{lead || 'Upload each country\'s strategic plan for the year (.docx, or paste the text). New grant applications are automatically checked against it, and the fit shows up on the coach\'s and Council Lead Team\'s cards.'}</p>
       <div class="tablewrap">
         <table class="grants">

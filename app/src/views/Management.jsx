@@ -9,9 +9,27 @@ export function Management({ boot, onRefresh }) {
   return (
     <>
       <Reconcile boot={boot} onRefresh={onRefresh} />
-      <PlanManager countries={boot.countries_meta || []} />
-      <SignIns boot={boot} />
+      <Fold title="People & access" dim="— roles, countries, and sign-ins">
+        <SignIns boot={boot} noHead />
+      </Fold>
+      <Fold title="Strategic plans" dim="— the yearly plan each grant is judged against">
+        <PlanManager countries={boot.countries_meta || []} noHead />
+      </Fold>
     </>
+  );
+}
+
+// A closed-by-default accordion section — click the header to open it.
+function Fold({ title, dim, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section style="margin-bottom:18px">
+      <button type="button" class="foldhead" onClick={() => setOpen(o => !o)}>
+        <span class="secthead" style="margin:0">{title} <span class="dim">{dim}</span></span>
+        <span class="dc-caret">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div style="margin-top:14px">{children}</div>}
+    </section>
   );
 }
 
@@ -107,7 +125,7 @@ function Reconcile({ boot, onRefresh }) {
 
 const ROLE_LABEL = Object.fromEntries(Object.values(ROLES).map(r => [r.airtable, r.label]));
 
-function SignIns({ boot }) {
+function SignIns({ boot, noHead }) {
   const [people, setPeople] = useState(null);
   const [err, setErr] = useState('');
   const [resetting, setResetting] = useState(null);
@@ -130,7 +148,7 @@ function SignIns({ boot }) {
 
   return (
     <section>
-      <div class="secthead">People &amp; access <span class="dim">— roles, countries, and sign-ins</span></div>
+      {!noHead && <div class="secthead">People &amp; access <span class="dim">— roles, countries, and sign-ins</span></div>}
       <p class="lead">Everyone who can sign in. Click a person to set their role and which countries they can see — or add someone new.</p>
       {err && <div class="editerr">{err}</div>}
       {msg && <div class="okmsg">{msg}</div>}

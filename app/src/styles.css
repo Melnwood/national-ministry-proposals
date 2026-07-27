@@ -102,6 +102,12 @@ body {
 .w-banner .w-go { background:#fff; color:var(--green-d); margin-top:4px; }
 @media(max-width:640px){ .w-card{ flex-direction:column; align-items:flex-start; } }
 
+/* ── management accordion sections ── */
+.foldhead { display:flex; width:100%; justify-content:space-between; align-items:center; gap:12px;
+  background:var(--card); border:1px solid var(--line); border-radius:11px; padding:13px 16px;
+  cursor:pointer; font-family:inherit; text-align:left; box-shadow:var(--shadow); transition:.12s; }
+.foldhead:hover { border-color:var(--orange); }
+
 /* ── council row tools: full application / budget / strategic fit ── */
 .dc-toolrow { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
 a.ghostbtn { text-decoration:none; display:inline-block; }
