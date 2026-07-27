@@ -88,15 +88,15 @@ body {
 .stagetile.empty { opacity:.5; box-shadow:none; }
 .stagetile .ct { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:22px; color:var(--ink); }
 .stagetile .nm { font-size:11px; color:var(--muted); font-weight:600; line-height:1.25; margin-top:2px; }
-/* Progressive pipeline color: cream deepens toward orange while a grant is
-   being decided, then goes green once it's approved — super light green at
-   Approved — Deferred, deeper at Accounting, dark green when funds have
-   actually been transferred. */
-.stagetile.fs-0 { background:#FBF8F1; }
-.stagetile.fs-1 { background:#FDF2E2; }
-.stagetile.fs-2 { background:#FEEBD2; }
-.stagetile.fs-3 { background:#EAF6EF; }
-.stagetile.fs-4 { background:#C4E5D4; }
+/* Progressive pipeline color: one green ramp, super light at Submitted and
+   darkest at Funds transferred. A stage's color comes on when a grant reaches
+   that window and never goes back off — so the point where the color stops
+   (and gray begins) is exactly how far the grant has gotten. */
+.stagetile.fs-0 { background:#F3FAF6; }
+.stagetile.fs-1 { background:#E0F1E8; }
+.stagetile.fs-2 { background:#C6E6D5; }
+.stagetile.fs-3 { background:#A0D4BC; }
+.stagetile.fs-4 { background:#72BD9C; }
 .stagetile.fs-funded { background:var(--green-d); border-color:var(--green-d); }
 .stagetile.fs-funded .ct { color:#fff; }
 .stagetile.fs-funded .nm { color:rgba(255,255,255,.85); }
