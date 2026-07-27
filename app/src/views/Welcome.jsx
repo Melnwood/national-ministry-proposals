@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
+import { date } from '../shared/format.js';
 import { stageKey, coach as coachName } from '../shared/grants.js';
+import { reportKind } from '../shared/reports.js';
+
+// A leader's own "your grant has been funded" message gets the big
+// celebration banner; everyone else's copies stay ordinary cards.
+const isFundedHero = n => (n.message || '').startsWith('Your grant') && (n.message || '').includes('has been funded');
 
 // The first thing anyone sees after signing in: their unread messages, each
 // explained in plain words (what happened + what to expect next), and their
@@ -74,17 +80,20 @@ export function Welcome({ boot, session, onGo }) {
   if (!notifs.length && !todos.length) return null;
 
   const first = (session.user && (session.user.name || session.user.email) || '').split(/[@\s]/)[0];
+  const heroes = notifs.filter(isFundedHero);
+  const rest = notifs.filter(n => !isFundedHero(n));
 
   return (
     <div class="welcome">
       <div class="w-head">{first ? `${first}, here's what's new for you` : "Here's what's new for you"}</div>
+      {heroes.map(n => <FundedBanner key={n.id} n={n} boot={boot} onGotIt={() => gotIt(n.id)} />)}
       {todos.map(t => (
         <div class="w-card action">
           <div class="w-msg"><b>{t.n}</b> {t.text}</div>
           <button class="w-go" onClick={() => onGo(t.tab)}>{t.btn} →</button>
         </div>
       ))}
-      {notifs.map(n => {
+      {rest.map(n => {
         const step = nextStep(n.message);
         return (
           <div class={`w-card ${step.tone}`} key={n.id}>
@@ -96,6 +105,35 @@ export function Welcome({ boot, session, onGo }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// The big moment: a country's project got funded. Front and center — what
+// happened, what to expect, and the REAL report due dates for this project
+// (from the report records Airtable creates when a grant is funded).
+function FundedBanner({ n, boot, onGotIt }) {
+  const dueReports = (boot.reports || [])
+    .filter(r => r.proposalId === n.propId && !r.done)
+    .sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  return (
+    <div class="w-banner">
+      <div class="w-banner-title">🎉 Congratulations!</div>
+      <div class="w-banner-msg">{n.message}</div>
+      <div class="w-banner-body">
+        <p>The money is on its way to your country's Cedarstone account — allow a few business days for it to arrive.</p>
+        <p><b>What we'll need from you:</b> two short reports on how the project is going, so we can celebrate what God is doing and report faithfully to the foundations behind this gift.</p>
+        {dueReports.length > 0 ? (
+          <ul class="w-banner-due">
+            {dueReports.map(r => (
+              <li><b>{reportKind(r)}-project report</b>{r.due ? <> — due <b>{date(r.due)}</b></> : ' — due date coming soon'}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>Your mid-project and final report due dates will appear here and on your page within a day.</p>
+        )}
+      </div>
+      <button class="w-go" onClick={onGotIt}>Got it — we're celebrating 🎉</button>
     </div>
   );
 }

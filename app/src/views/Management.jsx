@@ -149,6 +149,7 @@ function SignIns({ boot }) {
                 <td class="cty">{p.allCountries ? 'All' : (p.countries && p.countries.length ? p.countries.length : '—')}</td>
                 <td>{p.hasPassword ? <span class="rbadge submitted">Set</span> : <span class="rbadge upcoming">Not yet</span>}</td>
                 <td class="r" onClick={e => e.stopPropagation()}>
+                  <button class="ghostbtn" onClick={() => setEditing(p)}>Edit</button>{' '}
                   <button class="ghostbtn" disabled={resetting === p.id} onClick={() => reset(p)}>{resetting === p.id ? 'Resetting…' : 'Reset'}</button>
                 </td>
               </tr>

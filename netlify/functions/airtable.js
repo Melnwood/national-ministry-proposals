@@ -647,7 +647,8 @@ exports.handler = async (event) => {
       const recs = await fetchAll(T_NOTIF, {});
       const mine = recs.filter(r => ((r.fields[N.email]||'').trim().toLowerCase()) === ((who.email||'').trim().toLowerCase()));
       const out = mine.map(r => ({ id:r.id, at:r.createdTime, message:r.fields[N.msg]||'',
-        type:v(r.fields[N.type])||'', read:!!r.fields[N.read] }))
+        type:v(r.fields[N.type])||'', read:!!r.fields[N.read],
+        propId:(Array.isArray(r.fields[N.prop]) && r.fields[N.prop].length) ? (r.fields[N.prop][0].id || r.fields[N.prop][0]) : '' }))
         .sort((a,b)=> new Date(b.at)-new Date(a.at)).slice(0,50);
       return reply(200, { notifications:out, unread:out.filter(n=>!n.read).length, user:who });
     }
