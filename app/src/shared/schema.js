@@ -185,7 +185,6 @@ export const APPLICANT_CHECKLIST = [
   'Ability to deliver (It may be a stretch but you could see getting 80% for sure )',
   'Investment Return (will this project have ongoing impact)',
   'Sustainability (do you have a clear plan to keep this project going without grant money in the future)',
-  'Family’s basic needs met consistently during project period.',
 ];
 
 // Yes/No-style answers

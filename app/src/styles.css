@@ -272,7 +272,9 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .formbody .check input[type=checkbox] { width:auto; flex:0 0 auto; margin-top:2px; accent-color:var(--green); }
 .formbody textarea { resize:vertical; line-height:1.5; }
 .formbody input:focus, .formbody select:focus, .formbody textarea:focus { outline:none; border-color:var(--orange); }
-.formbody .moneyin input { padding-left:24px; font-family:'IBM Plex Mono',monospace; }
+/* Must out-specify the .formbody input:not(...) rule above, or its padding
+   shorthand resets the left padding and the number sits under the "$". */
+.formbody .moneyin input:not([type=checkbox]):not([type=radio]) { padding-left:26px; font-family:'IBM Plex Mono',monospace; }
 .fldrow3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
 @media(max-width:520px){ .fldrow3{ grid-template-columns:1fr; } }
 .formsec { font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin:20px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
