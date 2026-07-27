@@ -28,6 +28,8 @@ export function Accounting({ boot, onRefresh }) {
         {atAccounting.map(p => <TransferCard key={p.id} p={p} onDone={onRefresh} />)}
       </div>
 
+      {/* Only appears if a grant was manually parked at Funds Transferred —
+          the normal one-click flow goes straight to Project funded. */}
       {transferred.length > 0 && (
         <>
           <div class="secthead" style="font-size:15px;margin-top:30px">Funds transferred <span class="dim">— {transferred.length} to close out</span></div>
@@ -53,9 +55,10 @@ function TransferCard({ p, onDone }) {
     setBusy(true); setErr('');
     const name = projectName(p);
     const fields = {
-      // The transfer and the project being funded are separate windows:
-      // this records the money leaving; "Project funded ✓" closes it out.
-      [F.proposal.stage]: 'Funds Transferred',
+      // One click for Susan: the transfer is recorded and the grant moves
+      // straight through Funds Transferred into Project funded. (A grant only
+      // sits AT Funds Transferred if someone parks it there manually.)
+      [F.proposal.stage]: 'Funded',
       [F.proposal.dateFunded]: today(),
       [F.proposal.paid]: amt,
       [F.proposal.mTransferOut]: true,
