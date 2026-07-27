@@ -546,8 +546,45 @@ exports.handler = async (event) => {
         email:r.fields[A.email]||'',
         name:r.fields[A.name]||'',
         role:r.fields[A.role]||'',
+        countries: Array.isArray(r.fields[A.countries]) ? r.fields[A.countries] : [],
+        allCountries: !!r.fields[A.allCountries],
         hasPassword: !!(r.fields[A.salt] && r.fields[A.hash])
       })), user:who });
+    }
+
+    if(body.op === 'people_update'){
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
+      if(!body.recordId) return reply(400, { error:'Missing recordId.' });
+      const f = body.fields || {};
+      const fields = {};
+      if(f.name != null) fields[A.name] = String(f.name).trim();
+      if(f.role != null) fields[A.role] = String(f.role).trim();
+      if(f.allCountries != null) fields[A.allCountries] = !!f.allCountries;
+      if(Array.isArray(f.countries)) fields[A.countries] = f.countries;
+      const upd = await at(BASE+'/'+T_APP+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      try{ await writeLog([{ fields:{ [L.entry]:'Updated access for '+((upd.fields&&upd.fields[A.email])||body.recordId), [L.type]:'Login',
+        [L.detail]:(who.name||who.email)+' updated a person\'s role/access', [L.user]:who.name||'', [L.email]:who.email||'' } }]); }catch(e){}
+      return reply(200, { ok:true, user:who });
+    }
+
+    if(body.op === 'people_add'){
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
+      const f = body.fields || {};
+      const emailRaw = (f.email||'').trim();
+      const email = emailRaw.toLowerCase();
+      if(!email) return reply(400, { error:'Email is required.' });
+      const existing = await fetchAll(T_APP, {});
+      if(existing.some(p => ((p.fields[A.email]||'').trim().toLowerCase()) === email))
+        return reply(400, { error:'Someone with that email already exists.' });
+      const fields = { [A.email]:emailRaw, [A.name]:(f.name||'').trim() };
+      if(f.role) fields[A.role] = String(f.role).trim();
+      if(f.allCountries != null) fields[A.allCountries] = !!f.allCountries;
+      if(Array.isArray(f.countries) && f.countries.length) fields[A.countries] = f.countries;
+      const created = await at(BASE+'/'+T_APP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+      const id = created.records && created.records[0] && created.records[0].id;
+      try{ await writeLog([{ fields:{ [L.entry]:'Added person '+emailRaw, [L.type]:'Login',
+        [L.detail]:(who.name||who.email)+' added '+((f.name||'').trim()||emailRaw)+' ('+emailRaw+')', [L.user]:who.name||'', [L.email]:who.email||'' } }]); }catch(e){}
+      return reply(200, { ok:true, id, user:who });
     }
 
     if(body.op === 'people_reset'){
