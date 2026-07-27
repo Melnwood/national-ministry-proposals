@@ -327,8 +327,8 @@ function GrantDetail({ p, onClose, onSaved }) {
               <div class="moneyin"><span>$</span><input type="number" step="50" value={award}
                 placeholder={reqNum ? String(reqNum) : '0'} onInput={e => setAward(e.currentTarget.value)} /></div>
               {reqNum > 0 && (
-                <button type="button" class="mini" onClick={() => setAward(String(Math.round(reqNum * 0.9)))}>
-                  Requested − 10% = {money(Math.round(reqNum * 0.9))}
+                <button type="button" class="mini" onClick={() => setAward(String(reqNum))}>
+                  Requested = {money(reqNum)}
                 </button>
               )}
             </label>
@@ -350,6 +350,12 @@ function GrantDetail({ p, onClose, onSaved }) {
           <div class="dlrow"><span class="dt">Date funded</span><span class="dd">{val('dateFunded') ? date(val('dateFunded')) : '—'}</span></div>
         </div>
         {val('coachNotes') && <div class="notes"><div class="dt">Coach notes</div><p>{val('coachNotes')}</p></div>}
+        {val('decisionMessage') && (
+          <div class="notes">
+            <div class="dt">{stageKey(p) === 'denied' ? 'Why it was denied' : 'Council decision note'}</div>
+            <p>{val('decisionMessage')}</p>
+          </div>
+        )}
 
         {err && <div class="editerr">{err}</div>}
         <div class="modal-foot actions">

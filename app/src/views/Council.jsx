@@ -39,7 +39,7 @@ function DecisionCard({ p, cycles, onDone }) {
   const notes = val('coachNotes');
 
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
-  const [amount, setAmount] = useState(awarded(p) ? String(awarded(p)) : (requested(p) ? String(Math.round(requested(p) * 0.9)) : ''));
+  const [amount, setAmount] = useState(awarded(p) ? String(awarded(p)) : (requested(p) ? String(requested(p)) : ''));
   const [cycleId, setCycleId] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -114,7 +114,7 @@ function DecisionCard({ p, cycles, onDone }) {
             <div class="fldrow">
               <label class="fld"><span class="flbl">{mode === 'approve' ? 'Award amount' : 'Intended amount (optional)'}</span>
                 <div class="moneyin"><span>$</span><input type="number" step="50" value={amount} onInput={e => setAmount(e.currentTarget.value)} /></div>
-                {requested(p) > 0 && <button type="button" class="mini" onClick={() => setAmount(String(Math.round(requested(p) * 0.9)))}>Requested − 10% = {money(Math.round(requested(p) * 0.9))}</button>}
+                {requested(p) > 0 && <button type="button" class="mini" onClick={() => setAmount(String(requested(p)))}>Requested = {money(requested(p))}</button>}
               </label>
               {mode === 'approve' && (
                 <label class="fld"><span class="flbl">Grant cycle (optional)</span>
