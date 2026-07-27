@@ -2,11 +2,12 @@ import { STAGE_BY_KEY } from '../shared/schema.js';
 import { stageKey } from '../shared/grants.js';
 
 // The straight-through pipeline: submitted → coach → council approval →
-// accounting → funds transferred. Deferred and Denied are real outcomes but
-// not steps on the path — they sit in their own chips beside the flow.
-export const PIPELINE_FLOW = ['submitted', 'coach', 'council', 'accounting', 'funded'];
+// accounting → funds transferred → project funded. Deferred and Denied are
+// real outcomes but not steps on the path — they sit in their own chips
+// beside the flow.
+export const PIPELINE_FLOW = ['submitted', 'coach', 'council', 'accounting', 'transferred', 'funded'];
 const POS = Object.fromEntries(PIPELINE_FLOW.map((k, i) => [k, i]));
-export const TILE_LABEL = { council: 'Council Lead Team Approval', funded: 'Funds transferred' };
+export const TILE_LABEL = { council: 'Council Lead Team Approval', transferred: 'Funds transferred', funded: 'Project funded' };
 export const SIDE_KEYS = ['deferred', 'denied'];
 
 // A deferred grant has passed council approval, so it lights the pipeline
@@ -32,9 +33,11 @@ export function PipelineDash({ list }) {
     <div class="pipedash">
       <div class="pd-title">Pipeline</div>
       <div class="funnel">
+        {/* Funds transferred counts just the few being worked through right
+            now; Project funded carries the all-time total that made it. */}
         {PIPELINE_FLOW.map((k, i) => (
-          <div class={`stagetile ro ${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] || k === 'funded' ? '' : ' empty'}`}>
-            <div class="ct">{k === 'funded' ? (counts[k] ? '✓' : '·') : (counts[k] || 0)}</div>
+          <div class={`stagetile ro ${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] ? '' : ' empty'}`}>
+            <div class="ct">{counts[k] || 0}</div>
             <div class="nm">{TILE_LABEL[k] || STAGE_BY_KEY[k].label}</div>
           </div>
         ))}

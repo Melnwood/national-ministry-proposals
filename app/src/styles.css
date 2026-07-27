@@ -94,8 +94,9 @@ body {
    (and gray begins) is exactly how far the grant has gotten. */
 .stagetile.fs-0 { background:#F3FAF6; }
 .stagetile.fs-1 { background:#DDEFE6; }
-.stagetile.fs-2 { background:#B9E0CB; }
-.stagetile.fs-3 { background:#8FCCAF; }
+.stagetile.fs-2 { background:#BFE2D0; }
+.stagetile.fs-3 { background:#9CD2B7; }
+.stagetile.fs-4 { background:#72BD9C; }
 .stagetile.fs-funded { background:var(--green-d); border-color:var(--green-d); }
 .stagetile.fs-funded .ct { color:#fff; }
 .stagetile.fs-funded .nm { color:rgba(255,255,255,.85); }
@@ -136,6 +137,7 @@ table.grants td.owe { color:var(--red); }
 .badge.stg-grantApproved,.badge.stg-fundsFound { background:var(--green-soft); color:var(--green-d); }
 .badge.stg-cfo         { background:#FBF0D8; color:#7a5410; }
 .badge.stg-accounting  { background:#FCE6D6; color:#9a4a1c; }
+.badge.stg-transferred { background:#C9E9DA; color:#1F4438; }
 .badge.stg-funded      { background:#1F7A5C; color:#fff; }
 .badge.stg-denied      { background:#F6E0D8; color:#9A2E22; }
 .badge.stg-archived    { background:#E7DDCE; color:#6b6153; }

@@ -108,6 +108,7 @@ const STAGE_TO_STATUS = {
   'Grant Team Approved':'Grant Team Approval (Dave & Pavel)3',
   'Funding Identified':'Funding For Grant Identified 4',
   'At Accounting':'Funds distributed to Council Account 5',
+  'Funds Transferred':'Funds Distributed to Cedarstone Country Account 6',
   'Funded':'Funds Distributed to Cedarstone Country Account 6',
   'Denied':'Grant Team Denial 3.1 ', 'Archived':'Achived'
 };

@@ -13,6 +13,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 export function Accounting({ boot, onRefresh }) {
   const props = boot.props || [];
   const atAccounting = useMemo(() => props.filter(p => stageKey(p) === 'accounting'), [props]);
+  const transferred = useMemo(() => props.filter(p => stageKey(p) === 'transferred'), [props]);
 
   return (
     <>
@@ -26,6 +27,15 @@ export function Accounting({ boot, onRefresh }) {
       <div class="cards">
         {atAccounting.map(p => <TransferCard key={p.id} p={p} onDone={onRefresh} />)}
       </div>
+
+      {transferred.length > 0 && (
+        <>
+          <div class="secthead" style="font-size:15px;margin-top:30px">Funds transferred <span class="dim">— {transferred.length} to close out</span></div>
+          <div class="cards">
+            {transferred.map(p => <ConfirmFundedCard key={p.id} p={p} onDone={onRefresh} />)}
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -43,7 +53,9 @@ function TransferCard({ p, onDone }) {
     setBusy(true); setErr('');
     const name = projectName(p);
     const fields = {
-      [F.proposal.stage]: 'Funded',
+      // The transfer and the project being funded are separate windows:
+      // this records the money leaving; "Project funded ✓" closes it out.
+      [F.proposal.stage]: 'Funds Transferred',
       [F.proposal.dateFunded]: today(),
       [F.proposal.paid]: amt,
       [F.proposal.mTransferOut]: true,
@@ -75,6 +87,41 @@ function TransferCard({ p, onDone }) {
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
         <button class="savebtn" disabled={busy} onClick={transfer}>{busy ? 'Recording…' : 'Transferred ✓'}</button>
+      </div>
+    </div>
+  );
+}
+
+// Money has left — this card closes the loop and moves the grant into the
+// all-time Project funded total.
+function ConfirmFundedCard({ p, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const amt = awarded(p) || requested(p);
+  const sentOn = p.fields[F.proposal.dateFunded] || '';
+
+  async function confirm() {
+    setBusy(true); setErr('');
+    const name = projectName(p);
+    const fields = { [F.proposal.stage]: 'Funded' };
+    if (!p.fields[F.proposal.dateFunded]) fields[F.proposal.dateFunded] = today();
+    const changes = [{ type: 'Status change', label: 'Project funded',
+      detail: `${name} — confirmed funded (${money(amt)} transferred${sentOn ? ` on ${date(sentOn)}` : ''})` }];
+    try {
+      await api('update', { recordId: p.id, fields, changes, projectName: name });
+      onDone && onDone();
+    } catch (e) { setErr(e.message || 'Could not save.'); setBusy(false); }
+  }
+
+  return (
+    <div class="dcard">
+      <div class="dc-head">
+        <div><h3>{projectName(p)}</h3><div class="dc-meta">{country(p)}{sentOn ? ` · sent ${date(sentOn)}` : ''}</div></div>
+        <div class="xfer-amt">{money(amt)}</div>
+      </div>
+      {err && <div class="editerr">{err}</div>}
+      <div class="dc-confirm">
+        <button class="savebtn" disabled={busy} onClick={confirm}>{busy ? 'Saving…' : 'Project funded ✓'}</button>
       </div>
     </div>
   );

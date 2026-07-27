@@ -130,6 +130,10 @@ export const STAGES = [
   { key:'council',    label:'Council Lead Team Decision', owner:'evp', legacy:['EVP Approval'], aliases:['Council Decision'] },
   { key:'deferred',   label:'Approved — Deferred',  owner:'grant',   legacy:['Grant is approved but no funding yet','Pause','Grant Team Approval (Dave & Pavel)3'], aliases:['Grant Team Approved'] },
   { key:'accounting', label:'At Accounting',        owner:'grant',   legacy:['Funds distributed to Council Account 5','Funding For Grant Identified 4'], aliases:['Funding Identified'] },
+  // 2026-07-27 (per Mel): the transfer and the project being funded are two
+  // separate windows — Susan records the transfer, then confirms the project
+  // funded once everything is settled.
+  { key:'transferred', label:'Funds Transferred',   owner:'grant',   legacy:[] },
   { key:'funded',     label:'Funded',               owner:null,      legacy:['Funds Distributed to Cedarstone Country Account 6'] },
   { key:'denied',     label:'Denied',               owner:null,      legacy:['Grant Team Denial 3.1 '] },
   { key:'archived',   label:'Archived',             owner:null,      legacy:['Achived'] },
@@ -143,7 +147,7 @@ export const STAGE_BY_LABEL = STAGES.reduce((m, s) => {
   return m;
 }, {});
 // The active pipeline (excludes terminal outcomes) — used for the funnel view.
-export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','accounting'];
+export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','accounting','transferred'];
 export const TERMINAL_STAGE_KEYS = ['funded','denied','archived'];
 // Reverse lookup: legacy Status text (trimmed) → canonical stage key.
 export const LEGACY_STATUS_TO_STAGE = STAGES.reduce((m, s) => {

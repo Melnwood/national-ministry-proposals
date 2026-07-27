@@ -88,11 +88,11 @@ export function GrantTeam({ boot, session, onRefresh }) {
           leaving. Deferred and Denied sit apart below with Archived. */}
       <div class="secthead">Pipeline <span class="dim">— click a stage to filter</span></div>
       <div class="funnel">
+        {/* Funds transferred counts just the few in flight; Project funded
+            carries the all-time total that made it through. */}
         {PIPELINE_FLOW.map((k, i) => (
-          <button class={`stagetile ${k === 'funded' ? 'fs-funded' : `fs-${i}`}${filter === k ? ' on' : ''}${counts(k) || k === 'funded' ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
-            {/* End tile shows a check, not the all-time count — it marks that
-                grants move all the way through. Click still filters to Funded. */}
-            <div class="ct">{k === 'funded' ? (counts(k) ? '✓' : '·') : counts(k)}</div>
+          <button class={`stagetile ${k === 'funded' ? 'fs-funded' : `fs-${i}`}${filter === k ? ' on' : ''}${counts(k) ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
+            <div class="ct">{counts(k)}</div>
             <div class="nm">{TILE_LABEL[k] || STAGE_BY_KEY[k].label}</div>
           </button>
         ))}
@@ -282,7 +282,7 @@ function GrantDetail({ p, onClose, onSaved }) {
       fields[F.proposal.stage] = stage;
       changes.push({ type: 'Stage change', label: `Stage → ${stage}`, detail: `Stage moved from ${origStage || '(none)'} to ${stage}` });
       // stamp the outcome date when it makes sense
-      if (stage === 'Funded' && !val('dateFunded')) fields[F.proposal.dateFunded] = today();
+      if ((stage === 'Funded' || stage === 'Funds Transferred') && !val('dateFunded')) fields[F.proposal.dateFunded] = today();
       if (stage === 'Council Lead Team Decision' && !val('dateApproved')) fields[F.proposal.dateApproved] = today();
     }
     if (awardNum !== (awarded(p) || 0)) {

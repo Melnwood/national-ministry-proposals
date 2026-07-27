@@ -22,7 +22,7 @@ export function Country({ boot, session, onRefresh }) {
         return Array.isArray(link) && link.some(id => myCountryIds.includes(id && id.id ? id.id : id));
       });
     }
-    const order = ['submitted', 'coach', 'council', 'cfo', 'accounting', 'deferred', 'funded', 'denied', 'archived'];
+    const order = ['submitted', 'coach', 'council', 'cfo', 'accounting', 'transferred', 'deferred', 'funded', 'denied', 'archived'];
     return [...list].sort((a, b) => order.indexOf(stageKey(a)) - order.indexOf(stageKey(b)));
   }, [boot.props, isCountry]);
 
