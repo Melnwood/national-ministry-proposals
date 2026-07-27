@@ -923,6 +923,9 @@ exports.handler = async (event) => {
         [PA.leaderName]:who.name||'', [PA.leaderEmail]:who.email||'', [PA.subName]:who.name||'', [PA.subEmail]:who.email||''
       };
       if(countryId) fields[PA.country] = [countryId];
+      // Stamp the country's coach email (from People & access) so the
+      // notify-the-coach automation has a recipient.
+      try{ const ce = await coachEmailForCountry(countryId); if(ce) fields['fld4lLrDwB5x0ck72'] = ce; }catch(e){}
       const setN = (k,v)=>{ if(v!=null&&v!=='') fields[k]=Number(v)||0; };
       const setS = (k,v)=>{ if(v!=null&&String(v).trim()!=='') fields[k]=String(v).trim(); };
       setS(PA.category,f.category); setS(PA.requestType,f.requestType); setS(PA.problem,f.problem);
