@@ -93,10 +93,9 @@ body {
    that window and never goes back off — so the point where the color stops
    (and gray begins) is exactly how far the grant has gotten. */
 .stagetile.fs-0 { background:#F3FAF6; }
-.stagetile.fs-1 { background:#E0F1E8; }
-.stagetile.fs-2 { background:#C6E6D5; }
-.stagetile.fs-3 { background:#A0D4BC; }
-.stagetile.fs-4 { background:#72BD9C; }
+.stagetile.fs-1 { background:#DDEFE6; }
+.stagetile.fs-2 { background:#B9E0CB; }
+.stagetile.fs-3 { background:#8FCCAF; }
 .stagetile.fs-funded { background:var(--green-d); border-color:var(--green-d); }
 .stagetile.fs-funded .ct { color:#fff; }
 .stagetile.fs-funded .nm { color:rgba(255,255,255,.85); }

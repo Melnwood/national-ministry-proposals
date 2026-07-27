@@ -3,6 +3,7 @@ import { api } from '../shared/api.js';
 import { money, date, aval } from '../shared/format.js';
 import { STAGES, STAGE_BY_KEY, ACTIVE_STAGE_KEYS, TERMINAL_STAGE_KEYS, F } from '../shared/schema.js';
 import { moneySummary, byStage, projectName, country, coach, requested, awarded, paid, owed, stageKey, stageLabel } from '../shared/grants.js';
+import { PIPELINE_FLOW, TILE_LABEL } from './PipelineDash.jsx';
 import { FoundationReport } from './FoundationReport.jsx';
 
 // Approved but waiting on money — the projects the grant team can pay for if
@@ -83,21 +84,21 @@ export function GrantTeam({ boot, session, onRefresh }) {
         </div>
       </section>
 
-      {/* Pipeline funnel — the pipeline runs all the way to the money leaving,
-          so Funded ("Funds transferred") is its last tile, not a footnote. */}
+      {/* Pipeline funnel — the straight-through path only, ending at the money
+          leaving. Deferred and Denied sit apart below with Archived. */}
       <div class="secthead">Pipeline <span class="dim">— click a stage to filter</span></div>
       <div class="funnel">
-        {[...ACTIVE_STAGE_KEYS, 'funded'].map((k, i) => (
+        {PIPELINE_FLOW.map((k, i) => (
           <button class={`stagetile ${k === 'funded' ? 'fs-funded' : `fs-${i}`}${filter === k ? ' on' : ''}${counts(k) || k === 'funded' ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
             {/* End tile shows a check, not the all-time count — it marks that
                 grants move all the way through. Click still filters to Funded. */}
             <div class="ct">{k === 'funded' ? (counts(k) ? '✓' : '·') : counts(k)}</div>
-            <div class="nm">{k === 'funded' ? 'Funds transferred' : STAGE_BY_KEY[k].label}</div>
+            <div class="nm">{TILE_LABEL[k] || STAGE_BY_KEY[k].label}</div>
           </button>
         ))}
       </div>
       <div class="funnel term">
-        {TERMINAL_STAGE_KEYS.filter(k => k !== 'funded').map(k => (
+        {['deferred', 'denied', 'archived'].map(k => (
           <button class={`stagetile sm${filter === k ? ' on' : ''}${counts(k) ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
             <span class="ct">{counts(k)}</span><span class="nm">{STAGE_BY_KEY[k].label}</span>
           </button>

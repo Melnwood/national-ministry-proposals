@@ -1,35 +1,53 @@
-import { STAGE_BY_KEY, ACTIVE_STAGE_KEYS } from '../shared/schema.js';
+import { STAGE_BY_KEY } from '../shared/schema.js';
 import { stageKey } from '../shared/grants.js';
 
-// The pipeline runs all the way to the money leaving the building.
-const FLOW = [...ACTIVE_STAGE_KEYS, 'funded'];
-const POS = Object.fromEntries(FLOW.map((k, i) => [k, i]));
+// The straight-through pipeline: submitted → coach → council approval →
+// accounting → funds transferred. Deferred and Denied are real outcomes but
+// not steps on the path — they sit in their own chips beside the flow.
+export const PIPELINE_FLOW = ['submitted', 'coach', 'council', 'accounting', 'funded'];
+const POS = Object.fromEntries(PIPELINE_FLOW.map((k, i) => [k, i]));
+export const TILE_LABEL = { council: 'Council Lead Team Approval', funded: 'Funds transferred' };
+export const SIDE_KEYS = ['deferred', 'denied'];
+
+// A deferred grant has passed council approval, so it lights the pipeline
+// that far while showing in its own Deferred chip.
+const lightPos = k => (k === 'deferred' ? POS.council : POS[k]);
 
 // Cumulative pipeline dashboard, shown at the top of every workspace page.
-// Tiles light up and STAY lit as grants move through — everything up to the
-// furthest-along grant is colored, stages not yet reached stay grayed out,
-// and the final tile goes green when funds have been transferred. Denied and
-// archived grants don't light the pipeline. Renders nothing when the viewer
-// has no grants in the pipeline at all.
+// One green ramp, super light at Submitted and darkest at Funds transferred:
+// a stage's color comes on when a grant reaches that window and never goes
+// back off, so the point where color stops (and gray begins) is exactly how
+// far things have gotten. The end tile shows ✓, not a count — it's the proof
+// grants make it all the way through. Renders nothing when the viewer has no
+// grants at all (e.g. a country leader with no projects).
 export function PipelineDash({ list }) {
-  const inFlow = (list || []).filter(p => POS[stageKey(p)] != null);
-  if (!inFlow.length) return null;
+  const all = list || [];
   const counts = {};
-  inFlow.forEach(p => { const k = stageKey(p); counts[k] = (counts[k] || 0) + 1; });
-  const furthest = Math.max(...inFlow.map(p => POS[stageKey(p)]));
+  all.forEach(p => { const k = stageKey(p); counts[k] = (counts[k] || 0) + 1; });
+  const lit = all.map(p => lightPos(stageKey(p))).filter(v => v != null);
+  const hasSide = SIDE_KEYS.some(k => counts[k]);
+  if (!lit.length && !hasSide) return null;
+  const furthest = lit.length ? Math.max(...lit) : -1;
   return (
     <div class="pipedash">
       <div class="pd-title">Pipeline</div>
       <div class="funnel">
-        {FLOW.map((k, i) => (
+        {PIPELINE_FLOW.map((k, i) => (
           <div class={`stagetile ro ${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] || k === 'funded' ? '' : ' empty'}`}>
-            {/* The end tile isn't a count — it's the proof that grants make it
-                all the way through: a check once anything has, gray until then. */}
             <div class="ct">{k === 'funded' ? (counts[k] ? '✓' : '·') : (counts[k] || 0)}</div>
-            <div class="nm">{k === 'funded' ? 'Funds transferred' : STAGE_BY_KEY[k].label}</div>
+            <div class="nm">{TILE_LABEL[k] || STAGE_BY_KEY[k].label}</div>
           </div>
         ))}
       </div>
+      {hasSide && (
+        <div class="funnel term">
+          {SIDE_KEYS.filter(k => counts[k]).map(k => (
+            <div class="stagetile sm ro">
+              <span class="ct">{counts[k]}</span><span class="nm">{STAGE_BY_KEY[k].label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
