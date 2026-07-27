@@ -170,72 +170,87 @@ const usd = n => '$'+Math.round(Number(n)||0).toLocaleString('en-US');
 const PNF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
               leaderEmail:'fldbs0FzyPWbS1waI', submitterEmail:'fld64OxiMWtnko2H7', coachEmail:'fld4lLrDwB5x0ck72',
               decisionMsg:'fldt1Hu5YY1ZvvqMD' };
-async function roleEmails(roles){
+async function rolePeople(roles){
   try{
     const ppl = await fetchAll(T_APP, {});
     return ppl.filter(p => roles.includes((p.fields[A.role]||'').trim()))
-              .map(p => (p.fields[A.email]||'').trim()).filter(Boolean);
+              .map(p => ({ email:(p.fields[A.email]||'').trim(), name:(p.fields[A.name]||'').trim() }))
+              .filter(p => p.email);
   }catch(e){ return []; }
 }
-const councilEmails = () => roleEmails(['EVP','President']);
+const roleEmails = async roles => (await rolePeople(roles)).map(p => p.email);
+const councilPeople = () => rolePeople(['EVP','President']);
 // The coach for a country comes from People & access — the person with the
 // coach role whose assigned countries include this one. The application never
 // asks who the coach is; the system already knows.
-async function coachEmailForCountry(countryId){
-  if(!countryId) return '';
+async function coachForCountry(countryId){
+  if(!countryId) return { email:'', name:'' };
   try{
     const ppl = await fetchAll(T_APP, {});
     const c = ppl.find(p => (p.fields[A.role]||'').trim() === 'National Ministries Coaches'
       && Array.isArray(p.fields[A.countries])
       && p.fields[A.countries].some(id => (id && id.id ? id.id : id) === countryId));
-    return c ? (c.fields[A.email]||'').trim() : '';
-  }catch(e){ return ''; }
+    return c ? { email:(c.fields[A.email]||'').trim(), name:(c.fields[A.name]||'').trim() } : { email:'', name:'' };
+  }catch(e){ return { email:'', name:'' }; }
 }
+const coachEmailForCountry = async countryId => (await coachForCountry(countryId)).email;
+// First name for a warm greeting; falls back to the email's mailbox part.
+const firstName = (name, email) => {
+  const n = String(name||'').trim().split(/\s+/)[0];
+  if(n) return n;
+  const m = String(email||'').split('@')[0];
+  return m ? m.charAt(0).toUpperCase()+m.slice(1) : 'friend';
+};
 async function notifyEvent(event, recordId, opts={}){
   const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
   const f = rec.fields || {};
   const name = f[PNF.name] || 'a grant', country = f[PNF.country] || '', amt = usd(f[PNF.awarded]);
   const leader = (f[PNF.leaderEmail] || f[PNF.submitterEmail] || '').trim();
+  const leaderName = (f['fldcwusDwTyQ5E5Qf'] || '').trim();
   // Coach is derived from the country's assigned coach in People & access;
   // the Coach Email field on the record is only a fallback for old data.
   const clink = f[PROP_COUNTRY_LINK];
   const countryId = (Array.isArray(clink) && clink.length) ? (clink[0].id || clink[0]) : '';
-  const coach = (await coachEmailForCountry(countryId)) || (f[PNF.coachEmail] || '').trim();
+  const coachPerson = await coachForCountry(countryId);
+  const coach = coachPerson.email || (f[PNF.coachEmail] || '').trim();
+  const coachName = coachPerson.name;
   const decisionMsg = f[PNF.decisionMsg] || '';
   const where = country ? ` (${country})` : '';
 
   const notifs = [];
-  const add = (email, msg, type) => { if(email) notifs.push({ fields:{ [N.email]:email, [N.msg]:msg, [N.type]:type||'Decision', [N.prop]:[recordId], [N.link]:SITE_URL } }); };
+  // Every notification carries the recipient's name so emails can greet them.
+  const N_NAME = 'fldykHqa2JyKlkykm';
+  const add = (email, msg, type, who2) => { if(email) notifs.push({ fields:{ [N.email]:email, [N.msg]:msg, [N.type]:type||'Decision', [N.prop]:[recordId], [N.link]:SITE_URL, [N_NAME]:firstName(who2, email) } }); };
 
   if(event === 'coach_submit'){
-    const council = await councilEmails();
-    council.forEach(e => add(e, `Ready to decide: ${coach||'a coach'} submitted their review of "${name}"${where}.`, 'Decision'));
+    const council = await councilPeople();
+    council.forEach(p2 => add(p2.email, `Ready to decide: ${coachName||'a coach'} submitted their review of "${name}"${where}.`, 'Decision', p2.name));
   } else if(event === 'decision'){
-    const council = await councilEmails();
+    const council = await councilPeople();
     if(opts.kind === 'deny'){
       // Denials get their own notification type: the email automation only
       // sends for 'Transfer' and 'Denied' — everything else stays in-app.
-      add(leader, `Your grant "${name}" was not approved. Open your page to read the Council Lead Team's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Denied');
-      add(coach,  `"${name}"${where}, which you coached, was not approved${decisionMsg?` — the Council Lead Team's note: “${decisionMsg}”`:'.'}`, 'Denied');
+      add(leader, `Your grant "${name}" was not approved. Open your page to read the Council Lead Team's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Denied', leaderName);
+      add(coach,  `"${name}"${where}, which you coached, was not approved${decisionMsg?` — the Council Lead Team's note: “${decisionMsg}”`:'.'}`, 'Denied', coachName);
     } else if(opts.kind === 'defer'){
-      add(leader, `"${name}" was approved but deferred to a later cycle. Confirm on your page that you still want it.`, 'Decision');
+      add(leader, `"${name}" was approved but deferred to a later cycle. Confirm on your page that you still want it.`, 'Decision', leaderName);
     } else { // approve
-      add(leader, `Good news — "${name}" was approved by the Council Lead Team${amt!=='$0'?` for ${amt}`:''}.`, 'Decision');
-      council.forEach(e => add(e, `Approved: "${name}"${where} — now with the grant team to fund.`, 'Decision'));
+      add(leader, `Good news — "${name}" was approved by the Council Lead Team${amt!=='$0'?` for ${amt}`:''}.`, 'Decision', leaderName);
+      council.forEach(p2 => add(p2.email, `Approved: "${name}"${where} — now with the grant team to fund.`, 'Decision', p2.name));
     }
   } else if(event === 'funding_followup'){
     // Grant team asks whether an approved-but-unfunded project still needs money.
-    const council = await councilEmails();
-    council.forEach(e => add(e, `Still needed? "${name}"${where} was approved but is still waiting on funding. Please check whether the money is still needed, or if it has waited long enough that it no longer is.`, 'Decision'));
-    add(coach, `Can you follow up on "${name}"${where}? It was approved but funding hasn't been found yet — is the money still needed, or has it been too long?`, 'Decision');
+    const council = await councilPeople();
+    council.forEach(p2 => add(p2.email, `Still needed? "${name}"${where} was approved but is still waiting on funding. Please check whether the money is still needed, or if it has waited long enough that it no longer is.`, 'Decision', p2.name));
+    add(coach, `Can you follow up on "${name}"${where}? It was approved but funding hasn't been found yet — is the money still needed, or has it been too long?`, 'Decision', coachName);
   } else if(event === 'cleared'){
-    const team = await roleEmails(['Grant team']);
-    team.forEach(e => add(e, `Cleared to transfer: "${name}"${where} — ${amt} is ready to send to the country's Cedarstone account.`, 'Transfer'));
+    const team = await rolePeople(['Grant team']);
+    team.forEach(p2 => add(p2.email, `Cleared to transfer: "${name}"${where} — ${amt} is ready to send to the country's Cedarstone account.`, 'Transfer', p2.name));
   } else if(event === 'transfer'){
-    const council = await councilEmails();
-    council.forEach(e => add(e, `Funds sent: "${name}"${where} — ${amt} transferred to the country's Cedarstone account.`, 'Transfer'));
-    add(leader, `Your grant "${name}" has been funded — ${amt} is on its way to your account.`, 'Transfer');
-    add(coach,  `"${name}"${where}, which you reviewed, has been funded — ${amt} sent.`, 'Transfer');
+    const council = await councilPeople();
+    council.forEach(p2 => add(p2.email, `Funds sent: "${name}"${where} — ${amt} transferred to the country's Cedarstone account.`, 'Transfer', p2.name));
+    add(leader, `Your grant "${name}" has been funded — ${amt} is on its way to your account.`, 'Transfer', leaderName);
+    add(coach,  `"${name}"${where}, which you reviewed, has been funded — ${amt} sent.`, 'Transfer', coachName);
   }
   if(notifs.length){
     await writeNotifs(notifs);
@@ -925,7 +940,11 @@ exports.handler = async (event) => {
       if(countryId) fields[PA.country] = [countryId];
       // Stamp the country's coach email (from People & access) so the
       // notify-the-coach automation has a recipient.
-      try{ const ce = await coachEmailForCountry(countryId); if(ce) fields['fld4lLrDwB5x0ck72'] = ce; }catch(e){}
+      try{
+        const cp = await coachForCountry(countryId);
+        if(cp.email) fields['fld4lLrDwB5x0ck72'] = cp.email;
+        if(cp.name) fields['fldZ174mj2pCvJA37'] = cp.name.split(/\s+/)[0];
+      }catch(e){}
       const setN = (k,v)=>{ if(v!=null&&v!=='') fields[k]=Number(v)||0; };
       const setS = (k,v)=>{ if(v!=null&&String(v).trim()!=='') fields[k]=String(v).trim(); };
       setS(PA.category,f.category); setS(PA.requestType,f.requestType); setS(PA.problem,f.problem);
