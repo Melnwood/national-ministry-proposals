@@ -42,18 +42,22 @@ function DecisionCard({ p, cycles, onDone }) {
   const review = Array.isArray(f[F.proposal.coachReview]) ? f[F.proposal.coachReview].map(aval) : [];
   const notes = val('coachNotes');
 
-  // This-year's foundation gifts, shown as "Foundation — cycle" so the grant
-  // gets tied to the right money. (Falls back to all cycles if none are
-  // labelled with the current year.)
+  // Each foundation's MOST RECENT cycle only — older gifts stay out of the
+  // picker so an approval can't get tied to the wrong year's money. Cycle
+  // names like "2025-26" sort correctly as strings; created time breaks ties.
   const cycleOpts = useMemo(() => {
-    const year = String(new Date().getFullYear());
-    const opts = cycles.map(c => ({
-      id: c.id,
-      foundation: aval(c.fields[F.cycle.foundation]) || 'Unassigned',
-      name: String(aval(c.fields[F.cycle.name]) || ''),
-    }));
-    const thisYear = opts.filter(o => o.name.includes(year));
-    return (thisYear.length ? thisYear : opts).map(o => ({ id: o.id, label: `${o.foundation} — ${o.name || '(unnamed cycle)'}` }));
+    const latest = {};
+    cycles.forEach(c => {
+      const foundation = aval(c.fields[F.cycle.foundation]) || 'Unassigned';
+      const name = String(aval(c.fields[F.cycle.name]) || '');
+      const cur = latest[foundation];
+      if (!cur || name > cur.name || (name === cur.name && (c.createdTime || '') > (cur.created || ''))) {
+        latest[foundation] = { id: c.id, foundation, name, created: c.createdTime || '' };
+      }
+    });
+    return Object.values(latest)
+      .sort((a, b) => a.foundation.localeCompare(b.foundation))
+      .map(o => ({ id: o.id, label: `${o.foundation} — ${o.name || '(unnamed cycle)'}` }));
   }, [cycles]);
 
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
