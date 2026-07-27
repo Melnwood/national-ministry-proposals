@@ -13,7 +13,12 @@ export function NotificationBell() {
       setUnread(d.unread || 0);
     } catch (e) { /* silent */ }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // The welcome panel marks messages read — keep the bell count in sync.
+    window.addEventListener('jv-notifs-changed', load);
+    return () => window.removeEventListener('jv-notifs-changed', load);
+  }, []);
 
   async function toggle() {
     const next = !open;

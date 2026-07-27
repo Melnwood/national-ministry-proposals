@@ -75,6 +75,23 @@ body {
 .mnote { font-size:11.5px; color:var(--muted); }
 @media(max-width:720px){ .money{ grid-template-columns:1fr; } }
 
+/* ── welcome panel: first thing seen after sign-in ── */
+.welcome { margin:18px 0 6px; }
+.w-head { font-family:'Fraunces',serif; font-weight:600; font-size:19px; margin-bottom:12px; }
+.w-card { display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--card);
+  border:1px solid var(--line); border-left:4px solid var(--line-d); border-radius:11px; padding:13px 16px;
+  margin-bottom:9px; box-shadow:var(--shadow); }
+.w-card.deny   { border-left-color:#9A2E22; background:#FDF3F0; }
+.w-card.funded { border-left-color:var(--green); background:#F2FAF6; }
+.w-card.defer  { border-left-color:#7A4FB5; background:#F8F4FC; }
+.w-card.action { border-left-color:var(--orange); background:var(--orange-soft); }
+.w-msg { font-size:14px; line-height:1.45; }
+.w-next { font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-top:5px; }
+.w-go { flex:0 0 auto; font-family:inherit; font-weight:600; font-size:13px; padding:9px 14px; border:none;
+  border-radius:8px; background:var(--orange); color:#fff; cursor:pointer; }
+.w-go.ghost { background:transparent; color:var(--ink-soft); border:1px solid var(--line-d); font-weight:500; }
+@media(max-width:640px){ .w-card{ flex-direction:column; align-items:flex-start; } }
+
 /* ── section headings ── */
 .secthead { font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:26px 0 12px; }
 

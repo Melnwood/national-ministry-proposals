@@ -6,6 +6,7 @@ import { SignIn } from './views/SignIn.jsx';
 import { GrantTeam } from './views/GrantTeam.jsx';
 import { Council } from './views/Council.jsx';
 import { Foundations } from './views/Foundations.jsx';
+import { Welcome } from './views/Welcome.jsx';
 import { Reports } from './views/Reports.jsx';
 import { Coach } from './views/Coach.jsx';
 import { Country } from './views/Country.jsx';
@@ -122,6 +123,8 @@ export function Workspace({ boot, session, onRefresh }) {
       {canPreview && viewRole !== realRole && (
         <div class="previewbar">Previewing as <b>{(ROLES[viewRole] || {}).label || viewRole}</b> — this is what they see. <button onClick={() => setViewRole(realRole)}>Back to my view</button></div>
       )}
+
+      <Welcome boot={boot} session={viewSession} onGo={setTab} />
 
       {available.length > 1 && (
         <nav class="tabs">
