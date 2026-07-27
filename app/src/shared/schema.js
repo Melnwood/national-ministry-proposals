@@ -60,6 +60,17 @@ export const F = {
     leadersImpact:   'fldc2XplvqvAX8NlX', // How many leaders directly impacted? (target)
     churchesImpact:  'fld6ZWqZuuK9gcfab', // How many churches directly impacted? (target)
     strategicFit:    'fldTa8BUePK8Ifs02', // How does this fit your strategic plans?
+    objective:       'fld17fOaX3yAe3s4O', // Objective 1
+    objective2:      'fld2tSgq12UOBDMri', // Objective 2
+    objective3:      'fldquJXeXakScgMnU', // Objective 3
+    success:         'fldQKLTpf2M69gneF', // What does success look like?
+    sustainability:  'fldvktGeT6orNqBlA', // Sustainability
+    team:            'fldBqgoZhWMtEjsq0', // Team
+    projectLead:     'flddNefZxzHMlvr9t', // Project lead
+    otherFunding:    'fldRu1psJOpQPSx5W', // Other sources of funding
+    receivedFunds:   'fld95zxnULYIKO8nf', // Received funds in last 2 years?
+    unusedFunds:     'fld5TuhikpzrgI6G2', // Unused funds from other projects?
+    checklist:       'fldYJSfdlEI8cBTOm', // Applicant self-assessment checklist
     fitCheck:        'fldD7E2IXEeLM3oMF', // Strategic Fit Check (AI read vs. the country plan)
     decisionLog:     'fldkAS21IxnJwUwHq', // Decision Log (linked)
     reportLink:      'fldUEWeiL0wyXPTxZ', // Project Report (linked)

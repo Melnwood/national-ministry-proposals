@@ -37,6 +37,42 @@ export function Council({ boot, onRefresh }) {
   );
 }
 
+// The whole application, read-only, inside the decision row — every answer
+// the country gave, so the council never has to hunt for context.
+function FullApplication({ p }) {
+  const f = p.fields || {};
+  const val = key => aval(f[F.proposal[key]]);
+  const checklist = Array.isArray(f[F.proposal.checklist]) ? f[F.proposal.checklist].map(aval) : [];
+  const Row = ({ l, v }) => (v ? <div class="dlrow"><span class="dt">{l}</span><span class="dd">{v}</span></div> : null);
+  const Long = ({ l, v }) => (v ? <div class="notes"><div class="dt">{l}</div><p>{v}</p></div> : null);
+  return (
+    <div class="fullapp">
+      <div class="dl">
+        <Row l="Category" v={val('category')} />
+        <Row l="Request type" v={val('requestType')} />
+        <Row l="Timeline" v={`${val('startDate') || '—'} → ${val('endDate') || '—'}`} />
+        <Row l="Project lead" v={val('projectLead')} />
+        <Row l="Team" v={val('team')} />
+        <Row l="Requested" v={requested(p) ? money(requested(p)) : ''} />
+        <Row l="Total project budget" v={val('totalBudget') ? money(Number(val('totalBudget'))) : ''} />
+        <Row l="Cedarstone account" v={val('cedarstoneAccount')} />
+        <Row l="Received funds in last 2 years?" v={val('receivedFunds')} />
+        <Row l="Unused funds from other projects?" v={val('unusedFunds')} />
+        <Row l="Impact targets" v={`${val('peopleImpact') || 0} people · ${val('leadersImpact') || 0} leaders · ${val('churchesImpact') || 0} churches`} />
+      </div>
+      <Long l="The need" v={val('problem')} />
+      <Long l="Objective 1" v={val('objective')} />
+      <Long l="Objective 2" v={val('objective2')} />
+      <Long l="Objective 3" v={val('objective3')} />
+      <Long l="What success looks like" v={val('success')} />
+      <Long l="Sustainability" v={val('sustainability')} />
+      <Long l="Strategic fit (their words)" v={val('strategicFit')} />
+      <Long l="Other sources of funding" v={val('otherFunding')} />
+      {checklist.length > 0 && <div class="notes"><div class="dt">Applicant checklist</div><p>{checklist.join(' · ')}</p></div>}
+    </div>
+  );
+}
+
 function DecisionCard({ p, cycles, onDone }) {
   const f = p.fields || {};
   const val = key => aval(f[F.proposal[key]]);
@@ -63,6 +99,8 @@ function DecisionCard({ p, cycles, onDone }) {
 
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
   const [open, setOpen] = useState(false); // compact row by default; click for the full picture
+  const [show, setShow] = useState(null); // 'app' | 'fit' | null — panels inside the open row
+  const budgetFiles = Array.isArray(f[F.proposal.budgetFiles]) ? f[F.proposal.budgetFiles] : [];
   const [amount, setAmount] = useState(awarded(p) ? String(awarded(p)) : (requested(p) ? String(requested(p)) : ''));
   const [cycleId, setCycleId] = useState('');
   const [message, setMessage] = useState('');
@@ -123,7 +161,27 @@ function DecisionCard({ p, cycles, onDone }) {
       {open && (
         <div class="dc-details">
           <div class="dc-meta" style="margin-bottom:8px">{val('category') || '—'}</div>
-          <FitBox p={p} />
+
+          {/* Everything the council needs to decide, one click each. */}
+          <div class="dc-toolrow">
+            <button type="button" class="ghostbtn" onClick={() => setShow(show === 'app' ? null : 'app')}>
+              {show === 'app' ? 'Hide full application' : '📋 See the full application'}
+            </button>
+            {budgetFiles.length > 0
+              ? budgetFiles.map((bf, i) => (
+                  <a class="ghostbtn" href={`/.netlify/functions/airtable?op=budget_file&rec=${p.id}&i=${i}`} target="_blank" rel="noopener">
+                    📄 Budget{budgetFiles.length > 1 ? ` ${i + 1}` : ''}{bf.filename ? ` — ${bf.filename}` : ''}
+                  </a>
+                ))
+              : <span class="mini dim" style="align-self:center">No budget file uploaded</span>}
+            <button type="button" class="ghostbtn" onClick={() => setShow(show === 'fit' ? null : 'fit')}>
+              {show === 'fit' ? 'Hide strategic fit' : '🎯 How does this fit their strategic plan?'}
+            </button>
+          </div>
+
+          {show === 'fit' && <FitBox p={p} />}
+          {show === 'app' && <FullApplication p={p} />}
+
           {review.length > 0 && (
             <div class="chips">{review.map(r => <span class="chip">{shortCrit(r)}</span>)}</div>
           )}
