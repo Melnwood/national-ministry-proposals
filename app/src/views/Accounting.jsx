@@ -25,7 +25,7 @@ export function Accounting({ boot, onRefresh }) {
       <div class="secthead" style="font-size:15px">Ready to transfer <span class="dim">— {atAccounting.length}</span></div>
       {!atAccounting.length && <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a transfer right now.</p></div>}
       <div class="cards">
-        {atAccounting.map(p => <TransferCard key={p.id} p={p} onDone={onRefresh} />)}
+        {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh} />)}
       </div>
 
       {/* Only appears if a grant was manually parked at Funds Transferred —
@@ -44,7 +44,7 @@ export function Accounting({ boot, onRefresh }) {
 
 const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
 
-function TransferCard({ p, onDone }) {
+function TransferCard({ p, fromAcct, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const amt = awarded(p) || requested(p);
@@ -81,9 +81,14 @@ function TransferCard({ p, onDone }) {
         <div><h3>{projectName(p)}</h3><div class="dc-meta">{country(p)}</div></div>
         <div class="xfer-amt">{money(amt)}</div>
       </div>
+      {/* Both ends of the transfer, so Susan never has to look them up. */}
       <div class="acctrow">
-        <div><div class="cstat-l">Cedarstone account</div>
+        <div><div class="cstat-l">From — National Ministries account</div>
+          <div class="acctno">{fromAcct}</div></div>
+        <div><div class="cstat-l">To — country's Cedarstone account</div>
           <div class={`acctno${acct ? '' : ' missing'}`}>{acct || 'Not on file — check with the country'}</div></div>
+      </div>
+      <div class="acctrow">
         <div><div class="cstat-l">Approved{approvedOn ? ` ${date(approvedOn)}` : ''} by</div>
           <div class="cstat-v" style="font-size:13px">EVP ✓ · Council Lead Team ✓</div></div>
       </div>
