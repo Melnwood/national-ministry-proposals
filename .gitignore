@@ -6,3 +6,4 @@ node_modules/
 # OS / editor cruft
 .DS_Store
 preview/node_modules/
+preview/*.png
