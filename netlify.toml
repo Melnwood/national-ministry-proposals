@@ -1,5 +1,15 @@
 [build]
-  publish = "."
+  # Build the v2 app (app/src) and publish it at the site root, alongside the
+  # legacy standalone pages and the shared favicon set. The old console page
+  # stays reachable at /console.html.
+  command = """
+    cd app && npm ci && npm run build && \
+    cp ../director.html ../reports.html ../phases.html ../travel.html ../money.html dist/ && \
+    cp ../index.html dist/console.html && \
+    cp ../favicon.ico ../favicon.svg ../favicon-16.png ../favicon-32.png ../favicon-48.png dist/ && \
+    cp ../apple-touch-icon.png ../icon-192.png ../icon-512.png ../site.webmanifest dist/
+  """
+  publish = "app/dist"
   functions = "netlify/functions"
 
 [functions]

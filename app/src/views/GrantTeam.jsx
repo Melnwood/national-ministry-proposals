@@ -83,18 +83,19 @@ export function GrantTeam({ boot, session, onRefresh }) {
         </div>
       </section>
 
-      {/* Pipeline funnel */}
+      {/* Pipeline funnel — the pipeline runs all the way to the money leaving,
+          so Funded ("Funds transferred") is its last tile, not a footnote. */}
       <div class="secthead">Pipeline <span class="dim">— click a stage to filter</span></div>
       <div class="funnel">
-        {ACTIVE_STAGE_KEYS.map(k => (
-          <button class={`stagetile${filter === k ? ' on' : ''}${counts(k) ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
+        {[...ACTIVE_STAGE_KEYS, 'funded'].map((k, i) => (
+          <button class={`stagetile ${k === 'funded' ? 'fs-funded' : `fs-${i}`}${filter === k ? ' on' : ''}${counts(k) ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
             <div class="ct">{counts(k)}</div>
-            <div class="nm">{STAGE_BY_KEY[k].label}</div>
+            <div class="nm">{k === 'funded' ? 'Funds transferred' : STAGE_BY_KEY[k].label}</div>
           </button>
         ))}
       </div>
       <div class="funnel term">
-        {TERMINAL_STAGE_KEYS.map(k => (
+        {TERMINAL_STAGE_KEYS.filter(k => k !== 'funded').map(k => (
           <button class={`stagetile sm${filter === k ? ' on' : ''}${counts(k) ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
             <span class="ct">{counts(k)}</span><span class="nm">{STAGE_BY_KEY[k].label}</span>
           </button>

@@ -9,14 +9,14 @@ ignore it.)
 ## How deploys work
 
 This repo is connected to Netlify. **Pushing to `main` deploys the site automatically.**
-There is no build step — the pages are plain HTML and the function uses Node's built-in
-fetch, so nothing needs to be compiled or installed.
+Netlify builds the v2 app (`app/src`, Vite) on every deploy and publishes the built
+output — changes to `app/src` are NOT live until a push triggers this build.
 
 Settings (already declared in `netlify.toml`):
 
-- publish directory: `.`
+- build command: `cd app && npm ci && npm run build` + copy legacy pages/favicons into `dist`
+- publish directory: `app/dist` (v2 app at `/`, old console kept at `/console.html`)
 - functions directory: `netlify/functions`
-- build command: *(none)*
 
 ## Environment variables
 
