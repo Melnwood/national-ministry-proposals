@@ -145,7 +145,7 @@ export function Workspace({ boot, session, onRefresh }) {
       {tab === 'grant' && <GrantTeam boot={boot} session={viewSession} onRefresh={onRefresh} />}
       {tab === 'accounting' && <Accounting boot={boot} session={viewSession} onRefresh={onRefresh} />}
       {tab === 'foundations' && <Foundations boot={boot} onRefresh={onRefresh} />}
-      {tab === 'reports' && <Reports boot={boot} />}
+      {tab === 'reports' && <Reports boot={boot} onRefresh={onRefresh} />}
       {tab === 'history' && <CountryHistory boot={boot} />}
       {tab === 'manage' && <Management boot={boot} onRefresh={onRefresh} />}
     </div>

@@ -814,6 +814,22 @@ exports.handler = async (event) => {
       return reply(200, { ok:true, user:who });
     }
 
+    if(body.op === 'report_request'){
+      // Mel/Amanda request a report from a grandfathered (already-funded)
+      // grant: creates the Project Report record with a due date. The leader
+      // sees a 'Fill out report' row immediately, and the report-due email
+      // automation fires on the due date.
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
+      if(!body.recordId) return reply(400, { error:'Missing recordId.' });
+      const rtype = /mid/i.test(body.kind||'') ? 'Mid-Project Report' : 'Final Report';
+      const fields = { [RF.proposal]:[body.recordId], [RF.type]:rtype };
+      if(body.due) fields['fldkjC4V3NmC4ylDy'] = body.due;
+      await at(BASE+'/'+T_REPORT, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+      try{ await writeLog([{ fields:{ [L.entry]:(body.projectName? body.projectName+' — ':'')+rtype+' requested', [L.type]:'Status change',
+        [L.detail]:(who.name||who.email)+' requested a '+rtype.toLowerCase()+(body.due?` due ${body.due}`:''), [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:body.recordId } }]); }catch(e){}
+      return reply(200, { ok:true, user:who });
+    }
+
     if(body.op === 'plan_get'){
       if(!body.countryId) return reply(400, { error:'Missing countryId.' });
       if(isScopedCountry(who) && !(who.countryIds||[]).includes(body.countryId)) return reply(403, { error:'You can only view your own country\'s plan.' });
