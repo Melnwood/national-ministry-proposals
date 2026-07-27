@@ -2,12 +2,13 @@ import { useState, useEffect } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, moneyCents, date } from '../shared/format.js';
 import { parseBankCSV } from '../shared/csv.js';
+import { ROLES } from '../shared/schema.js';
 
 export function Management({ boot, onRefresh }) {
   return (
     <>
       <Reconcile boot={boot} onRefresh={onRefresh} />
-      <SignIns />
+      <SignIns boot={boot} />
     </>
   );
 }
@@ -102,11 +103,14 @@ function Reconcile({ boot, onRefresh }) {
   );
 }
 
-function SignIns() {
+const ROLE_LABEL = Object.fromEntries(Object.values(ROLES).map(r => [r.airtable, r.label]));
+
+function SignIns({ boot }) {
   const [people, setPeople] = useState(null);
   const [err, setErr] = useState('');
   const [resetting, setResetting] = useState(null);
   const [msg, setMsg] = useState('');
+  const [editing, setEditing] = useState(null); // a person, or { __new:true }
 
   async function load() {
     try { const d = await api('people_list', {}); setPeople(d.people || []); }
@@ -124,28 +128,116 @@ function SignIns() {
 
   return (
     <section>
-      <div class="secthead">Sign-ins <span class="dim">— reset access for a person</span></div>
-      <p class="lead">Everyone who can sign in. Reset a sign-in if someone is locked out — they’ll choose a new password on their next visit.</p>
+      <div class="secthead">People &amp; access <span class="dim">— roles, countries, and sign-ins</span></div>
+      <p class="lead">Everyone who can sign in. Click a person to set their role and which countries they can see — or add someone new.</p>
       {err && <div class="editerr">{err}</div>}
       {msg && <div class="okmsg">{msg}</div>}
+
+      <div class="dc-confirm" style="margin-bottom:12px">
+        <button class="savebtn" onClick={() => setEditing({ __new: true })}>➕ Add person</button>
+      </div>
+
       <div class="tablewrap">
         <table class="grants">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Password set</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Countries</th><th>Password</th><th></th></tr></thead>
           <tbody>
             {people && people.map(p => (
-              <tr key={p.id}>
+              <tr key={p.id} class="clk" onClick={() => setEditing(p)}>
                 <td class="nm">{p.name || '—'}</td>
                 <td class="cty">{p.email}</td>
-                <td class="cty">{p.role || '—'}</td>
+                <td class="cty">{ROLE_LABEL[p.role] || p.role || <span class="rbadge upcoming">No role</span>}</td>
+                <td class="cty">{p.allCountries ? 'All' : (p.countries && p.countries.length ? p.countries.length : '—')}</td>
                 <td>{p.hasPassword ? <span class="rbadge submitted">Set</span> : <span class="rbadge upcoming">Not yet</span>}</td>
-                <td class="r"><button class="ghostbtn" disabled={resetting === p.id} onClick={() => reset(p)}>{resetting === p.id ? 'Resetting…' : 'Reset'}</button></td>
+                <td class="r" onClick={e => e.stopPropagation()}>
+                  <button class="ghostbtn" disabled={resetting === p.id} onClick={() => reset(p)}>{resetting === p.id ? 'Resetting…' : 'Reset'}</button>
+                </td>
               </tr>
             ))}
-            {!people && <tr><td colspan="5" class="empty-row">Loading…</td></tr>}
+            {!people && <tr><td colspan="6" class="empty-row">Loading…</td></tr>}
           </tbody>
         </table>
       </div>
+
+      {editing && (
+        <PersonEditor
+          person={editing.__new ? null : editing}
+          countries={boot.countries_meta || []}
+          onClose={() => setEditing(null)}
+          onSaved={m => { setMsg(m); setEditing(null); load(); }}
+        />
+      )}
     </section>
+  );
+}
+
+function PersonEditor({ person, countries, onClose, onSaved }) {
+  const isNew = !person;
+  const [name, setName] = useState(person ? person.name || '' : '');
+  const [email, setEmail] = useState(person ? person.email || '' : '');
+  const [role, setRole] = useState(person ? person.role || '' : '');
+  const [allC, setAllC] = useState(person ? !!person.allCountries : false);
+  const [cset, setCset] = useState(() => new Set(person && person.countries ? person.countries : []));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const toggleC = id => setCset(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  async function save() {
+    if (isNew && !email.trim()) { setErr('Email is required.'); return; }
+    setBusy(true); setErr('');
+    const fields = { name, role, allCountries: allC, countries: allC ? [] : Array.from(cset) };
+    try {
+      if (isNew) { await api('people_add', { fields: { ...fields, email } }); onSaved(`Added ${name || email}.`); }
+      else { await api('people_update', { recordId: person.id, fields }); onSaved(`Saved ${name || email}.`); }
+    } catch (e) { setErr(e.message || 'Could not save.'); setBusy(false); }
+  }
+
+  return (
+    <div class="modal-scrim" onClick={onClose}>
+      <div class="modal" onClick={e => e.stopPropagation()}>
+        <div class="modal-head">
+          <div><h2>{isNew ? 'Add person' : 'Edit person'}</h2>
+            <div class="sub2">{isNew ? 'They set their password on first sign-in' : person.email}</div></div>
+          <button class="ghostbtn" onClick={onClose}>Close ✕</button>
+        </div>
+
+        <div class="editor">
+          <label class="fld"><span class="flbl">Name</span>
+            <input value={name} onInput={e => setName(e.currentTarget.value)} placeholder="Full name" /></label>
+          {isNew && (
+            <label class="fld"><span class="flbl">Email</span>
+              <input type="email" value={email} onInput={e => setEmail(e.currentTarget.value)} placeholder="name@josiahventure.com" /></label>
+          )}
+          <label class="fld"><span class="flbl">Role</span>
+            <select value={role} onChange={e => setRole(e.currentTarget.value)}>
+              <option value="">— No role —</option>
+              {Object.values(ROLES).map(r => <option value={r.airtable}>{r.label}</option>)}
+            </select>
+          </label>
+
+          <label class="check inline"><input type="checkbox" checked={allC} onChange={e => setAllC(e.currentTarget.checked)} /><span>Can see every country</span></label>
+
+          {!allC && (
+            <label class="fld"><span class="flbl">Countries they can see</span>
+              <div class="country-pick">
+                {countries.map(c => (
+                  <label class={`check${cset.has(c.id) ? ' on' : ''}`}>
+                    <input type="checkbox" checked={cset.has(c.id)} onChange={() => toggleC(c.id)} /><span>{c.name}</span>
+                  </label>
+                ))}
+                {!countries.length && <span class="dim">No countries loaded.</span>}
+              </div>
+            </label>
+          )}
+        </div>
+
+        {err && <div class="editerr">{err}</div>}
+        <div class="modal-foot actions">
+          <button class="ghostbtn" onClick={onClose} disabled={busy}>Cancel</button>
+          <button class="savebtn" onClick={save} disabled={busy}>{busy ? 'Saving…' : (isNew ? 'Add person' : 'Save changes')}</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

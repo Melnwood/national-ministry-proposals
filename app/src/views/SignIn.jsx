@@ -23,7 +23,7 @@ export function SignIn({ initialError, onSignedIn }) {
   return (
     <div class="gate">
       <div class="box">
-        <div class="mk">JV</div>
+        <div class="mk stacked"><span>NAT</span><span>MIN</span></div>
         <h1>National Ministries</h1>
         <div class="sub">Sign in to your grant dashboard.</div>
         <input

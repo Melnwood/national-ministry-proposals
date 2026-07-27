@@ -10,6 +10,16 @@ import { FoundationReport } from './FoundationReport.jsx';
 // list; council-pending, funded, denied and archived are all excluded too.
 const ONGOING_STAGES = new Set(['deferred', 'grantApproved']);
 
+// Sort by pipeline stage order, then by biggest money first.
+function sortGrants(list) {
+  const order = Object.fromEntries(STAGES.map((s, i) => [s.key, i]));
+  return [...list].sort((a, b) => {
+    const sa = order[stageKey(a)] ?? 99, sb = order[stageKey(b)] ?? 99;
+    if (sa !== sb) return sa - sb;
+    return (awarded(b) || requested(b)) - (awarded(a) || requested(a));
+  });
+}
+
 export function GrantTeam({ boot, session, onRefresh }) {
   const props = boot.props || [];
   const [filter, setFilter] = useState(null);   // stage key, or null = all
@@ -33,16 +43,11 @@ export function GrantTeam({ boot, session, onRefresh }) {
   const { groups } = useMemo(() => byStage(props), [props]);
   const counts = k => (groups[k] ? groups[k].length : 0);
 
-  const shown = useMemo(() => {
-    const list = filter ? (groups[filter] || []) : props;
-    // sort by stage order, then by awarded/requested desc
-    const order = Object.fromEntries(STAGES.map((s, i) => [s.key, i]));
-    return [...list].sort((a, b) => {
-      const sa = order[stageKey(a)] ?? 99, sb = order[stageKey(b)] ?? 99;
-      if (sa !== sb) return sa - sb;
-      return (awarded(b) || requested(b)) - (awarded(a) || requested(a));
-    });
-  }, [props, groups, filter]);
+  // When a stage tile is selected we show just that stage. Otherwise the main
+  // list is the ACTIVE pipeline (everything not yet funded/denied/archived);
+  // the terminal outcomes drop into collapsible windows below.
+  const shown = useMemo(() => sortGrants(filter ? (groups[filter] || []) : props), [props, groups, filter]);
+  const active = useMemo(() => sortGrants(props.filter(p => !TERMINAL_STAGE_KEYS.includes(stageKey(p)))), [props]);
 
   const openGrant = openId ? props.find(p => p.id === openId) : null;
 
@@ -52,7 +57,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
         <nav class="subtabs">
           <button class={`subtab${view === 'pipeline' ? ' on' : ''}`} onClick={() => setView('pipeline')}>Pipeline</button>
           <button class={`subtab${view === 'ongoing' ? ' on' : ''}`} onClick={() => setView('ongoing')}>
-            Ongoing projects{ongoing.length ? <span class="pillcount">{ongoing.length}</span> : null}
+            Deferred projects{ongoing.length ? <span class="pillcount">{ongoing.length}</span> : null}
           </button>
         </nav>
         <button class="reportbtn" onClick={() => setReportOpen(true)}>📄 Foundation report</button>
@@ -98,30 +103,23 @@ export function GrantTeam({ boot, session, onRefresh }) {
       </div>
 
       {/* Grant list */}
-      <div class="secthead">
-        {filter ? STAGE_BY_KEY[filter].label : 'All grants'} <span class="dim">— {shown.length}</span>
-      </div>
-      <div class="tablewrap">
-        <table class="grants">
-          <thead>
-            <tr><th>Grant</th><th>Country</th><th>Coach</th><th>Stage</th><th class="r">Requested</th><th class="r">Awarded</th><th class="r">Owed</th></tr>
-          </thead>
-          <tbody>
-            {shown.map(p => (
-              <tr onClick={() => setOpenId(p.id)} class="clk">
-                <td class="nm">{projectName(p)}</td>
-                <td class="cty">{country(p)}</td>
-                <td class="cty">{coach(p) || '—'}</td>
-                <td><StageBadge k={stageKey(p)} /></td>
-                <td class="r">{requested(p) ? money(requested(p)) : '—'}</td>
-                <td class="r">{awarded(p) ? money(awarded(p)) : '—'}</td>
-                <td class="r owe">{owed(p) ? money(owed(p)) : '—'}</td>
-              </tr>
-            ))}
-            {!shown.length && <tr><td colspan="7" class="empty-row">No grants in this stage.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      {filter ? (
+        <>
+          <div class="secthead">{STAGE_BY_KEY[filter].label} <span class="dim">— {shown.length}</span></div>
+          <GrantTable list={shown} onOpen={setOpenId} empty="No grants in this stage." />
+        </>
+      ) : (
+        <>
+          <div class="secthead">Active grants <span class="dim">— {active.length} in progress</span></div>
+          <GrantTable list={active} onOpen={setOpenId} empty="No active grants right now." />
+
+          <div class="ch-list" style="margin-top:14px">
+            {TERMINAL_STAGE_KEYS.map(k => (groups[k] && groups[k].length)
+              ? <GrantGroup key={k} title={STAGE_BY_KEY[k].label} list={sortGrants(groups[k])} onOpen={setOpenId} />
+              : null)}
+          </div>
+        </>
+      )}
       </>)}
 
       {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} />}
@@ -138,7 +136,7 @@ function dateOf(p) { const f = p.fields || {}; return f[F.proposal.dateApproved]
 function OngoingPanel({ list, onOpen, preview }) {
   return (
     <>
-      <div class="secthead">Fund if money frees up <span class="dim">— {list.length} approved, waiting on funding</span></div>
+      <div class="secthead">Deferred projects <span class="dim">— {list.length} approved, waiting on funding</span></div>
       <p class="lead">These are approved but not yet funded. If money comes free, they're ready to fund. If one has waited a long time, ask whether it's still needed.</p>
 
       {!list.length && <div class="panel"><p style="color:var(--muted)">Nothing approved is waiting on funding right now.</p></div>}
@@ -198,6 +196,50 @@ function OngoingRow({ p, onOpen, preview }) {
         {err && <div class="editerr sm">{err}</div>}
       </td>
     </tr>
+  );
+}
+
+function GrantTable({ list, onOpen, empty }) {
+  return (
+    <div class="tablewrap">
+      <table class="grants">
+        <thead>
+          <tr><th>Grant</th><th>Country</th><th>Coach</th><th>Stage</th><th class="r">Requested</th><th class="r">Awarded</th><th class="r">Owed</th></tr>
+        </thead>
+        <tbody>
+          {list.map(p => (
+            <tr onClick={() => onOpen(p.id)} class="clk">
+              <td class="nm">{projectName(p)}</td>
+              <td class="cty">{country(p)}</td>
+              <td class="cty">{coach(p) || '—'}</td>
+              <td><StageBadge k={stageKey(p)} /></td>
+              <td class="r">{requested(p) ? money(requested(p)) : '—'}</td>
+              <td class="r">{awarded(p) ? money(awarded(p)) : '—'}</td>
+              <td class="r owe">{owed(p) ? money(owed(p)) : '—'}</td>
+            </tr>
+          ))}
+          {!list.length && <tr><td colspan="7" class="empty-row">{empty || 'None.'}</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// A collapsed window for a terminal outcome (Funded / Denied / Archived).
+// Click the header to open it; shows the count and total awarded at a glance.
+function GrantGroup({ title, list, onOpen }) {
+  const [open, setOpen] = useState(false);
+  const total = list.reduce((a, p) => a + awarded(p), 0);
+  return (
+    <div class={`ch-acc${open ? ' open' : ''}`}>
+      <button class="ch-acc-head" onClick={() => setOpen(o => !o)}>
+        <span class="ch-chev">{open ? '▾' : '▸'}</span>
+        <span class="ch-name">{title}</span>
+        <span class="ch-sub">{list.length} {list.length === 1 ? 'grant' : 'grants'}</span>
+        {total ? <span class="ch-total">{money(total)}</span> : null}
+      </button>
+      {open && <div class="ch-acc-body"><GrantTable list={list} onOpen={onOpen} /></div>}
+    </div>
   );
 }
 
