@@ -66,7 +66,7 @@ function DecisionCard({ p, cycles, onDone }) {
       changes.push({ type: 'Status change', label: `Approved — ${money(Number(amount) || 0)}`,
         detail: `Council approved ${name} at ${money(Number(amount) || 0)}${message ? ` — ${message}` : ''}` });
     } else if (kind === 'defer') {
-      fields[F.proposal.stage] = 'Approved — Deferred';
+      fields[F.proposal.stage] = 'Deferred';
       if (amount) fields[F.proposal.awarded] = Number(amount) || 0;
       fields[F.proposal.lastConfirmed] = new Date().toISOString().slice(0, 10);
       changes.push({ type: 'Status change', label: 'Approved — deferred',

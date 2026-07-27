@@ -7,7 +7,7 @@ import { stageKey } from '../shared/grants.js';
 // beside the flow.
 export const PIPELINE_FLOW = ['submitted', 'coach', 'council', 'accounting', 'transferred', 'funded'];
 const POS = Object.fromEntries(PIPELINE_FLOW.map((k, i) => [k, i]));
-export const TILE_LABEL = { council: 'Council Lead Team Approval', transferred: 'Funds transferred', funded: 'Project funded' };
+export const TILE_LABEL = { transferred: 'Funds transferred', funded: 'Project funded' };
 export const SIDE_KEYS = ['deferred', 'denied'];
 
 // A deferred grant has passed council approval, so it lights the pipeline

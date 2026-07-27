@@ -283,7 +283,7 @@ function GrantDetail({ p, onClose, onSaved }) {
       changes.push({ type: 'Stage change', label: `Stage → ${stage}`, detail: `Stage moved from ${origStage || '(none)'} to ${stage}` });
       // stamp the outcome date when it makes sense
       if ((stage === 'Funded' || stage === 'Funds Transferred') && !val('dateFunded')) fields[F.proposal.dateFunded] = today();
-      if (stage === 'Council Lead Team Decision' && !val('dateApproved')) fields[F.proposal.dateApproved] = today();
+      if (stage === 'Council Lead Team Approval' && !val('dateApproved')) fields[F.proposal.dateApproved] = today();
     }
     if (awardNum !== (awarded(p) || 0)) {
       fields[F.proposal.awarded] = awardNum;

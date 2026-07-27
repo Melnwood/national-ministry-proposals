@@ -124,18 +124,20 @@ export const F = {
 // money) or goes straight to accounting. "Council Decision" is now labelled
 // "Council Lead Team Decision". `aliases` keeps any record whose Stage field
 // still holds an old label resolving to the right stage.
+// Order matters: the straight-through flow first, then the side outcomes
+// (Denied, Deferred, Archived) at the end — this is the stage dropdown's order.
 export const STAGES = [
   { key:'submitted',  label:'Submitted',            owner:'coach',   legacy:['Submitted '] },
   { key:'coach',      label:'Coach Review',         owner:'coach',   legacy:[] },
-  { key:'council',    label:'Council Lead Team Decision', owner:'evp', legacy:['EVP Approval'], aliases:['Council Decision'] },
-  { key:'deferred',   label:'Approved — Deferred',  owner:'grant',   legacy:['Grant is approved but no funding yet','Pause','Grant Team Approval (Dave & Pavel)3'], aliases:['Grant Team Approved'] },
+  { key:'council',    label:'Council Lead Team Approval', owner:'evp', legacy:['EVP Approval'], aliases:['Council Decision','Council Lead Team Decision'] },
   { key:'accounting', label:'At Accounting',        owner:'grant',   legacy:['Funds distributed to Council Account 5','Funding For Grant Identified 4'], aliases:['Funding Identified'] },
   // 2026-07-27 (per Mel): the transfer and the project being funded are two
-  // separate windows — Susan records the transfer, then confirms the project
-  // funded once everything is settled.
+  // separate windows; Susan's one click records the transfer and lands the
+  // grant in Funded, so this stage is only held manually.
   { key:'transferred', label:'Funds Transferred',   owner:'grant',   legacy:[] },
   { key:'funded',     label:'Funded',               owner:null,      legacy:['Funds Distributed to Cedarstone Country Account 6'] },
   { key:'denied',     label:'Denied',               owner:null,      legacy:['Grant Team Denial 3.1 '] },
+  { key:'deferred',   label:'Deferred',             owner:'grant',   legacy:['Grant is approved but no funding yet','Pause','Grant Team Approval (Dave & Pavel)3'], aliases:['Grant Team Approved','Approved — Deferred'] },
   { key:'archived',   label:'Archived',             owner:null,      legacy:['Achived'] },
 ];
 

@@ -100,9 +100,11 @@ function inScope(who, propFields){
 const STAGE_F = 'fld3Sh8TGO0Nukrgc', STATUS_F = 'fld1iHtOAuGDPvLVZ';
 const STAGE_TO_STATUS = {
   'Submitted':'Submitted ',
-  'Council Lead Team Decision':'EVP Approval',
+  'Council Lead Team Approval':'EVP Approval',
+  'Council Lead Team Decision':'EVP Approval', // pre-rename label, kept for stale clients
   'Council Decision':'EVP Approval', // pre-2026-07-27 label, kept for stale clients
-  'Approved — Deferred':'Grant is approved but no funding yet',
+  'Deferred':'Grant is approved but no funding yet',
+  'Approved — Deferred':'Grant is approved but no funding yet', // pre-rename label
   // 'Grant Team Approved' / 'Funding Identified' stages retired 2026-07-27;
   // mappings kept so a stale client writing them still syncs legacy Status.
   'Grant Team Approved':'Grant Team Approval (Dave & Pavel)3',
