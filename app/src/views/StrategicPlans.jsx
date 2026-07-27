@@ -58,16 +58,40 @@ function PlanEditor({ country, onClose, onSaved }) {
       .catch(e => { setErr(e.message || 'Could not load the plan.'); setLoading(false); });
   }, [country.id]);
 
+  const [reading, setReading] = useState(false);
+
   async function onFile(e) {
     const file = e.currentTarget.files && e.currentTarget.files[0];
     if (!file) return;
     setErr(''); setNote('');
     try {
-      const t = /\.docx$/i.test(file.name) ? await docxToText(file) : await file.text();
+      let t;
+      if (/\.docx$/i.test(file.name)) {
+        t = await docxToText(file);
+      } else if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+        // PDFs go through the server, where Claude transcribes the document —
+        // works for scanned pages too. Takes a little while.
+        setReading(true);
+        setNote(`Reading "${file.name}" — this can take up to a minute…`);
+        const data = await new Promise((res, rej) => {
+          const rd = new FileReader();
+          rd.onload = () => res(String(rd.result).split(',')[1]);
+          rd.onerror = () => rej(new Error('Could not read that file.'));
+          rd.readAsDataURL(file);
+        });
+        const d = await api('plan_extract', { file: { data, contentType: file.type, filename: file.name } });
+        if (d.needsKey) throw new Error('The AI key is not configured on the server yet.');
+        t = d.text || '';
+      } else if (/\.doc$/i.test(file.name)) {
+        throw new Error('Old-format .doc files aren\'t supported — save it as .docx or PDF and try again.');
+      } else {
+        t = await file.text();
+      }
       if (!t.trim()) { setErr('That file appears to be empty.'); return; }
       setText(t);
       setNote(`Loaded "${file.name}" — review below, then save.`);
-    } catch (ex) { setErr(ex.message || 'Could not read that file.'); }
+    } catch (ex) { setErr(ex.message || 'Could not read that file.'); setNote(''); }
+    finally { setReading(false); }
   }
 
   async function save() {
@@ -86,8 +110,8 @@ function PlanEditor({ country, onClose, onSaved }) {
         </div>
         <div class="editor">
           <label class="filebtn" style="align-self:flex-start">
-            Upload .docx / .txt…
-            <input type="file" accept=".docx,.txt,text/plain" onChange={onFile} style="display:none" />
+            {reading ? 'Reading…' : 'Upload Word (.docx) / PDF / .txt…'}
+            <input type="file" accept=".docx,.pdf,.txt,application/pdf,text/plain" onChange={onFile} style="display:none" disabled={reading} />
           </label>
           {note && <div class="okmsg">{note}</div>}
           <label class="fld"><span class="flbl">Plan text</span>
@@ -98,7 +122,7 @@ function PlanEditor({ country, onClose, onSaved }) {
         {err && <div class="editerr">{err}</div>}
         <div class="modal-foot actions">
           <button class="ghostbtn" onClick={onClose} disabled={busy}>Cancel</button>
-          <button class="savebtn" onClick={save} disabled={busy || loading}>{busy ? 'Saving…' : 'Save plan'}</button>
+          <button class="savebtn" onClick={save} disabled={busy || loading || reading}>{busy ? 'Saving…' : 'Save plan'}</button>
         </div>
       </div>
     </div>

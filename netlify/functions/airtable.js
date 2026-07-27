@@ -773,6 +773,29 @@ exports.handler = async (event) => {
       return reply(200, { ok:true, user:who });
     }
 
+    if(body.op === 'plan_extract'){
+      // Turn an uploaded PDF into plain text for the strategic-plan editor.
+      // Claude reads the document directly, so scanned PDFs work too.
+      if(!ANTHROPIC_KEY) return reply(200, { needsKey:true, user:who });
+      const file = body.file || {};
+      if(!file.data) return reply(400, { error:'Missing file.' });
+      if(String(file.data).length > 5500000) return reply(400, { error:'That file is too large — keep it under ~4 MB.' });
+      const r2 = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{ 'x-api-key':ANTHROPIC_KEY, 'anthropic-version':'2023-06-01', 'content-type':'application/json' },
+        body: JSON.stringify({ model:'claude-opus-5', max_tokens:8000, output_config:{ effort:'low' },
+          messages:[{ role:'user', content:[
+            { type:'document', source:{ type:'base64', media_type:'application/pdf', data:file.data } },
+            { type:'text', text:'Transcribe the complete text content of this document as clean plain text. Keep headings and list items on their own lines. Do not summarize, do not add commentary — output only the transcription.' }
+          ]}] }),
+      });
+      const d2 = await r2.json().catch(() => ({}));
+      if(!r2.ok) return reply(500, { error:(d2.error && d2.error.message) || 'Could not read that PDF.' });
+      const text = (d2.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+      if(!text) return reply(400, { error:'No text could be read from that PDF.' });
+      return reply(200, { text, user:who });
+    }
+
     if(body.op === 'fit_check'){
       if(!body.recordId) return reply(400, { error:'Missing recordId.' });
       if(!ANTHROPIC_KEY) return reply(200, { needsKey:true, user:who });
