@@ -42,6 +42,20 @@ function DecisionCard({ p, cycles, onDone }) {
   const review = Array.isArray(f[F.proposal.coachReview]) ? f[F.proposal.coachReview].map(aval) : [];
   const notes = val('coachNotes');
 
+  // This-year's foundation gifts, shown as "Foundation — cycle" so the grant
+  // gets tied to the right money. (Falls back to all cycles if none are
+  // labelled with the current year.)
+  const cycleOpts = useMemo(() => {
+    const year = String(new Date().getFullYear());
+    const opts = cycles.map(c => ({
+      id: c.id,
+      foundation: aval(c.fields[F.cycle.foundation]) || 'Unassigned',
+      name: String(aval(c.fields[F.cycle.name]) || ''),
+    }));
+    const thisYear = opts.filter(o => o.name.includes(year));
+    return (thisYear.length ? thisYear : opts).map(o => ({ id: o.id, label: `${o.foundation} — ${o.name || '(unnamed cycle)'}` }));
+  }, [cycles]);
+
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
   const [open, setOpen] = useState(false); // compact row by default; click for the full picture
   const [amount, setAmount] = useState(awarded(p) ? String(awarded(p)) : (requested(p) ? String(requested(p)) : ''));
@@ -124,10 +138,10 @@ function DecisionCard({ p, cycles, onDone }) {
                 {requested(p) > 0 && <button type="button" class="mini" onClick={() => setAmount(String(requested(p)))}>Requested = {money(requested(p))}</button>}
               </label>
               {mode === 'approve' && (
-                <label class="fld"><span class="flbl">Grant cycle (optional)</span>
+                <label class="fld"><span class="flbl">Foundation grant cycle</span>
                   <select value={cycleId} onChange={e => setCycleId(e.currentTarget.value)}>
                     <option value="">— none —</option>
-                    {cycles.map(c => <option value={c.id}>{aval(c.fields[F.cycle.name])}</option>)}
+                    {cycleOpts.map(c => <option value={c.id}>{c.label}</option>)}
                   </select>
                 </label>
               )}
