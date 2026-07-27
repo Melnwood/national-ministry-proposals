@@ -587,7 +587,12 @@ exports.handler = async (event) => {
           done: !!completedBy,                 // reliable "actually submitted" signal
           leaders: r.fields['fldP8DjBL1S5l1WWA'] || 0,
           churches: r.fields['fldkksYMIC3YMdsNx'] || 0,
-          people: r.fields['fldisUoMECHpHZwp5'] || 0
+          people: r.fields['fldisUoMECHpHZwp5'] || 0,
+          // narrative fields, so the final-report form can show the mid update
+          spent: r.fields['fld25e4OC4ObhbyZw'] || 0,
+          story: r.fields['fldoOYDPd2tbnzvgC'] || '',
+          challenges: r.fields['fldqkWPn3hAFQXoFu'] || '',
+          lessons: r.fields['fldpM9VAWPVjMeUCm'] || ''
         };
       }).filter(x => x.proposalId);
       const countries_meta = countryRecs.map(r => {
@@ -767,6 +772,31 @@ exports.handler = async (event) => {
           [L.user]:who.name||'', [L.email]:who.email||'' } }]);
       }catch(logErr){ /* best effort */ }
       return reply(200, { ok:true, balance:Number(body.balance), asOf:body.asOf||'', user:who });
+    }
+
+    if(body.op === 'report_submit'){
+      // Country leaders fill mid/final project reports right in the app — no
+      // Airtable forms. Scoped leaders may only submit for their own grants.
+      if(!body.reportId || !body.fields) return reply(400, { error:'Missing reportId or fields.' });
+      const rrec = await at(BASE+'/'+T_REPORT+'/'+body.reportId+'?returnFieldsByFieldId=true');
+      const plink = rrec.fields && rrec.fields[RF.proposal];
+      const pid = (Array.isArray(plink) && plink.length) ? (plink[0].id || plink[0]) : '';
+      if(isScopedCountry(who)){
+        if(!pid) return reply(403, { error:'Not permitted.' });
+        const prop = await at(BASE+'/'+T_PROP+'/'+pid+'?returnFieldsByFieldId=true');
+        if(!inScope(who, prop.fields)) return reply(403, { error:'You can only submit reports for your own country.' });
+      }
+      const src = body.fields || {};
+      const fields = { [RF.completedBy]: who.name || who.email || '', 'fldTytlPqwAo01YtX': new Date().toISOString().slice(0,10) };
+      const rsetN = (k,v)=>{ if(v!=null&&v!=='') fields[k]=Number(v)||0; };
+      const rsetS = (k,v)=>{ if(v!=null&&String(v).trim()!=='') fields[k]=String(v).trim(); };
+      rsetS(RF.story,src.story); rsetS(RF.challenges,src.challenges); rsetS(RF.lessons,src.lessons);
+      rsetS(RF.nextSteps,src.nextSteps); rsetS(RF.comments,src.comments);
+      rsetN(RF.spent,src.spent); rsetN(RF.people,src.people); rsetN(RF.leaders,src.leaders); rsetN(RF.churches,src.churches);
+      await at(BASE+'/'+T_REPORT+'/'+body.reportId, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      try{ await writeLog([{ fields:{ [L.entry]:(body.projectName? body.projectName+' — ':'')+'Project report submitted', [L.type]:'Status change',
+        [L.detail]:(who.name||who.email)+' submitted a project report in the app', [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:pid||'' } }]); }catch(e){}
+      return reply(200, { ok:true, user:who });
     }
 
     if(body.op === 'plan_get'){

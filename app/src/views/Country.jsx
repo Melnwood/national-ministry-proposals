@@ -287,6 +287,7 @@ function GrantStatus({ p, reports, onDone }) {
   const skey = stageKey(p);
   const msg = val('decisionMessage');
   const [busy, setBusy] = useState(false);
+  const [fill, setFill] = useState(null); // the report being filled out
 
   const lastConfirmed = val('lastConfirmed');
   const confirmedDays = daysAgo(lastConfirmed);
@@ -347,10 +348,96 @@ function GrantStatus({ p, reports, onDone }) {
               <span class={`kind ${r.kind.toLowerCase()}`}>{r.kind}</span>
               <span class={`rbadge ${r.status.key}`}>{r.status.label}</span>
               <span class="cty">{r.due ? `due ${date(r.due)}` : ''}</span>
+              {!r.done && <button class="mini" onClick={() => setFill(r)}>Fill out report ▸</button>}
             </div>
           ))}
         </div>
       )}
+
+      {fill && <ReportForm r={fill} p={p} midReport={reports.find(x => x.kind === 'Mid' && x.done)}
+        onClose={() => setFill(null)} onDone={() => { setFill(null); onDone && onDone(); }} />}
+    </div>
+  );
+}
+
+// The mid/final project report, filled right here in the app — this is what
+// feeds the impact numbers on the Foundations tab and the donor reports.
+// The mid report shows what the application promised; the final also shows
+// the mid-point update, so the country writes against their own trajectory.
+function ReportForm({ r, p, midReport, onClose, onDone }) {
+  const [v, setV] = useState({ spent: '', people: '', leaders: '', churches: '', story: '', challenges: '', lessons: '', nextSteps: '' });
+  const set = (k, val) => setV(prev => ({ ...prev, [k]: val }));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function submit() {
+    if (!v.story.trim()) { setErr('Tell the story — even a few sentences. This is what goes to the foundations who gave the money.'); return; }
+    setBusy(true); setErr('');
+    try {
+      await api('report_submit', { reportId: r.id, fields: v, projectName: projectName(p) });
+      onDone();
+    } catch (e) { setErr(e.message || 'Could not submit the report.'); setBusy(false); }
+  }
+
+  return (
+    <div class="modal-scrim" onClick={onClose}>
+      <div class="modal wide" onClick={e => e.stopPropagation()}>
+        <div class="modal-head">
+          <div><h2>{r.kind}-project report — {projectName(p)}</h2>
+            <div class="sub2">{r.due ? `Due ${date(r.due)} · ` : ''}Your words here feed the impact story we send the foundations behind this grant.</div></div>
+          <button class="ghostbtn" onClick={onClose}>Close ✕</button>
+        </div>
+
+        {/* What the application promised — the report is written against this. */}
+        <div class="fullapp" style="margin:0 24px">
+          <div class="dt">What you set out to do</div>
+          {[aval(p.fields[F.proposal.objective]), aval(p.fields[F.proposal.objective2]), aval(p.fields[F.proposal.objective3])].filter(Boolean).map((o, i) => (
+            <p style="margin:6px 0 0;font-size:13px"><b>Objective {i + 1}:</b> {o}</p>
+          ))}
+          {aval(p.fields[F.proposal.success]) && <p style="margin:6px 0 0;font-size:13px"><b>Success looks like:</b> {aval(p.fields[F.proposal.success])}</p>}
+          <p style="margin:6px 0 0;font-size:13px"><b>Impact targets:</b> {aval(p.fields[F.proposal.peopleImpact]) || 0} people · {aval(p.fields[F.proposal.leadersImpact]) || 0} leaders · {aval(p.fields[F.proposal.churchesImpact]) || 0} churches</p>
+        </div>
+
+        {/* On the final report, their own mid-point update sits right above
+            what they're about to write. */}
+        {r.kind === 'Final' && midReport && (
+          <div class="fullapp" style="margin:10px 24px 0">
+            <div class="dt">Your mid-project update{midReport.submitted ? ` — ${date(midReport.submitted)}` : ''}</div>
+            <p style="margin:6px 0 0;font-size:13px"><b>Reported then:</b> {midReport.people || 0} people · {midReport.leaders || 0} leaders · {midReport.churches || 0} churches{midReport.spent ? ` · ${money(midReport.spent)} spent` : ''}</p>
+            {midReport.story && <p style="margin:6px 0 0;font-size:13px"><b>Story:</b> {midReport.story}</p>}
+            {midReport.challenges && <p style="margin:6px 0 0;font-size:13px"><b>Challenges:</b> {midReport.challenges}</p>}
+            {midReport.lessons && <p style="margin:6px 0 0;font-size:13px"><b>Lessons:</b> {midReport.lessons}</p>}
+          </div>
+        )}
+
+        <div class="editor">
+          <div class="fldrow">
+            <label class="fld"><span class="flbl">Spent so far</span>
+              <div class="moneyin"><span>$</span><input type="number" step="50" value={v.spent} onInput={e => set('spent', e.currentTarget.value)} /></div></label>
+            <label class="fld"><span class="flbl">People impacted</span>
+              <input type="number" value={v.people} onInput={e => set('people', e.currentTarget.value)} /></label>
+          </div>
+          <div class="fldrow">
+            <label class="fld"><span class="flbl">Leaders impacted</span>
+              <input type="number" value={v.leaders} onInput={e => set('leaders', e.currentTarget.value)} /></label>
+            <label class="fld"><span class="flbl">Churches impacted</span>
+              <input type="number" value={v.churches} onInput={e => set('churches', e.currentTarget.value)} /></label>
+          </div>
+          <label class="fld"><span class="flbl">The story — what has God done through this project so far?</span>
+            <textarea rows="5" value={v.story} onInput={e => set('story', e.currentTarget.value)} placeholder="A moment, a person, a change you saw…" /></label>
+          <label class="fld"><span class="flbl">Challenges you hit</span>
+            <textarea rows="3" value={v.challenges} onInput={e => set('challenges', e.currentTarget.value)} /></label>
+          <label class="fld"><span class="flbl">Lessons learned</span>
+            <textarea rows="3" value={v.lessons} onInput={e => set('lessons', e.currentTarget.value)} /></label>
+          <label class="fld"><span class="flbl">Next steps</span>
+            <textarea rows="2" value={v.nextSteps} onInput={e => set('nextSteps', e.currentTarget.value)} /></label>
+        </div>
+        {err && <div class="editerr">{err}</div>}
+        <div class="modal-foot actions">
+          <button class="ghostbtn" onClick={onClose} disabled={busy}>Cancel</button>
+          <button class="savebtn" onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit report'}</button>
+        </div>
+      </div>
     </div>
   );
 }
