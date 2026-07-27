@@ -178,12 +178,29 @@ async function roleEmails(roles){
   }catch(e){ return []; }
 }
 const councilEmails = () => roleEmails(['EVP','President']);
+// The coach for a country comes from People & access — the person with the
+// coach role whose assigned countries include this one. The application never
+// asks who the coach is; the system already knows.
+async function coachEmailForCountry(countryId){
+  if(!countryId) return '';
+  try{
+    const ppl = await fetchAll(T_APP, {});
+    const c = ppl.find(p => (p.fields[A.role]||'').trim() === 'National Ministries Coaches'
+      && Array.isArray(p.fields[A.countries])
+      && p.fields[A.countries].some(id => (id && id.id ? id.id : id) === countryId));
+    return c ? (c.fields[A.email]||'').trim() : '';
+  }catch(e){ return ''; }
+}
 async function notifyEvent(event, recordId, opts={}){
   const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
   const f = rec.fields || {};
   const name = f[PNF.name] || 'a grant', country = f[PNF.country] || '', amt = usd(f[PNF.awarded]);
   const leader = (f[PNF.leaderEmail] || f[PNF.submitterEmail] || '').trim();
-  const coach  = (f[PNF.coachEmail] || '').trim();
+  // Coach is derived from the country's assigned coach in People & access;
+  // the Coach Email field on the record is only a fallback for old data.
+  const clink = f[PROP_COUNTRY_LINK];
+  const countryId = (Array.isArray(clink) && clink.length) ? (clink[0].id || clink[0]) : '';
+  const coach = (await coachEmailForCountry(countryId)) || (f[PNF.coachEmail] || '').trim();
   const decisionMsg = f[PNF.decisionMsg] || '';
   const where = country ? ` (${country})` : '';
 
@@ -196,7 +213,10 @@ async function notifyEvent(event, recordId, opts={}){
   } else if(event === 'decision'){
     const council = await councilEmails();
     if(opts.kind === 'deny'){
-      add(leader, `Your grant "${name}" was not approved. Open your page to read the Council Lead Team's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Decision');
+      // Denials get their own notification type: the email automation only
+      // sends for 'Transfer' and 'Denied' — everything else stays in-app.
+      add(leader, `Your grant "${name}" was not approved. Open your page to read the Council Lead Team's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Denied');
+      add(coach,  `"${name}"${where}, which you coached, was not approved${decisionMsg?` — the Council Lead Team's note: “${decisionMsg}”`:'.'}`, 'Denied');
     } else if(opts.kind === 'defer'){
       add(leader, `"${name}" was approved but deferred to a later cycle. Confirm on your page that you still want it.`, 'Decision');
     } else { // approve
