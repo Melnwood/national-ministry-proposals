@@ -101,7 +101,7 @@ export function Workspace({ boot, session, onRefresh }) {
       <div class="topbar">
         <div class="brand">
           <div class="mk stacked"><span>NAT</span><span>MIN</span></div>
-          <div><h1>National Ministries</h1><div class="sub">Grant lifecycle · v2</div></div>
+          <div><h1>National Ministries</h1><div class="sub">Grant lifecycle · v2 · build {typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</div></div>
         </div>
         <div class="topbar-right">
           {canPreview && (
@@ -136,7 +136,7 @@ export function Workspace({ boot, session, onRefresh }) {
       {tab === 'council' && <Council boot={boot} onRefresh={onRefresh} />}
       {tab === 'grant' && <GrantTeam boot={boot} session={viewSession} onRefresh={onRefresh} />}
       {tab === 'accounting' && <Accounting boot={boot} session={viewSession} onRefresh={onRefresh} />}
-      {tab === 'foundations' && <Foundations boot={boot} />}
+      {tab === 'foundations' && <Foundations boot={boot} onRefresh={onRefresh} />}
       {tab === 'reports' && <Reports boot={boot} />}
       {tab === 'history' && <CountryHistory boot={boot} />}
       {tab === 'manage' && <Management boot={boot} onRefresh={onRefresh} />}

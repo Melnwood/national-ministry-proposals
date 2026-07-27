@@ -11,6 +11,11 @@ const BACKEND = 'https://national-ministry-proposals.netlify.app';
 
 export default defineConfig({
   plugins: [preact()],
+  // Visible build stamp shown in the app header, so anyone can tell at a
+  // glance whether their browser is running the latest deploy.
+  define: {
+    __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC'),
+  },
   server: {
     proxy: {
       '/.netlify/functions': { target: BACKEND, changeOrigin: true, secure: true },

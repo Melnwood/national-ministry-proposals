@@ -4,6 +4,8 @@ import { money, aval } from '../shared/format.js';
 import { F, TABLES } from '../shared/schema.js';
 import { projectName, country, coach, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 
+import { PipelineDash } from './PipelineDash.jsx';
+
 // Stages that are waiting on a council decision (pre-decision pipeline).
 const QUEUE_STAGES = new Set(['submitted', 'coach', 'council']);
 
@@ -18,6 +20,8 @@ export function Council({ boot, onRefresh }) {
 
   return (
     <>
+      <PipelineDash list={props} />
+
       <div class="secthead">Council decisions <span class="dim">— {queue.length} awaiting a decision</span></div>
       <p class="lead">Every grant a coach has submitted, with their notes, ready to decide together. Approve for this cycle, defer to the parking lot, or deny with a reason.</p>
 

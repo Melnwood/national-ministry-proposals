@@ -3,6 +3,7 @@ import { api } from '../shared/api.js';
 import { money, date, aval } from '../shared/format.js';
 import { F } from '../shared/schema.js';
 import { projectName, country, awarded, requested, stageKey } from '../shared/grants.js';
+import { PipelineDash } from './PipelineDash.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -15,6 +16,8 @@ export function Accounting({ boot, onRefresh }) {
 
   return (
     <>
+      <PipelineDash list={props} />
+
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
       <p class="lead">Every grant here has already been approved by the EVP and the Council Lead Team — that's how it got here. Everything Accounting needs to make the transfer is right here, no email required.</p>
 

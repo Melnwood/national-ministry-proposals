@@ -3,6 +3,7 @@ import { api } from '../shared/api.js';
 import { money, aval } from '../shared/format.js';
 import { F, REVIEW_CRITERIA } from '../shared/schema.js';
 import { projectName, country, coach as coachName, requested, stageKey, stageLabel } from '../shared/grants.js';
+import { PipelineDash } from './PipelineDash.jsx';
 
 // Grants a coach still owes a review on.
 const QUEUE_STAGES = new Set(['submitted', 'coach']);
@@ -11,16 +12,26 @@ export function Coach({ boot, session, onRefresh }) {
   const me = (session.user && (session.user.name || '')).trim().toLowerCase();
   const isCoach = session.role && session.role.key === 'coach';
 
-  const queue = useMemo(() => {
-    let list = (boot.props || []).filter(p => QUEUE_STAGES.has(stageKey(p)));
-    // A coach sees only their own grants (by Regional Coach Name); oversight
-    // roles (EVP/president) see the whole queue.
-    if (isCoach && me && !session.previewing) list = list.filter(p => coachName(p).trim().toLowerCase().includes(me) || me.includes(coachName(p).trim().toLowerCase()));
-    return list.sort((a, b) => requested(b) - requested(a));
+  // A coach sees only their own grants (by Regional Coach Name); oversight
+  // roles (EVP/president) see everything.
+  const isMine = p => {
+    const c = coachName(p).trim().toLowerCase();
+    return c.includes(me) || me.includes(c);
+  };
+  const mine = useMemo(() => {
+    const list = boot.props || [];
+    return (isCoach && me && !session.previewing) ? list.filter(isMine) : list;
   }, [boot.props, me, isCoach]);
+
+  const queue = useMemo(
+    () => mine.filter(p => QUEUE_STAGES.has(stageKey(p))).sort((a, b) => requested(b) - requested(a)),
+    [mine]
+  );
 
   return (
     <>
+      <PipelineDash list={mine} />
+
       <div class="secthead">Coach review <span class="dim">— {queue.length} to review</span></div>
       <p class="lead">For each grant: confirm how it measures up, add your honest thoughts, and submit. Your notes go straight to the council for their decision — you're not approving, you're informing.</p>
 

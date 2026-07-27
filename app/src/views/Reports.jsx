@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'preact/hooks';
 import { date } from '../shared/format.js';
 import { enrichReports, reportCounts } from '../shared/reports.js';
+import { PipelineDash } from './PipelineDash.jsx';
 
 const NOW = Date.now();
 const STATUS_META = [
@@ -23,6 +24,8 @@ export function Reports({ boot }) {
 
   return (
     <>
+      <PipelineDash list={boot.props} />
+
       <div class="secthead">Report tracking <span class="dim">— mid-project & final reports</span></div>
       <p class="lead">Every funded grant owes a mid-project and a final report. These feed the impact numbers on the Foundations tab. Chase the overdue ones first.</p>
 

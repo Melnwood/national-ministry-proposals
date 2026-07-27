@@ -99,6 +99,11 @@ body {
 .stagetile.fs-funded .ct { color:#fff; }
 .stagetile.fs-funded .nm { color:rgba(255,255,255,.85); }
 .stagetile.fs-funded:hover, .stagetile.fs-funded.on { background:var(--green-d); border-color:var(--green-d); }
+.stagetile.ro { cursor:default; }
+.stagetile.fs-off { background:#EFEBE1; opacity:.55; box-shadow:none; }
+.stagetile.fs-off .ct, .stagetile.fs-off .nm { color:var(--muted); }
+.pipedash { margin-bottom:22px; }
+.pd-title { font-family:'Fraunces',serif; font-weight:600; font-size:15px; margin:0 0 9px; }
 .stagetile.sm { flex:0 0 auto; min-width:0; display:flex; gap:7px; align-items:center; padding:7px 12px; }
 .stagetile.sm .ct { font-size:15px; }
 .stagetile.sm .nm { margin-top:0; }

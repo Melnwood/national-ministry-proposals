@@ -682,6 +682,27 @@ exports.handler = async (event) => {
       return reply(200, { ok:true, balance:Number(body.balance), asOf:body.asOf||'', user:who });
     }
 
+    if(body.op === 'cycle_create'){
+      // Add a foundation gift: a new foundation's first cycle, or another
+      // gift/cycle from a foundation that has given before (Grant Team page).
+      if(!isOversight(who) && !ADMINS.includes((who.email||'').trim().toLowerCase()))
+        return reply(403, { error:'Only the grant department can add foundation gifts.' });
+      const f = body.fields || {};
+      if(!f.foundation || !String(f.foundation).trim()) return reply(400, { error:'Missing foundation name.' });
+      if(!f.name || !String(f.name).trim()) return reply(400, { error:'Missing cycle name.' });
+      const fields = { [CYF.name]:String(f.name).trim(), [CYF.foundation]:String(f.foundation).trim() };
+      if(f.total != null && f.total !== '') fields[CYF.total] = Number(f.total) || 0;
+      const created = await at(BASE+'/'+T_CYCLE, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+      const rec = created.records && created.records[0];
+      try{
+        await writeLog([{ fields:{ [L.entry]:'Foundation gift added — '+String(f.foundation).trim()+' '+String(f.name).trim(),
+          [L.type]:'Funding assignment',
+          [L.detail]:(who.name||who.email)+' added a gift of $'+(Number(f.total)||0).toLocaleString('en-US')+' from '+String(f.foundation).trim()+' (cycle '+String(f.name).trim()+')',
+          [L.user]:who.name||'', [L.email]:who.email||'' } }]);
+      }catch(logErr){ /* best effort */ }
+      return reply(200, { ok:true, id: rec && rec.id, user:who });
+    }
+
     if(body.op === 'delete'){
       if(!canDelete(who)) return reply(403, { error:'You do not have permission to delete a project.' });
       if(!body.recordId) return reply(400, { error:'Missing recordId.' });

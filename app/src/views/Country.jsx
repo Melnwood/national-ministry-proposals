@@ -4,6 +4,7 @@ import { money, date, aval, daysAgo } from '../shared/format.js';
 import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD } from '../shared/schema.js';
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
+import { PipelineDash } from './PipelineDash.jsx';
 
 const NOW = Date.now();
 
@@ -48,6 +49,8 @@ export function Country({ boot, session, onRefresh }) {
           <button class="ghostbtn big" onClick={() => setApply('travel')}>Apply for the SECC Travel Grant</button>
         </div>
       </div>
+
+      <PipelineDash list={grants} />
 
       <div class="secthead" style="font-size:15px">Your grants <span class="dim">— {grants.length}</span></div>
       {!grants.length && <div class="panel"><p style="color:var(--muted)">No grants on file yet — apply for one above.</p></div>}
