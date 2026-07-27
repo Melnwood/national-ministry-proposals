@@ -22,8 +22,10 @@ export function PipelineDash({ list }) {
       <div class="pd-title">Pipeline</div>
       <div class="funnel">
         {FLOW.map((k, i) => (
-          <div class={`stagetile ro ${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] ? '' : ' empty'}`}>
-            <div class="ct">{counts[k] || 0}</div>
+          <div class={`stagetile ro ${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] || k === 'funded' ? '' : ' empty'}`}>
+            {/* The end tile isn't a count — it's the proof that grants make it
+                all the way through: a check once anything has, gray until then. */}
+            <div class="ct">{k === 'funded' ? (counts[k] ? '✓' : '·') : (counts[k] || 0)}</div>
             <div class="nm">{k === 'funded' ? 'Funds transferred' : STAGE_BY_KEY[k].label}</div>
           </div>
         ))}

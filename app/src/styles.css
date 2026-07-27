@@ -88,17 +88,19 @@ body {
 .stagetile.empty { opacity:.5; box-shadow:none; }
 .stagetile .ct { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:22px; color:var(--ink); }
 .stagetile .nm { font-size:11px; color:var(--muted); font-weight:600; line-height:1.25; margin-top:2px; }
-/* Progressive pipeline color: cream deepens stage by stage toward orange,
-   then lands on green when the funds have actually been transferred. */
+/* Progressive pipeline color: cream deepens toward orange while a grant is
+   being decided, then goes green once it's approved — super light green at
+   Approved — Deferred, deeper at Accounting, dark green when funds have
+   actually been transferred. */
 .stagetile.fs-0 { background:#FBF8F1; }
 .stagetile.fs-1 { background:#FDF2E2; }
 .stagetile.fs-2 { background:#FEEBD2; }
-.stagetile.fs-3 { background:#FFE2BF; }
-.stagetile.fs-4 { background:#FFD8AB; }
-.stagetile.fs-funded { background:var(--green); border-color:var(--green); }
+.stagetile.fs-3 { background:#EAF6EF; }
+.stagetile.fs-4 { background:#C4E5D4; }
+.stagetile.fs-funded { background:var(--green-d); border-color:var(--green-d); }
 .stagetile.fs-funded .ct { color:#fff; }
 .stagetile.fs-funded .nm { color:rgba(255,255,255,.85); }
-.stagetile.fs-funded:hover, .stagetile.fs-funded.on { background:var(--green-d); border-color:var(--green-d); }
+.stagetile.fs-funded:hover, .stagetile.fs-funded.on { background:var(--green); border-color:var(--green); }
 .stagetile.ro { cursor:default; }
 .stagetile.fs-off { background:#EFEBE1; opacity:.55; box-shadow:none; }
 .stagetile.fs-off .ct, .stagetile.fs-off .nm { color:var(--muted); }

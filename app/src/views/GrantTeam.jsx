@@ -88,8 +88,10 @@ export function GrantTeam({ boot, session, onRefresh }) {
       <div class="secthead">Pipeline <span class="dim">— click a stage to filter</span></div>
       <div class="funnel">
         {[...ACTIVE_STAGE_KEYS, 'funded'].map((k, i) => (
-          <button class={`stagetile ${k === 'funded' ? 'fs-funded' : `fs-${i}`}${filter === k ? ' on' : ''}${counts(k) ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
-            <div class="ct">{counts(k)}</div>
+          <button class={`stagetile ${k === 'funded' ? 'fs-funded' : `fs-${i}`}${filter === k ? ' on' : ''}${counts(k) || k === 'funded' ? '' : ' empty'}`} onClick={() => setFilter(filter === k ? null : k)}>
+            {/* End tile shows a check, not the all-time count — it marks that
+                grants move all the way through. Click still filters to Funded. */}
+            <div class="ct">{k === 'funded' ? (counts(k) ? '✓' : '·') : counts(k)}</div>
             <div class="nm">{k === 'funded' ? 'Funds transferred' : STAGE_BY_KEY[k].label}</div>
           </button>
         ))}
