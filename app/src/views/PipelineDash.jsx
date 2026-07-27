@@ -15,13 +15,16 @@ export const SIDE_KEYS = ['deferred', 'denied'];
 const lightPos = k => (k === 'deferred' ? POS.council : POS[k]);
 
 // Cumulative pipeline dashboard, shown at the top of every workspace page.
-// One green ramp, super light at Submitted and darkest at Funds transferred:
-// a stage's color comes on when a grant reaches that window and never goes
-// back off, so the point where color stops (and gray begins) is exactly how
-// far things have gotten. The end tile shows ✓, not a count — it's the proof
-// grants make it all the way through. Renders nothing when the viewer has no
+// One green ramp, super light at Submitted and darkest at the end: a stage's
+// color comes on when a grant reaches that window and never goes back off,
+// so the point where color stops (and gray begins) is exactly how far things
+// have gotten. Funds transferred counts just the few in flight; Project
+// funded carries the all-time total. Renders nothing when the viewer has no
 // grants at all (e.g. a country leader with no projects).
-export function PipelineDash({ list }) {
+//
+// Pass onSelect/selected to make the tiles clickable (used by Accounting to
+// peek inside each stage read-only) — click a tile again to unselect.
+export function PipelineDash({ list, onSelect, selected }) {
   const all = list || [];
   const counts = {};
   all.forEach(p => { const k = stageKey(p); counts[k] = (counts[k] || 0) + 1; });
@@ -29,25 +32,27 @@ export function PipelineDash({ list }) {
   const hasSide = SIDE_KEYS.some(k => counts[k]);
   if (!lit.length && !hasSide) return null;
   const furthest = lit.length ? Math.max(...lit) : -1;
+
+  const Tile = onSelect ? 'button' : 'div';
+  const click = k => onSelect ? () => onSelect(selected === k ? null : k) : undefined;
+
   return (
     <div class="pipedash">
       <div class="pd-title">Pipeline</div>
       <div class="funnel">
-        {/* Funds transferred counts just the few being worked through right
-            now; Project funded carries the all-time total that made it. */}
         {PIPELINE_FLOW.map((k, i) => (
-          <div class={`stagetile ro ${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] ? '' : ' empty'}`}>
+          <Tile class={`stagetile ${onSelect ? '' : 'ro '}${i <= furthest ? (k === 'funded' ? 'fs-funded' : `fs-${i}`) : 'fs-off'}${counts[k] ? '' : ' empty'}${selected === k ? ' on' : ''}`} onClick={click(k)}>
             <div class="ct">{counts[k] || 0}</div>
             <div class="nm">{TILE_LABEL[k] || STAGE_BY_KEY[k].label}</div>
-          </div>
+          </Tile>
         ))}
       </div>
       {hasSide && (
         <div class="funnel term">
           {SIDE_KEYS.filter(k => counts[k]).map(k => (
-            <div class="stagetile sm ro">
+            <Tile class={`stagetile sm ${onSelect ? '' : 'ro'}${selected === k ? ' on' : ''}`} onClick={click(k)}>
               <span class="ct">{counts[k]}</span><span class="nm">{STAGE_BY_KEY[k].label}</span>
-            </div>
+            </Tile>
           ))}
         </div>
       )}

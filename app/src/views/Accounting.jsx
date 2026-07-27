@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval } from '../shared/format.js';
-import { F } from '../shared/schema.js';
-import { projectName, country, awarded, requested, stageKey } from '../shared/grants.js';
-import { PipelineDash } from './PipelineDash.jsx';
+import { F, STAGE_BY_KEY } from '../shared/schema.js';
+import { projectName, country, coach, awarded, requested, paid, stageKey, stageLabel } from '../shared/grants.js';
+import { PipelineDash, TILE_LABEL } from './PipelineDash.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -15,9 +15,39 @@ export function Accounting({ boot, onRefresh }) {
   const atAccounting = useMemo(() => props.filter(p => stageKey(p) === 'accounting'), [props]);
   const transferred = useMemo(() => props.filter(p => stageKey(p) === 'transferred'), [props]);
 
+  // Susan can click any pipeline window (and the Deferred/Denied chips) to
+  // see what's in it — view only, nothing editable from here.
+  const [pick, setPick] = useState(null);
+  const [viewP, setViewP] = useState(null);
+  const picked = useMemo(() => (pick ? props.filter(p => stageKey(p) === pick) : []), [props, pick]);
+
   return (
     <>
-      <PipelineDash list={props} />
+      <PipelineDash list={props} onSelect={k => { setPick(k); setViewP(null); }} selected={pick} />
+
+      {pick && (
+        <>
+          <div class="secthead" style="font-size:15px">{TILE_LABEL[pick] || STAGE_BY_KEY[pick].label} <span class="dim">— {picked.length}, view only</span></div>
+          <div class="tablewrap">
+            <table class="grants">
+              <thead><tr><th>Grant</th><th>Country</th><th>Coach</th><th class="r">Requested</th><th class="r">Awarded</th></tr></thead>
+              <tbody>
+                {picked.map(p => (
+                  <tr class="clk" key={p.id} onClick={() => setViewP(p)}>
+                    <td class="nm">{projectName(p)}</td>
+                    <td class="cty">{country(p)}</td>
+                    <td class="cty">{coach(p) || '—'}</td>
+                    <td class="r">{requested(p) ? money(requested(p)) : '—'}</td>
+                    <td class="r">{awarded(p) ? money(awarded(p)) : '—'}</td>
+                  </tr>
+                ))}
+                {!picked.length && <tr><td colspan="5" class="empty-row">Nothing in this stage right now.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      {viewP && <ViewGrant p={viewP} onClose={() => setViewP(null)} />}
 
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
       <p class="lead">Every grant here has already been approved by the EVP and the Council Lead Team — that's how it got here. Everything Accounting needs to make the transfer is right here, no email required.</p>
@@ -43,6 +73,43 @@ export function Accounting({ boot, onRefresh }) {
 }
 
 const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
+
+// Read-only look at a grant from Susan's side — everything useful, nothing
+// editable. Changes happen on the Grant Team page.
+function ViewGrant({ p, onClose }) {
+  const f = p.fields || {};
+  const val = key => aval(f[F.proposal[key]]);
+  return (
+    <div class="modal-scrim" onClick={onClose}>
+      <div class="modal" onClick={e => e.stopPropagation()}>
+        <div class="modal-head">
+          <div>
+            <span class={`badge stg-${stageKey(p)}`}>{stageLabel(p)}</span>
+            <h2>{projectName(p)}</h2>
+            <div class="sub2">{country(p)}{coach(p) ? ` · Coach: ${coach(p)}` : ''} · view only</div>
+          </div>
+          <button class="ghostbtn" onClick={onClose}>Close ✕</button>
+        </div>
+        <div class="dl">
+          <div class="dlrow"><span class="dt">Requested</span><span class="dd">{requested(p) ? money(requested(p)) : '—'}</span></div>
+          <div class="dlrow"><span class="dt">Awarded</span><span class="dd">{awarded(p) ? money(awarded(p)) : '—'}</span></div>
+          <div class="dlrow"><span class="dt">Paid to date</span><span class="dd">{paid(p) ? money(paid(p)) : '—'}</span></div>
+          <div class="dlrow"><span class="dt">Cedarstone account</span><span class="dd">{acctNo(p) || '—'}</span></div>
+          <div class="dlrow"><span class="dt">Category</span><span class="dd">{val('category') || '—'}</span></div>
+          <div class="dlrow"><span class="dt">Approved</span><span class="dd">{val('dateApproved') ? date(val('dateApproved')) : '—'}</span></div>
+          <div class="dlrow"><span class="dt">Date funded</span><span class="dd">{val('dateFunded') ? date(val('dateFunded')) : '—'}</span></div>
+        </div>
+        {val('coachNotes') && <div class="notes"><div class="dt">Coach notes</div><p>{val('coachNotes')}</p></div>}
+        {val('decisionMessage') && (
+          <div class="notes">
+            <div class="dt">{stageKey(p) === 'denied' ? 'Why it was denied' : 'Council decision note'}</div>
+            <p>{val('decisionMessage')}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function TransferCard({ p, onDone }) {
   const [busy, setBusy] = useState(false);
@@ -89,7 +156,7 @@ function TransferCard({ p, onDone }) {
       </div>
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
-        <button class="savebtn" disabled={busy} onClick={transfer}>{busy ? 'Recording…' : 'Transferred ✓'}</button>
+        <button class="savebtn" disabled={busy} onClick={transfer}>{busy ? 'Recording…' : 'Funds Transferred ✓'}</button>
       </div>
     </div>
   );
