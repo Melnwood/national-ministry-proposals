@@ -842,7 +842,8 @@ exports.handler = async (event) => {
         budget:'fldofeeQU3DlrHULR', objective:'fld17fOaX3yAe3s4O', objective2:'fld2tSgq12UOBDMri', objective3:'fldquJXeXakScgMnU',
         success:'fldQKLTpf2M69gneF', sustain:'fldvktGeT6orNqBlA', fit:'fldTa8BUePK8Ifs02',
         team:'fldBqgoZhWMtEjsq0', lead:'flddNefZxzHMlvr9t', start:'fldVIJKaXqmUw8qFP', end:'fldxV1o8EVEXaitod',
-        otherFunding:'fldRu1psJOpQPSx5W', received:'fld95zxnULYIKO8nf', unused:'fld5TuhikpzrgI6G2', checklist:'fldYJSfdlEI8cBTOm' };
+        otherFunding:'fldRu1psJOpQPSx5W', received:'fld95zxnULYIKO8nf', unused:'fld5TuhikpzrgI6G2', checklist:'fldYJSfdlEI8cBTOm',
+        acct:'fldrqg7gy2oEhfdvw' };
       const fields = {
         [PA.name]:String(f.name).trim(), [PA.requested]:Number(f.requested)||0,
         [PA.stage]:'Submitted', [PA.status]:'Submitted ', [PA.submitted]:true,
@@ -856,7 +857,7 @@ exports.handler = async (event) => {
       setS(PA.objective,f.objective); setS(PA.objective2,f.objective2); setS(PA.objective3,f.objective3);
       setS(PA.success,f.success); setS(PA.sustain,f.sustainability); setS(PA.fit,f.strategicFit);
       setS(PA.team,f.team); setS(PA.lead,f.projectLead); setS(PA.otherFunding,f.otherFunding);
-      setS(PA.received,f.receivedFunds); setS(PA.unused,f.unusedFunds);
+      setS(PA.received,f.receivedFunds); setS(PA.unused,f.unusedFunds); setS(PA.acct,f.cedarstoneAccount);
       if(f.start) fields[PA.start]=f.start; if(f.end) fields[PA.end]=f.end;
       if(Array.isArray(f.checklist) && f.checklist.length) fields[PA.checklist]=f.checklist;
       const created = await at(BASE+'/'+T_PROP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });

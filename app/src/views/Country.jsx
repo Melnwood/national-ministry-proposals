@@ -71,7 +71,7 @@ export function Country({ boot, session, onRefresh }) {
 const EMPTY_APP = {
   name: '', category: GRANT_CATEGORIES[0], requestType: '', team: '', projectLead: '', start: '', end: '',
   problem: '', people: '', leaders: '', churches: '',
-  requested: '', totalBudget: '', otherFunding: '', receivedFunds: '', unusedFunds: '',
+  requested: '', totalBudget: '', otherFunding: '', receivedFunds: '', unusedFunds: '', cedarstoneAccount: '',
   objective: '', objective2: '', objective3: '',
   strategicFit: '', success: '', sustainability: '', checklist: [], budgetFile: null,
 };
@@ -159,6 +159,9 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
               <Fld label="Amount requesting from the grant"><div class="moneyin"><span>$</span><input type="number" step="50" value={v.requested} onInput={e => set('requested', e.currentTarget.value)} /></div></Fld>
               <Fld label="Total project budget"><div class="moneyin"><span>$</span><input type="number" step="50" value={v.totalBudget} onInput={e => set('totalBudget', e.currentTarget.value)} /></div></Fld>
             </div>
+            <Fld label="JV account number at Cedarstone — where the money goes if approved">
+              <input value={v.cedarstoneAccount} onInput={e => set('cedarstoneAccount', e.currentTarget.value)} placeholder="e.g. 510xxx" />
+            </Fld>
             <Fld label="Other sources of funding for this project (if any)"><textarea rows="2" value={v.otherFunding} onInput={e => set('otherFunding', e.currentTarget.value)} /></Fld>
             <Fld label="Detailed budget breakdown (optional file)">
               <input type="file" accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,image/*" onChange={onBudgetFile} />
