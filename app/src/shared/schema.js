@@ -119,23 +119,31 @@ export const F = {
 // RECOMMENDED MODEL (pending Mel's confirm): a single clean Stage field becomes
 // the source of truth for "where is this grant right now," and the milestone
 // checkboxes above stay as "passed this gate on <date>" audit markers.
+// 2026-07-27 (per Mel): "Grant Team Approved" and "Funding Identified" are gone
+// — after the council decides, a grant is either deferred (approved, waiting on
+// money) or goes straight to accounting. "Council Decision" is now labelled
+// "Council Lead Team Decision". `aliases` keeps any record whose Stage field
+// still holds an old label resolving to the right stage.
 export const STAGES = [
   { key:'submitted',  label:'Submitted',            owner:'coach',   legacy:['Submitted '] },
   { key:'coach',      label:'Coach Review',         owner:'coach',   legacy:[] },
-  { key:'council',    label:'Council Decision',     owner:'evp',     legacy:['EVP Approval'] },
-  { key:'deferred',   label:'Approved — Deferred',  owner:'grant',   legacy:['Grant is approved but no funding yet','Pause'] },
-  { key:'grantApproved', label:'Grant Team Approved', owner:'grant', legacy:['Grant Team Approval (Dave & Pavel)3'] },
-  { key:'fundsFound', label:'Funding Identified',   owner:'grant',   legacy:['Funding For Grant Identified 4'] },
-  { key:'accounting', label:'At Accounting',        owner:'grant',   legacy:['Funds distributed to Council Account 5'] },
+  { key:'council',    label:'Council Lead Team Decision', owner:'evp', legacy:['EVP Approval'], aliases:['Council Decision'] },
+  { key:'deferred',   label:'Approved — Deferred',  owner:'grant',   legacy:['Grant is approved but no funding yet','Pause','Grant Team Approval (Dave & Pavel)3'], aliases:['Grant Team Approved'] },
+  { key:'accounting', label:'At Accounting',        owner:'grant',   legacy:['Funds distributed to Council Account 5','Funding For Grant Identified 4'], aliases:['Funding Identified'] },
   { key:'funded',     label:'Funded',               owner:null,      legacy:['Funds Distributed to Cedarstone Country Account 6'] },
   { key:'denied',     label:'Denied',               owner:null,      legacy:['Grant Team Denial 3.1 '] },
   { key:'archived',   label:'Archived',             owner:null,      legacy:['Achived'] },
 ];
 
 export const STAGE_BY_KEY = Object.fromEntries(STAGES.map(s => [s.key, s]));
-export const STAGE_BY_LABEL = Object.fromEntries(STAGES.map(s => [s.label, s]));
+// Labels AND old aliases both resolve, so records written before the 2026-07-27
+// stage cleanup still land in the right place.
+export const STAGE_BY_LABEL = STAGES.reduce((m, s) => {
+  m[s.label] = s; (s.aliases || []).forEach(a => { m[a] = s; });
+  return m;
+}, {});
 // The active pipeline (excludes terminal outcomes) — used for the funnel view.
-export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','grantApproved','fundsFound','accounting'];
+export const ACTIVE_STAGE_KEYS = ['submitted','coach','council','deferred','accounting'];
 export const TERMINAL_STAGE_KEYS = ['funded','denied','archived'];
 // Reverse lookup: legacy Status text (trimmed) → canonical stage key.
 export const LEGACY_STATUS_TO_STAGE = STAGES.reduce((m, s) => {

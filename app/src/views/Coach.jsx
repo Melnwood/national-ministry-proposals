@@ -53,7 +53,7 @@ function ReviewCard({ p, onDone }) {
     const fields = {
       [F.proposal.coachReview]: Array.from(checked),
       [F.proposal.coachNotes]: notes,
-      [F.proposal.stage]: 'Council Decision',
+      [F.proposal.stage]: 'Council Lead Team Decision',
       [F.proposal.mCoachApproval]: true,
     };
     const changes = [{ type: 'Status change', label: 'Coach review submitted',

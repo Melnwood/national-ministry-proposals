@@ -5,10 +5,10 @@ import { STAGES, STAGE_BY_KEY, ACTIVE_STAGE_KEYS, TERMINAL_STAGE_KEYS, F } from 
 import { moneySummary, byStage, projectName, country, coach, requested, awarded, paid, owed, stageKey, stageLabel } from '../shared/grants.js';
 import { FoundationReport } from './FoundationReport.jsx';
 
-// Approved but funding NOT yet identified — the projects the grant team can pay
-// for if money frees up. Once funding is identified the project has left this
-// list; council-pending, funded, denied and archived are all excluded too.
-const ONGOING_STAGES = new Set(['deferred', 'grantApproved']);
+// Approved but waiting on money — the projects the grant team can pay for if
+// funds free up. Council-pending, at-accounting, funded, denied and archived
+// are all excluded.
+const ONGOING_STAGES = new Set(['deferred']);
 
 // Sort by pipeline stage order, then by biggest money first.
 function sortGrants(list) {
@@ -28,7 +28,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
   const [view, setView] = useState('pipeline'); // 'pipeline' | 'ongoing'
 
   const ongoing = useMemo(() => {
-    const order = { deferred: 0, grantApproved: 1 };
+    const order = { deferred: 0 };
     return props
       .filter(p => ONGOING_STAGES.has(stageKey(p)))
       .sort((a, b) => {
@@ -279,7 +279,7 @@ function GrantDetail({ p, onClose, onSaved }) {
       changes.push({ type: 'Stage change', label: `Stage → ${stage}`, detail: `Stage moved from ${origStage || '(none)'} to ${stage}` });
       // stamp the outcome date when it makes sense
       if (stage === 'Funded' && !val('dateFunded')) fields[F.proposal.dateFunded] = today();
-      if ((stage === 'Council Decision' || stage === 'Grant Team Approved') && !val('dateApproved')) fields[F.proposal.dateApproved] = today();
+      if (stage === 'Council Lead Team Decision' && !val('dateApproved')) fields[F.proposal.dateApproved] = today();
     }
     if (awardNum !== (awarded(p) || 0)) {
       fields[F.proposal.awarded] = awardNum;

@@ -51,7 +51,7 @@ function DecisionCard({ p, cycles, onDone }) {
     const name = projectName(p);
     if (message.trim()) fields[F.proposal.decisionMessage] = message.trim();
     if (kind === 'approve') {
-      fields[F.proposal.stage] = 'Grant Team Approved';
+      fields[F.proposal.stage] = 'At Accounting';
       fields[F.proposal.awarded] = Number(amount) || 0;
       fields[F.proposal.dateApproved] = new Date().toISOString().slice(0, 10);
       if (cycleId) fields[F.proposal.cycles] = [cycleId];

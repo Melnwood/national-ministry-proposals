@@ -99,8 +99,12 @@ function inScope(who, propFields){
 // still watch Status keep firing. Exact legacy strings (typos/spaces included).
 const STAGE_F = 'fld3Sh8TGO0Nukrgc', STATUS_F = 'fld1iHtOAuGDPvLVZ';
 const STAGE_TO_STATUS = {
-  'Submitted':'Submitted ', 'Council Decision':'EVP Approval',
+  'Submitted':'Submitted ',
+  'Council Lead Team Decision':'EVP Approval',
+  'Council Decision':'EVP Approval', // pre-2026-07-27 label, kept for stale clients
   'Approved — Deferred':'Grant is approved but no funding yet',
+  // 'Grant Team Approved' / 'Funding Identified' stages retired 2026-07-27;
+  // mappings kept so a stale client writing them still syncs legacy Status.
   'Grant Team Approved':'Grant Team Approval (Dave & Pavel)3',
   'Funding Identified':'Funding For Grant Identified 4',
   'At Accounting':'Funds distributed to Council Account 5',
