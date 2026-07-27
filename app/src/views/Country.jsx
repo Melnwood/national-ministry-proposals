@@ -329,7 +329,7 @@ function GrantStatus({ p, reports, onDone }) {
       )}
 
       {msg && skey !== 'denied' && skey !== 'deferred' && (
-        <div class="dc-ctx"><span class="dt">Note from the council</span><p>{msg}</p></div>
+        <div class="dc-ctx"><span class="dt">Note from the Council Lead Team</span><p>{msg}</p></div>
       )}
 
       {reports.length > 0 && (

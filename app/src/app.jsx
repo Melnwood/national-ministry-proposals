@@ -124,7 +124,12 @@ export function Workspace({ boot, session, onRefresh }) {
         <div class="previewbar">Previewing as <b>{(ROLES[viewRole] || {}).label || viewRole}</b> — this is what they see. <button onClick={() => setViewRole(realRole)}>Back to my view</button></div>
       )}
 
-      <Welcome boot={boot} session={viewSession} onGo={setTab} />
+      <Welcome boot={boot} session={viewSession} onGo={k => {
+        setTab(k);
+        // Even when it's already the active tab, respond visibly: scroll down
+        // to the content the button points at.
+        setTimeout(() => { const el = document.querySelector('.tabs'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 0);
+      }} />
 
       {available.length > 1 && (
         <nav class="tabs">

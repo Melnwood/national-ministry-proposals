@@ -102,7 +102,7 @@ function ViewGrant({ p, onClose }) {
         {val('coachNotes') && <div class="notes"><div class="dt">Coach notes</div><p>{val('coachNotes')}</p></div>}
         {val('decisionMessage') && (
           <div class="notes">
-            <div class="dt">{stageKey(p) === 'denied' ? 'Why it was denied' : 'Council decision note'}</div>
+            <div class="dt">{stageKey(p) === 'denied' ? 'Why it was denied' : 'Council Lead Team note'}</div>
             <p>{val('decisionMessage')}</p>
           </div>
         )}

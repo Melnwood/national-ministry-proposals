@@ -33,7 +33,7 @@ export function Coach({ boot, session, onRefresh }) {
       <PipelineDash list={mine} />
 
       <div class="secthead">Coach review <span class="dim">— {queue.length} to review</span></div>
-      <p class="lead">For each grant: confirm how it measures up, add your honest thoughts, and submit. Your notes go straight to the council for their decision — you're not approving, you're informing.</p>
+      <p class="lead">For each grant: confirm how it measures up, add your honest thoughts, and submit. Your notes go straight to the Council Lead Team for their decision — you're not approving, you're informing.</p>
 
       {!queue.length && <div class="panel"><p style="color:var(--muted)">Nothing waiting for your review right now.</p></div>}
       <div class="cards">

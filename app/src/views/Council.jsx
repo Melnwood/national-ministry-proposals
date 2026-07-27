@@ -22,11 +22,11 @@ export function Council({ boot, onRefresh }) {
     <>
       <PipelineDash list={props} />
 
-      <div class="secthead">Council decisions <span class="dim">— {queue.length} awaiting a decision</span></div>
-      <p class="lead">Every grant a coach has submitted, with their notes, ready to decide together. Approve for this cycle, defer to the parking lot, or deny with a reason.</p>
+      <div class="secthead">Council Lead Team decisions <span class="dim">— {queue.length} awaiting a Council Lead Team decision</span></div>
+      <p class="lead">Every grant a coach has submitted, with their notes, ready to decide together. Approve for this cycle, defer to the parking lot, or deny with a reason. Click a project to see the full picture.</p>
 
       {!queue.length && (
-        <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a council decision right now.</p></div>
+        <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a Council Lead Team decision right now.</p></div>
       )}
 
       <div class="cards">
@@ -43,6 +43,7 @@ function DecisionCard({ p, cycles, onDone }) {
   const notes = val('coachNotes');
 
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
+  const [open, setOpen] = useState(false); // compact row by default; click for the full picture
   const [amount, setAmount] = useState(awarded(p) ? String(awarded(p)) : (requested(p) ? String(requested(p)) : ''));
   const [cycleId, setCycleId] = useState('');
   const [message, setMessage] = useState('');
@@ -84,31 +85,33 @@ function DecisionCard({ p, cycles, onDone }) {
   }
 
   return (
-    <div class="dcard">
-      <div class="dc-head">
-        <div>
+    <div class="dcard slim">
+      <div class="dc-row" onClick={() => setOpen(o => !o)}>
+        <span class="dc-caret">{open ? '▾' : '▸'}</span>
+        <div class="dc-rowmain">
           <h3>{projectName(p)}</h3>
-          <div class="dc-meta">{country(p)}{coach(p) ? ` · Coach: ${coach(p)}` : ''} · <b>{money(requested(p))}</b> requested · {val('category') || '—'}</div>
+          <div class="dc-meta">{country(p)}{coach(p) ? ` · Coach: ${coach(p)}` : ''} · <b>{money(requested(p))}</b> requested</div>
         </div>
-        <span class={`badge stg-${stageKey(p)}`}>{stageLabel(p)}</span>
+        {!mode && (
+          <div class="dc-actions slim" onClick={e => e.stopPropagation()}>
+            <button class="btn-approve" onClick={() => { setMode('approve'); setErr(''); }}>Approve</button>
+            <button class="btn-defer" onClick={() => { setMode('defer'); setErr(''); }}>Defer</button>
+            <button class="btn-deny" onClick={() => { setMode('deny'); setErr(''); }}>Deny</button>
+          </div>
+        )}
       </div>
 
-      {review.length > 0 && (
-        <div class="chips">{review.map(r => <span class="chip">{shortCrit(r)}</span>)}</div>
-      )}
-
-      <div class="dc-notes">
-        <div class="dt">Coach notes</div>
-        {notes ? <p>{notes}</p> : <p class="muted">No coach notes yet.</p>}
-      </div>
-
-      {val('problem') && <div class="dc-ctx"><span class="dt">Need</span><p>{val('problem')}</p></div>}
-
-      {!mode && (
-        <div class="dc-actions">
-          <button class="btn-approve" onClick={() => { setMode('approve'); setErr(''); }}>Approve</button>
-          <button class="btn-defer" onClick={() => { setMode('defer'); setErr(''); }}>Defer</button>
-          <button class="btn-deny" onClick={() => { setMode('deny'); setErr(''); }}>Deny</button>
+      {open && (
+        <div class="dc-details">
+          <div class="dc-meta" style="margin-bottom:8px">{val('category') || '—'}</div>
+          {review.length > 0 && (
+            <div class="chips">{review.map(r => <span class="chip">{shortCrit(r)}</span>)}</div>
+          )}
+          <div class="dc-notes">
+            <div class="dt">Coach notes</div>
+            {notes ? <p>{notes}</p> : <p class="muted">No coach notes yet.</p>}
+          </div>
+          {val('problem') && <div class="dc-ctx"><span class="dt">Need</span><p>{val('problem')}</p></div>}
         </div>
       )}
 

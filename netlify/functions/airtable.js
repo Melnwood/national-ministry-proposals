@@ -196,11 +196,11 @@ async function notifyEvent(event, recordId, opts={}){
   } else if(event === 'decision'){
     const council = await councilEmails();
     if(opts.kind === 'deny'){
-      add(leader, `Your grant "${name}" was not approved. Open your page to read the council's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Decision');
+      add(leader, `Your grant "${name}" was not approved. Open your page to read the Council Lead Team's note${decisionMsg?`: “${decisionMsg}”`:'.'}`, 'Decision');
     } else if(opts.kind === 'defer'){
       add(leader, `"${name}" was approved but deferred to a later cycle. Confirm on your page that you still want it.`, 'Decision');
     } else { // approve
-      add(leader, `Good news — "${name}" was approved by the council${amt!=='$0'?` for ${amt}`:''}.`, 'Decision');
+      add(leader, `Good news — "${name}" was approved by the Council Lead Team${amt!=='$0'?` for ${amt}`:''}.`, 'Decision');
       council.forEach(e => add(e, `Approved: "${name}"${where} — now with the grant team to fund.`, 'Decision'));
     }
   } else if(event === 'funding_followup'){

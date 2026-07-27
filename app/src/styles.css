@@ -92,6 +92,17 @@ body {
 .w-go.ghost { background:transparent; color:var(--ink-soft); border:1px solid var(--line-d); font-weight:500; }
 @media(max-width:640px){ .w-card{ flex-direction:column; align-items:flex-start; } }
 
+/* ── compact council decision rows ── */
+.dcard.slim { padding:10px 14px; }
+.dc-row { display:flex; align-items:center; gap:12px; cursor:pointer; }
+.dc-row h3 { font-size:15px; margin:0; }
+.dc-rowmain { flex:1; min-width:0; }
+.dc-caret { color:var(--muted); font-size:12px; flex:0 0 auto; }
+.dc-actions.slim { display:flex; gap:7px; margin:0; flex:0 0 auto; }
+.dc-actions.slim button { padding:8px 14px; font-size:13px; }
+.dc-details { margin-top:10px; border-top:1px solid var(--line); padding-top:10px; }
+@media(max-width:640px){ .dc-row{ flex-wrap:wrap; } .dc-actions.slim{ width:100%; } }
+
 /* ── section headings ── */
 .secthead { font-family:'Fraunces',serif; font-weight:600; font-size:17px; margin:26px 0 12px; }
 

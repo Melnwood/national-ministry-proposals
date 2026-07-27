@@ -12,7 +12,7 @@ import { stageKey, coach as coachName } from '../shared/grants.js';
 function nextStep(msg) {
   const m = (msg || '').toLowerCase();
   if (m.includes('not approved'))
-    return { tone: 'deny', text: 'What happens next: the council\'s reason is above. Talk it through with your coach — you can strengthen the application and re-apply in a future cycle.' };
+    return { tone: 'deny', text: 'What happens next: the Council Lead Team\'s reason is above. Talk it through with your coach — you can strengthen the application and re-apply in a future cycle.' };
   if (m.includes('deferred'))
     return { tone: 'defer', text: 'What happens next: your project IS approved — it\'s waiting in line for funding. Confirm on My Country that you still want it, and you\'ll hear the moment funds free up.' };
   if (m.includes('has been funded') || m.includes('funds sent') || m.includes('on its way'))
@@ -58,7 +58,7 @@ export function Welcome({ boot, session, onGo }) {
     }
     if (role === 'evp') {
       const q = props.filter(p => ['submitted', 'coach'].includes(stageKey(p))).length;
-      if (q) list.push({ n: q, text: 'awaiting a council decision', tab: 'council', btn: 'Decide' });
+      if (q) list.push({ n: q, text: 'awaiting a Council Lead Team decision', tab: 'council', btn: 'Decide' });
       const acc = at('accounting');
       if (acc) list.push({ n: acc, text: 'ready to transfer at accounting', tab: 'accounting', btn: 'Open Accounting' });
     }
