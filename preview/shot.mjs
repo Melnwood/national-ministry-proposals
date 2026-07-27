@@ -60,11 +60,13 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await page.addInitScript(() => localStorage.setItem('jv_token', 'demo'));
 await page.goto('http://localhost:4499/');
 await page.waitForSelector('.funnel', { timeout: 15000 }).catch(() => {});
-// make sure we're on the Grant Team tab
-const tab = page.locator('button, a', { hasText: 'Grant Team' }).first();
+// switch to the requested tab (default: Grant Team)
+const tabName = process.argv[2] || 'Grant Team';
+const outFile = process.argv[3] || 'pipeline-preview.png';
+const tab = page.locator('button, a', { hasText: tabName }).first();
 if (await tab.count()) await tab.click().catch(() => {});
 await page.waitForTimeout(600);
-await page.screenshot({ path: new URL('./pipeline-preview.png', import.meta.url).pathname, fullPage: false });
+await page.screenshot({ path: new URL('./' + outFile, import.meta.url).pathname, fullPage: false });
 await browser.close();
 server.close();
 console.log('done');

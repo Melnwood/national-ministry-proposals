@@ -54,6 +54,10 @@ function DecisionCard({ p, cycles, onDone }) {
       fields[F.proposal.stage] = 'At Accounting';
       fields[F.proposal.awarded] = Number(amount) || 0;
       fields[F.proposal.dateApproved] = new Date().toISOString().slice(0, 10);
+      // The council's approval IS the sign-off: stamp both milestone checkboxes
+      // so Accounting (and Airtable) show the grant came through the right way.
+      fields[F.proposal.evpApproval] = true;
+      fields[F.proposal.mCouncilApproval] = true;
       if (cycleId) fields[F.proposal.cycles] = [cycleId];
       changes.push({ type: 'Status change', label: `Approved — ${money(Number(amount) || 0)}`,
         detail: `Council approved ${name} at ${money(Number(amount) || 0)}${message ? ` — ${message}` : ''}` });
