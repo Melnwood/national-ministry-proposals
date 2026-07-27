@@ -4,6 +4,7 @@ import { money, aval } from '../shared/format.js';
 import { F, REVIEW_CRITERIA } from '../shared/schema.js';
 import { projectName, country, coach as coachName, requested, stageKey, stageLabel } from '../shared/grants.js';
 import { PipelineDash } from './PipelineDash.jsx';
+import { FitBox } from './StrategicPlans.jsx';
 
 // Grants a coach still owes a review on.
 const QUEUE_STAGES = new Set(['submitted', 'coach']);
@@ -86,7 +87,8 @@ function ReviewCard({ p, onDone }) {
       </div>
 
       {val('problem') && <div class="dc-ctx"><span class="dt">The need</span><p>{val('problem')}</p></div>}
-      {val('strategicFit') && <div class="dc-ctx"><span class="dt">Strategic fit</span><p>{val('strategicFit')}</p></div>}
+      {val('strategicFit') && <div class="dc-ctx"><span class="dt">Strategic fit (their words)</span><p>{val('strategicFit')}</p></div>}
+      <FitBox p={p} />
 
       <div class="checklist">
         <div class="dt">How does this grant measure up?</div>

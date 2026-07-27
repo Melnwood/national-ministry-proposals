@@ -356,6 +356,67 @@ Write 3–4 short paragraphs, addressed to the foundation ("your gift", "because
   return (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
 }
 
+// ── Strategic fit check ───────────────────────────────────────────────────────
+// Country strategic-plan fields + the cached AI fit assessment on proposals.
+const CTRY_PLAN_F = 'fld9vFYV81T4UARpR', CTRY_PLAN_UPD_F = 'fldQvhpdcIYJwEhHf', CTRY_NAME_F = 'fldzgWM7sqaFDM4Cl';
+const FIT_F = 'fldD7E2IXEeLM3oMF';
+
+// Generate and save the strategic-fit read for one proposal against its
+// country's current plan. Returns the text, or null when there's no plan,
+// no linked country, or no API key. An aid to the coach and Council Lead
+// Team — mapped to the plan's own objectives, with honest gaps and
+// questions — never a score or a decision.
+async function runFitCheck(recordId){
+  if(!ANTHROPIC_KEY) return null;
+  const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
+  const f = rec.fields || {};
+  const link = f[PROP_COUNTRY_LINK];
+  const countryId = (Array.isArray(link) && link.length) ? (link[0].id || link[0]) : '';
+  if(!countryId) return null;
+  const ctry = await at(BASE+'/'+T_COUNTRIES+'/'+countryId+'?returnFieldsByFieldId=true');
+  const plan = ((ctry.fields && ctry.fields[CTRY_PLAN_F]) || '').trim();
+  if(!plan) return null;
+  const P = { name:'fld1qi35letQtg6yC', requested:'fld3bvuKr1SIXAwUf', budget:'fldofeeQU3DlrHULR',
+    problem:'fldb0TRzRi1nzkN7v', fit:'fldTa8BUePK8Ifs02', people:'fld8CdQ8Ens5m3NDs',
+    leaders:'fldc2XplvqvAX8NlX', churches:'fld6ZWqZuuK9gcfab',
+    objective:'fld17fOaX3yAe3s4O', objective2:'fld2tSgq12UOBDMri', objective3:'fldquJXeXakScgMnU',
+    success:'fldQKLTpf2M69gneF', start:'fldVIJKaXqmUw8qFP', end:'fldxV1o8EVEXaitod' };
+  const g = k => { const v = f[P[k]]; return v == null ? '' : (v.name || v); };
+  const app = [
+    `Project: ${g('name')}`,
+    `Requested: $${g('requested')} of a $${g('budget')||g('requested')} total budget`,
+    `Timeline: ${g('start')||'?'} to ${g('end')||'?'}`,
+    `Need it addresses: ${g('problem')}`,
+    `Objectives: ${[g('objective'),g('objective2'),g('objective3')].filter(Boolean).join(' | ') || '(none given)'}`,
+    `Success looks like: ${g('success')}`,
+    `Impact targets: ${g('people')||0} people, ${g('leaders')||0} leaders, ${g('churches')||0} churches`,
+    `The applicant's own strategic-fit claim: ${g('fit')}`,
+  ].join('\n');
+  const prompt = `You are helping Josiah Venture's Council Lead Team and country coaches judge how a grant application fits the country's current strategic plan. Be specific and honest — name the plan's actual objectives/key results the project supports, say plainly where it does NOT obviously fit, and never invent anything that isn't in the plan or the application.
+
+THE COUNTRY'S STRATEGIC PLAN:
+${plan.slice(0, 20000)}
+
+THE GRANT APPLICATION:
+${app}
+
+Write plain text (no markdown) in exactly this shape:
+Line 1: "Fit: <Strong|Good|Partial|Weak> — <one short phrase why>"
+Then a blank line, then "Where it lands in the plan:" followed by 2-4 sentences naming the specific objectives, key results, or program goals this supports, quoting the plan's own wording where possible, and noting any part of the plan the project ignores or duplicates.
+Then a blank line, then "Worth asking:" followed by 1-3 pointed questions the council or coach should raise with the country. Keep the whole thing under 180 words.`;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{ 'x-api-key':ANTHROPIC_KEY, 'anthropic-version':'2023-06-01', 'content-type':'application/json' },
+    body: JSON.stringify({ model:'claude-opus-5', max_tokens:900, output_config:{ effort:'low' },
+      messages:[{ role:'user', content:prompt }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error((d.error && d.error.message) || 'The fit-check service returned an error.');
+  const text = (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  if(text) await at(BASE+'/'+T_PROP+'/'+recordId, { method:'PATCH', body:JSON.stringify({ fields:{ [FIT_F]:text }, typecast:true }) });
+  return text || null;
+}
+
 exports.handler = async (event) => {
   // ---- BUDGET FILE PROXY (GET, serves the attachment through our own domain so ad/content blockers don't block it) ----
   if(event.httpMethod === 'GET'){
@@ -514,7 +575,9 @@ exports.handler = async (event) => {
         return {
           id: r.id,
           name: r.fields['fldzgWM7sqaFDM4Cl'] || '',
-          phase: (ph && (ph.name || (typeof ph === 'string' ? ph : ''))) || ''
+          phase: (ph && (ph.name || (typeof ph === 'string' ? ph : ''))) || '',
+          hasPlan: !!((r.fields[CTRY_PLAN_F] || '').trim()),
+          planUpdated: r.fields[CTRY_PLAN_UPD_F] || ''
         };
       }).filter(c => c.name);
       const logs = logRecs.map(r => ({
@@ -686,6 +749,38 @@ exports.handler = async (event) => {
       return reply(200, { ok:true, balance:Number(body.balance), asOf:body.asOf||'', user:who });
     }
 
+    if(body.op === 'plan_get'){
+      if(!body.countryId) return reply(400, { error:'Missing countryId.' });
+      if(isScopedCountry(who) && !(who.countryIds||[]).includes(body.countryId)) return reply(403, { error:'You can only view your own country\'s plan.' });
+      const rec = await at(BASE+'/'+T_COUNTRIES+'/'+body.countryId+'?returnFieldsByFieldId=true');
+      return reply(200, { plan:(rec.fields && rec.fields[CTRY_PLAN_F])||'', updated:(rec.fields && rec.fields[CTRY_PLAN_UPD_F])||'',
+        name:(rec.fields && rec.fields[CTRY_NAME_F])||'', user:who });
+    }
+
+    if(body.op === 'plan_save'){
+      // Amanda/oversight and coaches can save any country's plan; a country
+      // leader can save their own.
+      if(!body.countryId) return reply(400, { error:'Missing countryId.' });
+      const isCoachRole = (who.role||'').trim() === 'National Ministries Coaches';
+      const own = (who.countryIds||[]).includes(body.countryId);
+      const allowed = isOversight(who) || isCoachRole || own || ADMINS.includes((who.email||'').trim().toLowerCase());
+      if(!allowed) return reply(403, { error:'Not permitted.' });
+      if(isScopedCountry(who) && !own) return reply(403, { error:'You can only update your own country\'s plan.' });
+      await at(BASE+'/'+T_COUNTRIES+'/'+body.countryId, { method:'PATCH', body:JSON.stringify({ fields:{
+        [CTRY_PLAN_F]: String(body.text||''), [CTRY_PLAN_UPD_F]: new Date().toISOString().slice(0,10) }, typecast:true }) });
+      try{ await writeLog([{ fields:{ [L.entry]:'Strategic plan updated', [L.type]:'Status change',
+        [L.detail]:(who.name||who.email)+' saved a country strategic plan', [L.user]:who.name||'', [L.email]:who.email||'' } }]); }catch(e){}
+      return reply(200, { ok:true, user:who });
+    }
+
+    if(body.op === 'fit_check'){
+      if(!body.recordId) return reply(400, { error:'Missing recordId.' });
+      if(!ANTHROPIC_KEY) return reply(200, { needsKey:true, user:who });
+      const fit = await runFitCheck(body.recordId);
+      if(!fit) return reply(400, { error:'No strategic plan is on file for this project\'s country yet — add it under Management → Strategic plans.' });
+      return reply(200, { fit, user:who });
+    }
+
     if(body.op === 'cycle_create'){
       // Add a foundation gift: a new foundation's first cycle, or another
       // gift/cycle from a foundation that has given before (Grant Team page).
@@ -778,6 +873,9 @@ exports.handler = async (event) => {
       }
       try{ await writeLog([{ fields:{ [L.entry]:String(f.name).trim()+' — application submitted', [L.type]:'Status change',
         [L.detail]:(who.name||who.email)+' submitted a new grant application', [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:recId||'' } }]); }catch(e){}
+      // Auto-run the strategic fit check so it's already waiting on the coach's
+      // and council's cards. Best-effort — never blocks the submission.
+      try{ if(recId) await runFitCheck(recId); }catch(fitErr){ /* re-runnable from the app */ }
       return reply(200, { ok:true, id:recId, user:who });
     }
 

@@ -3,11 +3,13 @@ import { api } from '../shared/api.js';
 import { money, moneyCents, date } from '../shared/format.js';
 import { parseBankCSV } from '../shared/csv.js';
 import { ROLES } from '../shared/schema.js';
+import { PlanManager } from './StrategicPlans.jsx';
 
 export function Management({ boot, onRefresh }) {
   return (
     <>
       <Reconcile boot={boot} onRefresh={onRefresh} />
+      <PlanManager countries={boot.countries_meta || []} />
       <SignIns boot={boot} />
     </>
   );

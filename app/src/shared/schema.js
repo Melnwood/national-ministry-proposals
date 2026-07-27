@@ -60,6 +60,7 @@ export const F = {
     leadersImpact:   'fldc2XplvqvAX8NlX', // How many leaders directly impacted? (target)
     churchesImpact:  'fld6ZWqZuuK9gcfab', // How many churches directly impacted? (target)
     strategicFit:    'fldTa8BUePK8Ifs02', // How does this fit your strategic plans?
+    fitCheck:        'fldD7E2IXEeLM3oMF', // Strategic Fit Check (AI read vs. the country plan)
     decisionLog:     'fldkAS21IxnJwUwHq', // Decision Log (linked)
     reportLink:      'fldUEWeiL0wyXPTxZ', // Project Report (linked)
     // ── coach (existing records use Regional Coach Name; Assigned Coach is the

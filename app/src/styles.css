@@ -102,6 +102,11 @@ body {
 .w-banner .w-go { background:#fff; color:var(--green-d); margin-top:4px; }
 @media(max-width:640px){ .w-card{ flex-direction:column; align-items:flex-start; } }
 
+/* ── strategic fit box (AI read on coach/council cards) ── */
+.fitbox { background:#F4F8F2; border:1px dashed var(--line-d); border-radius:10px; padding:10px 13px; margin:10px 0; }
+.fitbox-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.fittext { white-space:pre-wrap; font-size:12.5px; line-height:1.55; margin-top:6px; }
+
 /* ── compact council decision rows ── */
 .dcard.slim { padding:10px 14px; }
 .dc-row { display:flex; align-items:center; gap:12px; cursor:pointer; }

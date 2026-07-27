@@ -5,6 +5,7 @@ import { F, TABLES } from '../shared/schema.js';
 import { projectName, country, coach, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 
 import { PipelineDash } from './PipelineDash.jsx';
+import { FitBox } from './StrategicPlans.jsx';
 
 // Stages that are waiting on a council decision (pre-decision pipeline).
 const QUEUE_STAGES = new Set(['submitted', 'coach', 'council']);
@@ -122,6 +123,7 @@ function DecisionCard({ p, cycles, onDone }) {
       {open && (
         <div class="dc-details">
           <div class="dc-meta" style="margin-bottom:8px">{val('category') || '—'}</div>
+          <FitBox p={p} />
           {review.length > 0 && (
             <div class="chips">{review.map(r => <span class="chip">{shortCrit(r)}</span>)}</div>
           )}

@@ -5,6 +5,7 @@ import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_M
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
 import { PipelineDash } from './PipelineDash.jsx';
+import { PlanManager } from './StrategicPlans.jsx';
 
 const NOW = Date.now();
 
@@ -57,6 +58,9 @@ export function Country({ boot, session, onRefresh }) {
       <div class="cards">
         {grants.map(p => <GrantStatus key={p.id} p={p} reports={reportsByProp[p.id] || []} onDone={onRefresh} />)}
       </div>
+
+      <PlanManager countries={countries}
+        lead="Your country's strategic plan for the year. Keep it current — every grant you apply for is checked against it, and the fit is what the coach and Council Lead Team see first." />
 
       {apply === 'project' && <ProjectGrantForm countries={countries} myCountryIds={myCountryIds} onClose={() => setApply(null)} onDone={onRefresh} />}
       {apply === 'travel' && <TravelGrantForm user={session.user} onClose={() => setApply(null)} />}
