@@ -6,6 +6,7 @@ import { projectName, country, coach, requested, awarded, stageKey, stageLabel }
 
 import { PipelineDash } from './PipelineDash.jsx';
 import { FitBox } from './StrategicPlans.jsx';
+import { BudgetViewer } from './BudgetViewer.jsx';
 
 // Stages that are waiting on a council decision (pre-decision pipeline).
 const QUEUE_STAGES = new Set(['submitted', 'coach', 'council']);
@@ -100,6 +101,7 @@ function DecisionCard({ p, cycles, onDone }) {
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
   const [open, setOpen] = useState(false); // compact row by default; click for the full picture
   const [show, setShow] = useState(null); // 'app' | 'fit' | null — panels inside the open row
+  const [budgetView, setBudgetView] = useState(null); // index of the budget file being viewed
   const budgetFiles = Array.isArray(f[F.proposal.budgetFiles]) ? f[F.proposal.budgetFiles] : [];
   const [amount, setAmount] = useState(awarded(p) ? String(awarded(p)) : (requested(p) ? String(requested(p)) : ''));
   const [cycleId, setCycleId] = useState('');
@@ -169,9 +171,9 @@ function DecisionCard({ p, cycles, onDone }) {
             </button>
             {budgetFiles.length > 0
               ? budgetFiles.map((bf, i) => (
-                  <a class="ghostbtn" href={`/.netlify/functions/airtable?op=budget_file&rec=${p.id}&i=${i}`} target="_blank" rel="noopener">
+                  <button type="button" class="ghostbtn" onClick={() => setBudgetView(i)}>
                     📄 Budget{budgetFiles.length > 1 ? ` ${i + 1}` : ''}{bf.filename ? ` — ${bf.filename}` : ''}
-                  </a>
+                  </button>
                 ))
               : <span class="mini dim" style="align-self:center">No budget file uploaded</span>}
             <button type="button" class="ghostbtn" onClick={() => setShow(show === 'fit' ? null : 'fit')}>
@@ -181,6 +183,11 @@ function DecisionCard({ p, cycles, onDone }) {
 
           {show === 'fit' && <FitBox p={p} />}
           {show === 'app' && <FullApplication p={p} />}
+          {budgetView != null && (
+            <BudgetViewer recId={p.id} index={budgetView}
+              filename={budgetFiles[budgetView] && budgetFiles[budgetView].filename}
+              onClose={() => setBudgetView(null)} />
+          )}
 
           {review.length > 0 && (
             <div class="chips">{review.map(r => <span class="chip">{shortCrit(r)}</span>)}</div>
