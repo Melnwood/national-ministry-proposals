@@ -85,6 +85,8 @@ export function TravelCard({ t, onDone }) {
 export function TravelPayCard({ t, fromFund, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [asked, setAsked] = useState(''); // who the nudge email went to
+  const [asking, setAsking] = useState(false);
   const amt = t.appAmt || t.reqAmt || 0;
 
   async function pay() {
@@ -93,6 +95,16 @@ export function TravelPayCard({ t, fromFund, onDone }) {
       await api('travel_update', { recordId: t.id, fields: { [F.travel.status]: 'Paid' } });
       onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not record the payment.'); setBusy(false); }
+  }
+
+  // Amanda's one click: email the people who send money that this is ready.
+  async function askToPay() {
+    setAsking(true); setErr('');
+    try {
+      const d = await api('pay_request', { kind: 'travel', recordId: t.id });
+      setAsked((d.sentTo || []).join(' & ') || 'accounting');
+    } catch (e) { setErr(e.message || 'Could not send the email.'); }
+    setAsking(false);
   }
 
   return (
@@ -109,7 +121,12 @@ export function TravelPayCard({ t, fromFund, onDone }) {
       </div>
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
-        <button class="savebtn" disabled={busy} onClick={pay}>{busy ? 'Recording…' : 'Paid ✓'}</button>
+        {asked
+          ? <span class="sent-ok">✓ Emailed {asked}</span>
+          : <button class="ghostbtn" disabled={asking || busy} onClick={askToPay} title="Email the accounting team that this payment is ready to send">
+              {asking ? 'Emailing…' : '📧 Email accounting — ready to send'}
+            </button>}
+        <button class="savebtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Recording…' : 'Paid ✓'}</button>
       </div>
     </div>
   );

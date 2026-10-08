@@ -743,12 +743,61 @@ exports.handler = async (event) => {
             await writeNotifs([{ fields:{ [N.email]:email, [N.msg]:msgs[newStatus], [N.type]:types[newStatus], [N.link]:SITE_URL, [N_NAME]:firstName(applicant, email) } }]);
             await sendEmail(email, newStatus==='Paid' ? 'Your SECC travel grant has been paid' : 'An update on your SECC travel request', msgs[newStatus], SITE_URL);
           }
+          // The money moment fans out like a project transfer: Ben & Amanda
+          // hear it too, not just the applicant.
+          if(newStatus === 'Paid'){
+            const council = await councilPeople();
+            const cmsg = `SECC travel paid: ${amt} sent to ${applicant||email} from the SouthEast travel fund.`;
+            if(council.length){
+              await writeNotifs(council.map(p => ({ fields:{ [N.email]:p.email, [N.msg]:cmsg, [N.type]:'Transfer', [N.link]:SITE_URL, [N_NAME]:firstName(p.name, p.email) } })));
+              for(const p of council){ await sendEmail(p.email, 'SECC travel grant paid', cmsg, SITE_URL); }
+            }
+          }
           await writeLog([{ fields:{ [L.entry]:`SECC travel — ${newStatus}: ${applicant||email||'a request'}`, [L.type]:'Status change',
             [L.detail]:`${who.name||who.email} marked the SECC travel request from ${applicant||email} (${amt}) as ${newStatus}`,
             [L.user]: who.name||'', [L.email]: who.email||'' } }]);
         }
       }catch(e){ /* notifications and logs are best-effort; the update itself succeeded */ }
       return reply(200, { fields:upd.fields, user:who });
+    }
+
+    // "Nudge accounting" — a one-click email from whoever's signed in (Amanda,
+    // Ben…) to the people who actually send money (Grant team + CFO roles in
+    // People & access), telling them a specific payment is ready. Works for
+    // both programs: a project transfer or an approved SECC travel grant.
+    if(body.op === 'pay_request'){
+      if(isScopedCountry(who)) return reply(403, { error:'Not permitted.' });
+      if(!body.recordId) return reply(400, { error:'Missing recordId.' });
+      const team = await rolePeople(['Grant team','CFO']);
+      if(!team.length) return reply(400, { error:'No one with the Grant team or CFO role is in People & access yet — add them there first so this email has somewhere to go.' });
+      const N_NAME = 'fldykHqa2JyKlkykm';
+      const asker = who.name || who.email;
+      let msg, logEntry;
+      if(body.kind === 'travel'){
+        const rec = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId+'?returnFieldsByFieldId=true');
+        const f = rec.fields || {};
+        const amt = usd(f[TR.appAmt] || f[TR.reqAmt]);
+        const applicant = (f[TR.name]||'').trim() || (f[TR.email]||'');
+        msg = `${asker} asked accounting to send an approved SECC travel grant: ${amt} to ${applicant}, from the SouthEast travel fund. It's ready on the Accounting page — one click records the payment.`;
+        logEntry = `SECC travel — payment requested: ${applicant}`;
+      } else {
+        const rec = await at(BASE+'/'+T_PROP+'/'+body.recordId+'?returnFieldsByFieldId=true');
+        const f = rec.fields || {};
+        const name = f[PNF.name] || 'a grant';
+        const amt = usd(f[PNF.awarded]);
+        const acct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
+        msg = `${asker} asked accounting to send the transfer for "${name}": ${amt} to Cedarstone account ${acct||'(shown on the card)'}. It's ready on the Accounting page — one click records it.`;
+        logEntry = `Payment requested: ${name}`;
+      }
+      // Type 'Transfer' so the existing email automation delivers it.
+      await writeNotifs(team.map(p => ({ fields:{ [N.email]:p.email, [N.msg]:msg, [N.type]:'Transfer', [N.link]:SITE_URL, [N_NAME]:firstName(p.name, p.email) } })));
+      for(const p of team){ await sendEmail(p.email, 'Ready to send — payment requested', msg, SITE_URL); }
+      try{
+        await writeLog([{ fields:{ [L.entry]:logEntry, [L.type]:'Status change', [L.detail]:msg,
+          [L.user]:who.name||'', [L.email]:who.email||'',
+          ...(body.kind !== 'travel' ? { [L.pid]:body.recordId, 'fldDCLcDUyODA0AvP':[body.recordId] } : {}) } }]);
+      }catch(e){ /* best effort */ }
+      return reply(200, { ok:true, sentTo: team.map(p => firstName(p.name, p.email)), user:who });
     }
 
     if(body.op === 'update'){

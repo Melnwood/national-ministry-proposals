@@ -65,9 +65,21 @@ const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
 function TransferCard({ p, fromAcct, onDone }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [asked, setAsked] = useState(''); // who the nudge email went to
+  const [asking, setAsking] = useState(false);
   const amt = awarded(p) || requested(p);
   const acct = acctNo(p);
   const approvedOn = p.fields[F.proposal.dateApproved] || '';
+
+  // Amanda's one click: email the people who send money that this is ready.
+  async function askToPay() {
+    setAsking(true); setErr('');
+    try {
+      const d = await api('pay_request', { kind: 'project', recordId: p.id });
+      setAsked((d.sentTo || []).join(' & ') || 'accounting');
+    } catch (e) { setErr(e.message || 'Could not send the email.'); }
+    setAsking(false);
+  }
 
   async function transfer() {
     setBusy(true); setErr('');
@@ -112,7 +124,12 @@ function TransferCard({ p, fromAcct, onDone }) {
       </div>
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
-        <button class="savebtn" disabled={busy} onClick={transfer}>{busy ? 'Recording…' : 'Funds Transferred ✓'}</button>
+        {asked
+          ? <span class="sent-ok">✓ Emailed {asked}</span>
+          : <button class="ghostbtn" disabled={asking || busy} onClick={askToPay} title="Email the accounting team that this transfer is ready to send">
+              {asking ? 'Emailing…' : '📧 Email accounting — ready to send'}
+            </button>}
+        <button class="savebtn" disabled={busy} onClick={transfer} title="Records the transfer and emails the country leader, coach, Ben and Amanda">{busy ? 'Recording…' : 'Funds Transferred ✓'}</button>
       </div>
     </div>
   );
