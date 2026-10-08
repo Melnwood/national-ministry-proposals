@@ -451,7 +451,9 @@ function tripDates(t) {
   return t.depart ? date(t.depart) : '—';
 }
 
-function TravelCard({ t, onDone }) {
+// Exported: the Council Lead Team page shows the same card for SECC travel
+// applications waiting on approval.
+export function TravelCard({ t, onDone }) {
   const [mode, setMode] = useState(null); // 'approve' | 'deny' | null
   const [amount, setAmount] = useState(t.reqAmt ? String(t.reqAmt) : '');
   const [busy, setBusy] = useState(false);
