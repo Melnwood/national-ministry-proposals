@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, aval } from '../shared/format.js';
-import { F, TABLES } from '../shared/schema.js';
+import { F, TABLES, STAGES, STAGE_BY_KEY } from '../shared/schema.js';
 import { projectName, country, coach, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 
-import { PipelineDash } from './PipelineDash.jsx';
+import { PipelineDash, ViewGrant } from './PipelineDash.jsx';
 import { FitBox } from './StrategicPlans.jsx';
 import { BudgetViewer } from './BudgetViewer.jsx';
 
@@ -14,11 +14,23 @@ const QUEUE_STAGES = new Set(['submitted', 'coach', 'council']);
 export function Council({ boot, onRefresh }) {
   const props = boot.props || [];
   const cycles = boot.cycles || [];
+  const [viewP, setViewP] = useState(null); // read-only look at any grant
   const queue = useMemo(
     () => props.filter(p => QUEUE_STAGES.has(stageKey(p)))
                .sort((a, b) => requested(b) - requested(a)),
     [props]
   );
+
+  // Everything on file, in pipeline order (then biggest money first), so the
+  // council sees the whole book — not just what's waiting on them.
+  const everything = useMemo(() => {
+    const order = Object.fromEntries(STAGES.map((s, i) => [s.key, i]));
+    return [...props].sort((a, b) => {
+      const sa = order[stageKey(a)] ?? 99, sb = order[stageKey(b)] ?? 99;
+      if (sa !== sb) return sa - sb;
+      return (awarded(b) || requested(b)) - (awarded(a) || requested(a));
+    });
+  }, [props]);
 
   return (
     <>
@@ -34,6 +46,31 @@ export function Council({ boot, onRefresh }) {
       <div class="cards">
         {queue.map(p => <DecisionCard key={p.id} p={p} cycles={cycles} onDone={onRefresh} />)}
       </div>
+
+      <div class="secthead" style="margin-top:22px">Every grant <span class="dim">— {everything.length} on file</span></div>
+      <p class="lead">All grants at every stage — deferred, funded, denied, all of it. Click one for the full picture (view only; decisions happen above).</p>
+      <div class="tablewrap">
+        <table class="grants">
+          <thead>
+            <tr><th>Grant</th><th>Country</th><th>Coach</th><th>Stage</th><th class="r">Requested</th><th class="r">Awarded</th></tr>
+          </thead>
+          <tbody>
+            {everything.map(p => (
+              <tr class="clk" key={p.id} onClick={() => setViewP(p)}>
+                <td class="nm">{projectName(p)}</td>
+                <td class="cty">{country(p)}</td>
+                <td class="cty">{coach(p) || '—'}</td>
+                <td><span class={`badge stg-${stageKey(p)}`}>{(STAGE_BY_KEY[stageKey(p)] || {}).label || stageLabel(p)}</span></td>
+                <td class="r">{requested(p) ? money(requested(p)) : '—'}</td>
+                <td class="r">{awarded(p) ? money(awarded(p)) : '—'}</td>
+              </tr>
+            ))}
+            {!everything.length && <tr><td colspan="6" class="empty-row">No grants on file yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {viewP && <ViewGrant p={viewP} onClose={() => setViewP(null)} />}
     </>
   );
 }
