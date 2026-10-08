@@ -26,7 +26,10 @@ export function GrantTeam({ boot, session, onRefresh }) {
   const [filter, setFilter] = useState(null);   // stage key, or null = all
   const [openId, setOpenId] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
-  const [view, setView] = useState('pipeline'); // 'pipeline' | 'ongoing'
+  const [view, setView] = useState('pipeline'); // 'pipeline' | 'ongoing' | 'travel'
+
+  const travel = boot.travel || [];
+  const travelNew = travel.filter(t => t.status === 'Submitted');
 
   const ongoing = useMemo(() => {
     const order = { deferred: 0 };
@@ -59,6 +62,9 @@ export function GrantTeam({ boot, session, onRefresh }) {
           <button class={`subtab${view === 'pipeline' ? ' on' : ''}`} onClick={() => setView('pipeline')}>Pipeline</button>
           <button class={`subtab${view === 'ongoing' ? ' on' : ''}`} onClick={() => setView('ongoing')}>
             Deferred projects{ongoing.length ? <span class="pillcount">{ongoing.length}</span> : null}
+          </button>
+          <button class={`subtab${view === 'travel' ? ' on' : ''}`} onClick={() => setView('travel')}>
+            SECC travel{travelNew.length ? <span class="pillcount">{travelNew.length}</span> : null}
           </button>
         </nav>
         <button class="reportbtn" onClick={() => setReportOpen(true)}>📄 Foundation report</button>
@@ -127,6 +133,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
       </>)}
 
       {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} />}
+      {view === 'travel' && <TravelPanel travel={travel} funds={boot.funds || []} onRefresh={onRefresh} />}
 
       {openGrant && <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />}
       {reportOpen && <FoundationReport boot={boot} onClose={() => setReportOpen(false)} />}
@@ -372,3 +379,165 @@ function GrantDetail({ p, onClose, onSaved }) {
 }
 
 function today() { return new Date().toISOString().slice(0, 10); }
+
+// ── SECC travel grants ───────────────────────────────────────────────────────
+// Travel requests are paid out of ONE restricted gift (SE Christian Foundation
+// in Available Funds), not the general grant pool — the panel leads with that
+// so every approval is made against what's actually left in the fund.
+
+const TRAVEL_FORM_URL = 'https://national-ministry-proposals.netlify.app/travel.html';
+const TR_BADGE = { Submitted: 'submitted', Approved: 'transferred', Paid: 'funded', Denied: 'denied' };
+
+function TravelPanel({ travel, funds, onRefresh }) {
+  // Matched by name so a renamed Available Funds record still resolves.
+  const fund = funds.find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
+  const fundName = fund ? aval(fund.fields[F.funds.source]) : 'SE Christian Foundation';
+  const total = fund ? (fund.fields[F.funds.amount] || 0) : 0;
+  const committed = travel
+    .filter(t => t.status === 'Approved' || t.status === 'Paid')
+    .reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
+  const fresh = travel.filter(t => t.status === 'Submitted');
+  const asked = fresh.reduce((a, t) => a + (t.reqAmt || 0), 0);
+  const decided = travel.filter(t => t.status !== 'Submitted');
+
+  return (
+    <>
+      <section class="money">
+        <div class="mtile">
+          <div class="mlbl">The fund — {fundName}</div>
+          <div class="mval">{money(total)}</div>
+          <div class="mnote">Restricted gift · SECC leader travel</div>
+        </div>
+        <div class="mtile">
+          <div class="mlbl">Committed (approved + paid)</div>
+          <div class="mval neg">− {money(committed)}</div>
+        </div>
+        <div class="mtile hero">
+          <div class="mlbl">Left in the fund</div>
+          <div class="mval">{money(total - committed)}</div>
+          <div class="mnote">{fresh.length} new {fresh.length === 1 ? 'request' : 'requests'} asking {money(asked)}</div>
+        </div>
+      </section>
+
+      <div class="secthead">New applications <span class="dim">— {fresh.length} waiting on a decision</span></div>
+      <p class="lead">Each request draws on the {fundName} fund above. Anyone can apply — no app sign-in needed — with this link: <b>{TRAVEL_FORM_URL}</b></p>
+
+      {!fresh.length && <div class="panel"><p style="color:var(--muted)">No new travel requests right now.</p></div>}
+      <div class="cards">
+        {fresh.map(t => <TravelCard key={t.id} t={t} onDone={onRefresh} />)}
+      </div>
+
+      {decided.length > 0 && (
+        <>
+          <div class="secthead" style="margin-top:18px">Decided <span class="dim">— {decided.length}</span></div>
+          <div class="tablewrap">
+            <table class="grants">
+              <thead>
+                <tr><th>Who</th><th>Country / team</th><th>Trip</th><th class="r">Requested</th><th class="r">Approved</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                {decided.map(t => <TravelRow key={t.id} t={t} onDone={onRefresh} />)}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function tripDates(t) {
+  if (t.depart && t.ret) return `${date(t.depart)} → ${date(t.ret)}`;
+  return t.depart ? date(t.depart) : '—';
+}
+
+function TravelCard({ t, onDone }) {
+  const [mode, setMode] = useState(null); // 'approve' | 'deny' | null
+  const [amount, setAmount] = useState(t.reqAmt ? String(t.reqAmt) : '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function decide(kind) {
+    setBusy(true); setErr('');
+    const fields = kind === 'approve'
+      ? { [F.travel.appAmt]: Number(amount) || 0, [F.travel.status]: 'Approved' }
+      : { [F.travel.status]: 'Denied' };
+    try {
+      await api('travel_update', { recordId: t.id, fields });
+      onDone && onDone();
+    } catch (e) { setErr(e.message || 'Could not save.'); setBusy(false); }
+  }
+
+  return (
+    <div class="dcard slim">
+      <div class="dc-row" style="cursor:default">
+        <div class="dc-rowmain">
+          <h3>{t.name || '(no name)'}</h3>
+          <div class="dc-meta">{t.team || '—'} · {tripDates(t)} · <b>{money(t.reqAmt)}</b> {t.timing === 'Already taken' ? 'spent — trip already taken' : 'requested'}</div>
+        </div>
+        {!mode && (
+          <div class="dc-actions slim">
+            <button class="btn-approve" onClick={() => { setMode('approve'); setErr(''); }}>Approve</button>
+            <button class="btn-deny" onClick={() => { setMode('deny'); setErr(''); }}>Deny</button>
+          </div>
+        )}
+      </div>
+
+      <div class="dc-details" style="display:block">
+        <div class="dc-ctx"><span class="dt">What the trip is for</span><p>{t.purpose || '—'}</p></div>
+        <div class="dc-meta">{t.email}</div>
+      </div>
+
+      {mode && (
+        <div class="dc-form">
+          {mode === 'approve' && (
+            <label class="fld"><span class="flbl">Approved amount — from the SECC fund</span>
+              <div class="moneyin"><span>$</span><input type="number" step="50" value={amount} onInput={e => setAmount(e.currentTarget.value)} /></div>
+              {t.reqAmt > 0 && <button type="button" class="mini" onClick={() => setAmount(String(t.reqAmt))}>Requested = {money(t.reqAmt)}</button>}
+            </label>
+          )}
+          {mode === 'deny' && <p class="lead" style="margin:0">Mark this request as denied? {t.name ? `${t.name} isn't` : "The applicant isn't"} notified automatically — let them know directly.</p>}
+          {err && <div class="editerr">{err}</div>}
+          <div class="dc-confirm">
+            <button class="ghostbtn" onClick={() => { setMode(null); setErr(''); }} disabled={busy}>Cancel</button>
+            <button class={mode === 'deny' ? 'btn-deny solid' : 'savebtn'} disabled={busy} onClick={() => decide(mode)}>
+              {busy ? 'Saving…' : mode === 'approve' ? 'Confirm approval' : 'Confirm denial'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TravelRow({ t, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function markPaid() {
+    setBusy(true); setErr('');
+    try {
+      await api('travel_update', { recordId: t.id, fields: { [F.travel.status]: 'Paid' } });
+      onDone && onDone();
+    } catch (e) { setErr(e.message || 'Could not save.'); setBusy(false); }
+  }
+
+  return (
+    <tr>
+      <td class="nm" title={t.email}>{t.name || '—'}</td>
+      <td class="cty">{t.team || '—'}</td>
+      <td class="cty">{tripDates(t)}</td>
+      <td class="r">{t.reqAmt ? money(t.reqAmt) : '—'}</td>
+      <td class="r">{t.appAmt ? money(t.appAmt) : '—'}</td>
+      <td><span class={`badge stg-${TR_BADGE[t.status] || 'submitted'}`}>{t.status}</span></td>
+      <td class="r">
+        {t.status === 'Approved' && (
+          <button class="mini-ask" disabled={busy} onClick={markPaid} title="Record that the money has been sent">
+            {busy ? 'Saving…' : 'Mark paid ✓'}
+          </button>
+        )}
+        {err && <div class="editerr sm">{err}</div>}
+      </td>
+    </tr>
+  );
+}

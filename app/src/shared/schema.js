@@ -119,6 +119,10 @@ export const F = {
              completedBy:'fldemspw6LSoGMnIQ', leaders:'fldP8DjBL1S5l1WWA', churches:'fldkksYMIC3YMdsNx', people:'fldisUoMECHpHZwp5' },
   balance: { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' },
   funds:   { source:'fldVacsCCr02d612m', amount:'fldcZFJwHyfu5IgCl', status:'fldXwNvQuraOWvgq7', note:'fldNn57TqCs35zJnj' },
+  travel:  { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKEDpGAD9o1A',
+             purpose:'fld8oHEtAeBQbsYWR', depart:'fldc3LDVsLMCU16Vd', ret:'fldMvpfZTKuBwAhmB',
+             reqAmt:'fldRwm5T4wcLIeIuL', appAmt:'fldGoVMNTpc2jf0v5', status:'fldtcWGoQLVOQcG5P',
+             notes:'fldbcUSKRon6HgyDC', timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C' },
   countries: { name:'fldzgWM7sqaFDM4Cl', phase:'flduog58oXfNq2aEt', recordId:'fldca6uVjtxsluVK1', approvers:'fldwpCrK2Mr68tQh5' },
 };
 

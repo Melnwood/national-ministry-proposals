@@ -712,6 +712,8 @@ exports.handler = async (event) => {
     }
 
     if(body.op === 'travel_update'){
+      // Approving / paying travel requests is a grant-department action.
+      if(isScopedCountry(who)) return reply(403, { error:'Not permitted.' });
       if(!body.recordId || !body.fields) return reply(400, { error:'Missing recordId or fields.' });
       const upd = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields:body.fields, typecast:true }) });
       return reply(200, { fields:upd.fields, user:who });

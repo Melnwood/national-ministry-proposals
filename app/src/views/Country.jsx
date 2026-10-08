@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'preact/hooks';
+import { useState, useMemo, useEffect } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval, daysAgo } from '../shared/format.js';
 import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD } from '../shared/schema.js';
@@ -38,6 +38,12 @@ export function Country({ boot, session, onRefresh }) {
   const [apply, setApply] = useState(null); // 'project' | 'travel' | null
   const countries = boot.countries_meta || [];
 
+  // If they saved a half-finished application, the button invites them back.
+  const draftKey = `jv-app-draft:${(session.user && session.user.email) || 'anon'}`;
+  const hasDraft = useMemo(() => {
+    try { return !!localStorage.getItem(draftKey); } catch (e) { return false; }
+  }, [draftKey, apply]);
+
   return (
     <>
       <div class="applybar">
@@ -46,7 +52,7 @@ export function Country({ boot, session, onRefresh }) {
           <p class="lead" style="margin:4px 0 0">Apply for a grant, track what you've submitted, and keep deferred projects alive.</p>
         </div>
         <div class="applybtns">
-          <button class="btn-approve" onClick={() => setApply('project')}>Apply for a project grant</button>
+          <button class="btn-approve" onClick={() => setApply('project')}>{hasDraft ? 'Continue your application ▸' : 'Apply for a project grant'}</button>
           <button class="ghostbtn big" onClick={() => setApply('travel')}>Apply for the SECC Travel Grant</button>
         </div>
       </div>
@@ -62,7 +68,8 @@ export function Country({ boot, session, onRefresh }) {
       <PlanManager countries={countries}
         lead="Your country's strategic plan for the year. Keep it current — every grant you apply for is checked against it, and the fit is what the coach and Council Lead Team see first." />
 
-      {apply === 'project' && <ProjectGrantForm countries={countries} myCountryIds={myCountryIds} onClose={() => setApply(null)} onDone={onRefresh} />}
+      {apply === 'project' && <ProjectGrantForm countries={countries} myCountryIds={myCountryIds}
+        draftKey={draftKey} onClose={() => setApply(null)} onDone={onRefresh} />}
       {apply === 'travel' && <TravelGrantForm user={session.user} onClose={() => setApply(null)} />}
     </>
   );
@@ -76,14 +83,41 @@ const EMPTY_APP = {
   strategicFit: '', success: '', sustainability: '', checklist: [], budgetFile: null,
 };
 
-function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
+// A saved-but-not-submitted application, kept in this browser's localStorage so
+// a leader can close the form (or lose their connection) and pick up where they
+// left off. The attached budget file is NOT saved — files are too big for
+// localStorage — so a restored draft asks them to re-attach it.
+function loadDraft(key) {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+}
+
+function ProjectGrantForm({ countries, myCountryIds, draftKey, onClose, onDone }) {
   const only = myCountryIds.length === 1 ? myCountryIds[0] : '';
-  const [v, setV] = useState({ ...EMPTY_APP, countryId: only });
+  const saved = useMemo(() => loadDraft(draftKey), [draftKey]);
+  const [v, setV] = useState(saved
+    ? { ...EMPTY_APP, countryId: only, ...saved, budgetFile: null }
+    : { ...EMPTY_APP, countryId: only });
+  const [restored, setRestored] = useState(!!saved);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
   const [step, setStep] = useState('form'); // 'form' → 'assessment'
   const set = (k, val) => setV(s => ({ ...s, [k]: val }));
+
+  // Save progress automatically as they type (everything except the file).
+  useEffect(() => {
+    if (done) return;
+    try {
+      const { budgetFile, ...rest } = v;
+      localStorage.setItem(draftKey, JSON.stringify(rest));
+    } catch (e) { /* storage full or blocked — form still works, just no draft */ }
+  }, [v, done]);
+
+  function startFresh() {
+    try { localStorage.removeItem(draftKey); } catch (e) {}
+    setV({ ...EMPTY_APP, countryId: only });
+    setRestored(false);
+  }
   const toggleCheck = c => setV(s => ({ ...s, checklist: s.checklist.includes(c) ? s.checklist.filter(x => x !== c) : [...s.checklist, c] }));
 
   // Clicking submit validates the questionnaire, then opens the assessment gate.
@@ -107,6 +141,7 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
     setBusy(true); setErr('');
     try {
       await api('submit_application', { countryId: v.countryId, fields: v, budgetFile: v.budgetFile });
+      try { localStorage.removeItem(draftKey); } catch (ex) {} // submitted — the draft is done
       setDone(true); onDone && onDone();
     } catch (e) { setErr(e.message || 'Could not submit.'); setBusy(false); }
   }
@@ -122,6 +157,12 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
           </div>
         ) : (
           <div class="formbody">
+            {restored && (
+              <div class="okmsg" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span>Welcome back — your saved progress is restored.{saved && saved.name ? ` (“${saved.name}”)` : ''} If you had a budget file attached, please re-attach it.</span>
+                <button type="button" class="mini" onClick={startFresh}>Start fresh instead</button>
+              </div>
+            )}
             <div class="formsec">The basics</div>
             {myCountryIds.length !== 1 && (
               <Fld label="Country"><select value={v.countryId} onChange={e => set('countryId', e.currentTarget.value)}>
@@ -185,8 +226,9 @@ function ProjectGrantForm({ countries, myCountryIds, onClose, onDone }) {
             <Fld label="How will the project be sustained after the grant ends?"><textarea rows="2" value={v.sustainability} onInput={e => set('sustainability', e.currentTarget.value)} /></Fld>
 
             {step === 'form' && err && <div class="editerr">{err}</div>}
-            <div class="dc-confirm" style="margin-top:16px">
-              <button class="ghostbtn" onClick={onClose}>Cancel</button>
+            <div class="dc-confirm" style="margin-top:16px;align-items:center">
+              <span class="mini dim" style="margin-right:auto">✓ Progress saves automatically on this device — close and come back anytime.</span>
+              <button class="ghostbtn" onClick={onClose}>Save &amp; close</button>
               <button class="savebtn" onClick={goAssess}>Submit application</button>
             </div>
           </div>
