@@ -4,6 +4,7 @@ import { money, date, aval } from '../shared/format.js';
 import { F } from '../shared/schema.js';
 import { projectName, country, awarded, requested, stageKey } from '../shared/grants.js';
 import { PipelineDash } from './PipelineDash.jsx';
+import { TravelPayCard } from './Travel.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -15,9 +16,16 @@ export function Accounting({ boot, onRefresh }) {
   const atAccounting = useMemo(() => props.filter(p => stageKey(p) === 'accounting'), [props]);
   const transferred = useMemo(() => props.filter(p => stageKey(p) === 'transferred'), [props]);
 
+  // Council-approved SECC travel grants wait here for payout, exactly like
+  // project grants wait for their transfer. Paying one emails the applicant.
+  const travel = boot.travel || [];
+  const travelToPay = travel.filter(t => t.status === 'Approved');
+  const seccFund = (boot.funds || []).find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
+  const seccFundName = seccFund ? aval(seccFund.fields[F.funds.source]) : 'SE Christian Foundation';
+
   return (
     <>
-      <PipelineDash list={props} />
+      <PipelineDash list={props} travel={travel} />
 
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
       <p class="lead">Every grant here has already been approved by the EVP and the Council Lead Team — that's how it got here. Everything Accounting needs to make the transfer is right here, no email required.</p>
@@ -27,6 +35,16 @@ export function Accounting({ boot, onRefresh }) {
       <div class="cards">
         {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh} />)}
       </div>
+
+      {travelToPay.length > 0 && (
+        <>
+          <div class="secthead" style="font-size:15px;margin-top:30px">SECC travel — ready to pay <span class="dim">— {travelToPay.length}</span></div>
+          <p class="lead">Approved by the Council Lead Team, paid from the {seccFundName} restricted fund. One click records the payment and emails the applicant.</p>
+          <div class="cards">
+            {travelToPay.map(t => <TravelPayCard key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh} />)}
+          </div>
+        </>
+      )}
 
       {/* Only appears if a grant was manually parked at Funds Transferred —
           the normal one-click flow goes straight to Project funded. */}

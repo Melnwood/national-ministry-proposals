@@ -6,6 +6,7 @@ import { projectName, country, requested, awarded, stageKey, stageLabel } from '
 import { enrichReports } from '../shared/reports.js';
 import { PipelineDash } from './PipelineDash.jsx';
 import { PlanManager } from './StrategicPlans.jsx';
+import { TravelTable } from './Travel.jsx';
 
 const NOW = Date.now();
 
@@ -44,6 +45,16 @@ export function Country({ boot, session, onRefresh }) {
     try { return !!localStorage.getItem(draftKey); } catch (e) { return false; }
   }, [draftKey, apply]);
 
+  // The leader's own SECC travel requests, so a submitted request is never a
+  // black hole — they see its status here just like their project grants.
+  // (The server already scopes boot.travel to their own for country leaders;
+  // the email match keeps it personal for oversight roles previewing.)
+  const myEmail = ((session.user && session.user.email) || '').trim().toLowerCase();
+  const myTravel = useMemo(
+    () => (boot.travel || []).filter(t => (t.email || '').trim().toLowerCase() === myEmail),
+    [boot.travel, myEmail]
+  );
+
   return (
     <>
       <div class="applybar">
@@ -57,13 +68,21 @@ export function Country({ boot, session, onRefresh }) {
         </div>
       </div>
 
-      <PipelineDash list={grants} />
+      <PipelineDash list={grants} travel={myTravel} />
 
       <div class="secthead" style="font-size:15px">Your grants <span class="dim">— {grants.length}</span></div>
       {!grants.length && <div class="panel"><p style="color:var(--muted)">No grants on file yet — apply for one above.</p></div>}
       <div class="cards">
         {grants.map(p => <GrantStatus key={p.id} p={p} reports={reportsByProp[p.id] || []} onDone={onRefresh} />)}
       </div>
+
+      {myTravel.length > 0 && (
+        <>
+          <div class="secthead" style="font-size:15px;margin-top:22px">Your SECC travel requests <span class="dim">— {myTravel.length}</span></div>
+          <p class="lead">Submitted goes to the Council Lead Team; once approved, accounting pays it from the SouthEast travel fund and you'll get an email when the money is sent.</p>
+          <TravelTable list={myTravel} />
+        </>
+      )}
 
       <PlanManager countries={countries}
         lead="Your country's strategic plan for the year. Keep it current — every grant you apply for is checked against it, and the fit is what the coach and Council Lead Team see first." />

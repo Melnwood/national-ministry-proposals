@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'preact/hooks';
 import { money, date, aval } from '../shared/format.js';
-import { F, STAGE_BY_KEY } from '../shared/schema.js';
+import { F, STAGE_BY_KEY, TRAVEL_FLOW } from '../shared/schema.js';
 import { projectName, country, coach, requested, awarded, paid, stageKey, stageLabel } from '../shared/grants.js';
+import { TravelTable } from './Travel.jsx';
 
 // The straight-through pipeline: submitted → coach → council approval →
 // accounting → funds transferred → project funded. Deferred and Denied are
@@ -29,20 +30,25 @@ const lightPos = k => (k === 'deferred' ? POS.council : POS[k]);
 // viewer (a country leader's pipeline only contains their own grants), so
 // clicking only ever opens what they're allowed to see. Renders nothing when
 // the viewer has no grants at all.
-export function PipelineDash({ list }) {
+export function PipelineDash({ list, travel }) {
   const all = list || [];
+  const tlist = travel || [];
   const [pick, setPick] = useState(null);
+  const [tpick, setTpick] = useState(null); // picked SECC travel status
   const [viewP, setViewP] = useState(null);
 
   const counts = {};
   all.forEach(p => { const k = stageKey(p); counts[k] = (counts[k] || 0) + 1; });
+  const tcounts = {};
+  tlist.forEach(t => { tcounts[t.status] = (tcounts[t.status] || 0) + 1; });
   const lit = all.map(p => lightPos(stageKey(p))).filter(v => v != null);
   const hasSide = SIDE_KEYS.some(k => counts[k]);
   const picked = useMemo(() => (pick ? all.filter(p => stageKey(p) === pick) : []), [all, pick]);
-  if (!lit.length && !hasSide) return null;
+  if (!lit.length && !hasSide && !tlist.length) return null;
   const furthest = lit.length ? Math.max(...lit) : -1;
 
-  const click = k => () => { setPick(pick === k ? null : k); setViewP(null); };
+  const click = k => () => { setPick(pick === k ? null : k); setTpick(null); setViewP(null); };
+  const tclick = s => () => { setTpick(tpick === s ? null : s); setPick(null); setViewP(null); };
 
   return (
     <div class="pipedash">
@@ -62,6 +68,24 @@ export function PipelineDash({ list }) {
               <span class="ct">{counts[k]}</span><span class="nm">{STAGE_BY_KEY[k].label}</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* The second grant program gets its own strip, same click-to-peek. */}
+      {tlist.length > 0 && (
+        <div class="funnel term" style="margin-top:8px;align-items:center">
+          <span class="dim" style="font-size:12px;font-weight:600">SECC travel:</span>
+          {TRAVEL_FLOW.filter(s => tcounts[s]).map(s => (
+            <button class={`stagetile sm${tpick === s ? ' on' : ''}`} onClick={tclick(s)}>
+              <span class="ct">{tcounts[s]}</span><span class="nm">{s}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {tpick && (
+        <div style="margin-top:12px">
+          <div class="secthead" style="font-size:15px;margin:0 0 8px">SECC travel — {tpick} <span class="dim">— {tcounts[tpick] || 0}</span></div>
+          <TravelTable list={tlist.filter(t => t.status === tpick)} />
         </div>
       )}
 

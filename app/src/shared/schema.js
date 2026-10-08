@@ -173,6 +173,15 @@ export const LEGACY_STATUS_TO_STAGE = STAGES.reduce((m, s) => {
   return m;
 }, {});
 
+// ── SECC travel request lifecycle ───────────────────────────────────────────
+// The second grant program (SouthEast Christian travel fund) has a short
+// pipeline of its own: Submitted → Approved → Paid, with Denied as the side
+// exit. ONE definition here; every page renders the same labels and colors.
+// Apply on My Country (or the public travel.html page) · decide on Council ·
+// pay on Accounting · money overview on Grant Team.
+export const TRAVEL_FLOW = ['Submitted', 'Approved', 'Paid', 'Denied'];
+export const TRAVEL_BADGE = { Submitted: 'submitted', Approved: 'transferred', Paid: 'funded', Denied: 'denied' };
+
 // ── Roles ────────────────────────────────────────────────────────────────────
 // `key` is used in code; `airtable` is the exact option name in the Approvers
 // Role field; `scope` is what this role can see. Enforced server-side.

@@ -643,7 +643,11 @@ exports.handler = async (event) => {
         const mineReports = reports.filter(r => mineIds.has(r.proposalId));
         // scoped users get their own grants + reports + their own country; sensitive aggregates withheld
         const myCountries = countries_meta.filter(c => allowed.has(c.id));
-        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:[], user:who });
+        // …and their OWN travel requests (matched by email), so a submitted
+        // SECC request is never a black hole for the person who sent it.
+        const myEmail = ((who.email||'').trim().toLowerCase());
+        const mineTravel = travel.filter(t => (t.email||'').trim().toLowerCase() === myEmail);
+        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, user:who });
       }
       return reply(200, { cycles, props, logs, funds, bal, goals, countries_meta, reports, travel, user:who });
     }
@@ -715,7 +719,35 @@ exports.handler = async (event) => {
       // Approving / paying travel requests is a grant-department action.
       if(isScopedCountry(who)) return reply(403, { error:'Not permitted.' });
       if(!body.recordId || !body.fields) return reply(400, { error:'Missing recordId or fields.' });
+      const before = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId+'?returnFieldsByFieldId=true');
       const upd = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields:body.fields, typecast:true }) });
+      // Same lifecycle treatment as project grants: log the change, tell the
+      // applicant in-app, and the email automation fires on the money moment
+      // (Paid → 'Transfer') or a denial ('Denied') — approval stays in-app.
+      try{
+        const bf = before.fields || {};
+        const newStatus = body.fields[TR.status];
+        const prevStatus = (bf[TR.status] && (bf[TR.status].name || bf[TR.status])) || '';
+        if(newStatus && newStatus !== prevStatus){
+          const applicant = (bf[TR.name]||'').trim();
+          const email = (bf[TR.email]||'').trim();
+          const amt = usd(body.fields[TR.appAmt] != null ? body.fields[TR.appAmt] : (bf[TR.appAmt] || bf[TR.reqAmt]));
+          const N_NAME = 'fldykHqa2JyKlkykm';
+          const msgs = {
+            'Approved': `Good news — your SECC travel request was approved for ${amt}. You'll get another message the moment the money is sent.`,
+            'Paid':     `Your SECC travel grant has been paid — ${amt} from the SouthEast travel fund is on its way to you.`,
+            'Denied':   `Your SECC travel request was not approved this time. If you have questions, reach out to the National Ministries team — and you're welcome to request again for a future trip.`
+          };
+          const types = { 'Approved':'Decision', 'Paid':'Transfer', 'Denied':'Denied' };
+          if(msgs[newStatus] && email){
+            await writeNotifs([{ fields:{ [N.email]:email, [N.msg]:msgs[newStatus], [N.type]:types[newStatus], [N.link]:SITE_URL, [N_NAME]:firstName(applicant, email) } }]);
+            await sendEmail(email, newStatus==='Paid' ? 'Your SECC travel grant has been paid' : 'An update on your SECC travel request', msgs[newStatus], SITE_URL);
+          }
+          await writeLog([{ fields:{ [L.entry]:`SECC travel — ${newStatus}: ${applicant||email||'a request'}`, [L.type]:'Status change',
+            [L.detail]:`${who.name||who.email} marked the SECC travel request from ${applicant||email} (${amt}) as ${newStatus}`,
+            [L.user]: who.name||'', [L.email]: who.email||'' } }]);
+        }
+      }catch(e){ /* notifications and logs are best-effort; the update itself succeeded */ }
       return reply(200, { fields:upd.fields, user:who });
     }
 

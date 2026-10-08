@@ -5,7 +5,7 @@ import { F, TABLES } from '../shared/schema.js';
 import { projectName, country, coach, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 
 import { PipelineDash } from './PipelineDash.jsx';
-import { TravelCard } from './GrantTeam.jsx';
+import { TravelCard } from './Travel.jsx';
 import { FitBox } from './StrategicPlans.jsx';
 import { BudgetViewer } from './BudgetViewer.jsx';
 
@@ -26,7 +26,7 @@ export function Council({ boot, onRefresh }) {
 
   return (
     <>
-      <PipelineDash list={props} />
+      <PipelineDash list={props} travel={boot.travel} />
 
       <div class="secthead">Project grant applications <span class="dim">— Cornerstone &amp; other foundation grants · {queue.length} waiting</span></div>
       <p class="lead">Every grant a coach has submitted, with their notes, ready to decide together. Approve for this cycle, defer to the parking lot, or deny with a reason. Click a project to see the full picture.</p>

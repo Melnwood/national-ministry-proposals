@@ -17,6 +17,13 @@ const isFundedHero = n => (n.message || '').startsWith('Your grant') && (n.messa
 // Tailor the "what happens next" line to what the message is about.
 function nextStep(msg) {
   const m = (msg || '').toLowerCase();
+  // SECC travel messages first — they're more specific than the project ones.
+  if (m.includes('travel request was approved'))
+    return { tone: 'funded', text: 'What happens next: accounting pays it from the SouthEast travel fund — you\'ll get an email the moment the money is sent.' };
+  if (m.includes('travel grant has been paid'))
+    return { tone: 'funded', text: 'What happens next: nothing — the money is on its way to you. Safe travels!' };
+  if (m.includes('travel request was not approved'))
+    return { tone: 'deny', text: 'What happens next: if you have questions about the decision, reach out to the team — and you\'re welcome to request again for a future trip.' };
   if (m.includes('not approved'))
     return { tone: 'deny', text: 'What happens next: the Council Lead Team\'s reason is above. Talk it through with your coach — you can strengthen the application and re-apply in a future cycle.' };
   if (m.includes('deferred'))
@@ -62,20 +69,27 @@ export function Welcome({ boot, session, onGo }) {
       }).length;
       if (mine) list.push({ n: mine, text: `grant${mine === 1 ? '' : 's'} waiting for your review`, tab: 'coach', btn: 'Review now' });
     }
+    // The SECC travel program rides the same to-dos: decide on Council, pay
+    // on Accounting.
+    const travel = boot.travel || [];
+    const travelQ = travel.filter(t => t.status === 'Submitted').length;
+    const travelPay = travel.filter(t => t.status === 'Approved').length;
     if (role === 'evp') {
       const q = props.filter(p => ['submitted', 'coach'].includes(stageKey(p))).length;
       if (q) list.push({ n: q, text: 'awaiting a Council Lead Team decision', tab: 'council', btn: 'Decide' });
+      if (travelQ) list.push({ n: travelQ, text: `SouthEast travel application${travelQ === 1 ? '' : 's'} awaiting a decision`, tab: 'council', btn: 'Decide' });
       const acc = at('accounting');
       if (acc) list.push({ n: acc, text: 'ready to transfer at accounting', tab: 'accounting', btn: 'Open Accounting' });
     }
     if (['grant', 'cfo', 'president'].includes(role)) {
       const acc = at('accounting');
       if (acc) list.push({ n: acc, text: 'ready to transfer at accounting', tab: 'accounting', btn: 'Open Accounting' });
+      if (travelPay) list.push({ n: travelPay, text: `SECC travel grant${travelPay === 1 ? '' : 's'} approved and ready to pay`, tab: 'accounting', btn: 'Open Accounting' });
       const def = at('deferred');
       if (def) list.push({ n: def, text: 'approved and waiting on funding', tab: 'grant', btn: 'See deferred' });
     }
     return list;
-  }, [boot.props, session]);
+  }, [boot.props, boot.travel, session]);
 
   if (!notifs.length && !todos.length) return null;
 
