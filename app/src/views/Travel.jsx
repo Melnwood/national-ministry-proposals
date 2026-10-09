@@ -133,7 +133,7 @@ export function TravelPayCard({ t, fromFund, onDone, pick }) {
           : <button class="ghostbtn" disabled={asking || busy} onClick={askToPay} title="Email the accounting team that this payment is ready to send">
               {asking ? 'Emailing…' : '📧 Email accounting — ready to send'}
             </button>}
-        <button class="savebtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Recording…' : 'Paid ✓'}</button>
+        <button class="savebtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Recording…' : 'Mark as paid ✓'}</button>
       </div>
     </div>
   );
