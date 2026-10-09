@@ -442,27 +442,39 @@ async function writeImpactSummary(data){
   const facts = `The foundation is "${c.foundation}". Their gift for ${c.year || 'this cycle'} was ${usd(c.gift)}. `
     + `It funded ${t.fundedCount} project(s) across ${t.countryCount} countries. `
     + `Adding up the field reports so far: ${t.leaders} leaders, ${t.churches} churches, and ${t.people} people reached.`;
-  const prompt = `You are helping the Josiah Venture National Ministries team write to ${c.foundation || 'a foundation'} — friends who gave money so that national leaders in Central and Eastern Europe could do ministry. This is a letter between partners in the same work, not a report from a development office.
+  const prompt = `You are helping the Josiah Venture National Ministries team write to ${c.foundation || 'a foundation'} — friends who gave money so that national leaders in Central and Eastern Europe could do ministry. This is a letter between partners in the same work — NOT an information packet, and it must not read like AI wrote it.
 
-How it should sound: like one person writing to a friend they're deeply grateful for. Plain, warm, specific. Use contractions. Short sentences are fine. The country leaders' reports talk about what God did — keep that language; it's how this community speaks. When a detail is good, use the leader's own words (lightly cleaned up) and name them and their country, e.g. 'Timo, who leads the work in Slovakia, wrote that…'. Be honest about hard things the reports name — partners trust honesty.
+How it should sound: like one person writing to a friend they're deeply grateful for, about moments that genuinely moved them. Plain, warm, specific. Use contractions. Vary sentence length; short sentences are fine. The country leaders' reports talk about what God did — keep that language; it's how this community speaks. When a detail shines, use the leader's own words (lightly cleaned up) and name them and their country.
 
-Never do this: do not invent any fact, number, name, or story beyond what is below. Do not use words like impact metrics, leverage, utilize, strategic, outcomes, 'we are pleased to report', or 'it is our privilege'. Do not pad — if the reports are thin, write less.
+Inspiring, not info-heavy: pick the TWO or THREE moments from the reports that would make a donor's heart lift, and let those carry the letter. Use at most two or three numbers in the whole letter — the ones that matter — and leave the rest out; the report page already shows every figure. No project lists, no inventories of activities, no summary of everything that happened.
+
+Never do this: do not invent any fact, number, name, or story beyond what is below. No 'impact metrics', 'leverage', 'utilize', 'strategic', 'outcomes', 'we are pleased to report', 'it is our privilege'. Do not pad — if the reports are thin, write less.
 
 The facts: ${facts}
 
 The country leaders' reports (your only source material):
 ${stories}
 
-Write 3–4 short paragraphs addressed to them ('your gift', 'because of you'). Open with real thanks, let the leaders' own stories carry the middle, and close simply — gratitude and shared mission, no sales pitch. Plain text only: no headings, no markdown, no bullet points.`;
+Return ONLY valid JSON, no markdown fences, in exactly this shape:
+{"letter": "3 short paragraphs addressed to them ('your gift', 'because of you'), separated by blank lines. Open with real thanks, let one or two of the leaders' stories carry the middle, close simply — gratitude and shared mission, no sales pitch.",
+ "vignettes": [{"project": "<the project name EXACTLY as given above>", "text": "2–3 sentences for this project: concise, heartfelt, inspiring. Keep the leader's own best phrase where there is one, and their name. No statistics unless one is the point of the story."}]}
+Write a vignette ONLY for projects above that have real narrative to work with (skip numbers-only reports), up to 8 of the strongest.`;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-opus-5', max_tokens: 1800, output_config: { effort: 'low' },
+    body: JSON.stringify({ model: 'claude-opus-5', max_tokens: 2600, output_config: { effort: 'low' },
       messages: [{ role: 'user', content: prompt }] }),
   });
   const d = await r.json().catch(() => ({}));
   if(!r.ok) throw new Error((d.error && d.error.message) || 'The AI summary service returned an error.');
-  return (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  const text = (d.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  // Expect JSON; fall back to treating the whole output as the letter.
+  try{
+    const parsed = JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''));
+    if(parsed && parsed.letter) return { summary: String(parsed.letter).trim(),
+      vignettes: Array.isArray(parsed.vignettes) ? parsed.vignettes.filter(v => v && v.project && v.text).slice(0, 12) : [] };
+  }catch(e){ /* fall through */ }
+  return { summary: text, vignettes: [] };
 }
 
 // ── Strategic fit check ───────────────────────────────────────────────────────
@@ -1317,8 +1329,8 @@ exports.handler = async (event) => {
       // No project reports = nothing true to write from. Say so instead of
       // composing a donor letter out of bare numbers.
       if(!(data.stories && data.stories.length)) return reply(200, { noReports:true, user:who });
-      const summary = await writeImpactSummary(data);
-      return reply(200, { summary, generated:true, user:who });
+      const out = await writeImpactSummary(data);
+      return reply(200, { summary: out && out.summary, vignettes: (out && out.vignettes) || [], generated:true, user:who });
     }
 
     return reply(400, { error:'Unknown op.' });

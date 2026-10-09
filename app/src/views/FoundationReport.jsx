@@ -103,6 +103,7 @@ function ReportDoc({ data, cycleId }) {
   const funded = projects.filter(p => p.stage === 'Funded');
 
   const [summary, setSummary] = useState(data.summary || '');
+  const [vignettes, setVignettes] = useState({}); // project name → short heartfelt text
   const [sumBusy, setSumBusy] = useState(false);
   const [sumErr, setSumErr] = useState('');
   const [needsKey, setNeedsKey] = useState(false);
@@ -114,7 +115,12 @@ function ReportDoc({ data, cycleId }) {
       const r = await api('cycle_summary', { cycleId, data });
       if (r.needsKey) setNeedsKey(true);
       else if (r.noReports) setNoReports(true);
-      else setSummary(r.summary || '');
+      else {
+        setSummary(r.summary || '');
+        const map = {};
+        (r.vignettes || []).forEach(v => { if (v && v.project && v.text) map[String(v.project).trim()] = String(v.text).trim(); });
+        setVignettes(map);
+      }
     } catch (e) { setSumErr(e.message || 'Could not write the summary.'); }
     setSumBusy(false);
   }
@@ -193,13 +199,24 @@ function ReportDoc({ data, cycleId }) {
       {stories && stories.length > 0 && (
         <section class="rp-sec">
           <h2>Stories from the field</h2>
-          {stories.map(s => (
+          {Object.keys(vignettes).length > 0 && (
+            <p class="rp-note noprint">Distilled from the full field reports — concise and heartfelt for the foundation. The complete reports stay in the app (Management → Reports).</p>
+          )}
+          {stories
+            // Once distilled, show only the projects with a vignette — the
+            // strongest stories, short and from the heart, not a data dump.
+            .filter(s => !Object.keys(vignettes).length || vignettes[String(s.name).trim()])
+            .map(s => {
+            const v = vignettes[String(s.name).trim()];
+            return (
             <article class="rp-story">
               <div class="rp-story-head">
                 <b>{s.name}</b>{s.country ? <span class="rp-cty"> · {s.country}</span> : null}
                 {s.kind ? <span class="rp-kind">{s.kind} report</span> : null}
               </div>
-              {s.story && <p class="rp-lead-para">{s.story}</p>}
+              {v
+                ? <p class="rp-lead-para">{v}</p>
+                : s.story ? <p class="rp-lead-para">{s.story}</p> : null}
               {s.photos && s.photos.length > 0 && (
                 <div class="rp-photos">
                   {s.photos.slice(0, 3).map(ph => ph === 'sample'
@@ -207,9 +224,9 @@ function ReportDoc({ data, cycleId }) {
                     : <img class="rp-photo" src={ph} alt="" loading="lazy" />)}
                 </div>
               )}
-              {s.objectives && s.objectives.map(o => <p class="rp-obj">{o}</p>)}
-              {s.lessons && <p class="rp-mini"><span class="dt">Lessons learned</span> {s.lessons}</p>}
-              {s.challenges && <p class="rp-mini"><span class="dt">Challenges</span> {s.challenges}</p>}
+              {!v && s.objectives && s.objectives.map(o => <p class="rp-obj">{o}</p>)}
+              {!v && s.lessons && <p class="rp-mini"><span class="dt">Lessons learned</span> {s.lessons}</p>}
+              {!v && s.challenges && <p class="rp-mini"><span class="dt">Challenges</span> {s.challenges}</p>}
               {(s.leaders || s.churches || s.people) ? (
                 <div class="rp-story-nums">
                   {s.leaders ? <span>{num(s.leaders)} leaders</span> : null}
@@ -218,7 +235,8 @@ function ReportDoc({ data, cycleId }) {
                 </div>
               ) : null}
             </article>
-          ))}
+            );
+          })}
         </section>
       )}
 
