@@ -694,6 +694,32 @@ exports.handler = async (event) => {
         fetchAll(T_FUNDS, {}),
         fetchAll(T_BAL, {})
       ]);
+      // ── Housekeeping (per Mel, 2026-10-09): a deferred project whose
+      // window has been over for a month isn't waiting on funding any more —
+      // it archives ITSELF, automatically, whenever anyone loads the app.
+      // Uses the project end date (start date if no end is set), logs each
+      // move to the Decision Log. Best effort; never blocks the load.
+      try{
+        const cutoff = new Date(Date.now() - 30*24*60*60*1000).toISOString().slice(0,10);
+        const sname2 = x => ((x && (x.name || x)) || '').trim();
+        const DEFERRED_LABELS = ['Deferred','Approved — Deferred','Grant Team Approved'];
+        const stale = props.filter(p => {
+          if(!DEFERRED_LABELS.includes(sname2(p.fields[STAGE_F]))) return false;
+          const ref = p.fields['fldxV1o8EVEXaitod'] || p.fields['fldVIJKaXqmUw8qFP'] || ''; // end, else start
+          return !!ref && String(ref).slice(0,10) < cutoff;
+        });
+        for(const p of stale.slice(0, 10)){ // bounded per load; rest next load
+          const fields = { [STAGE_F]:'Archived' };
+          if(STAGE_TO_STATUS['Archived']) fields[STATUS_F] = STAGE_TO_STATUS['Archived'];
+          await at(BASE+'/'+T_PROP+'/'+p.id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+          p.fields[STAGE_F] = 'Archived'; // this response reflects the move too
+          const nm = p.fields['fld1qi35letQtg6yC'] || 'A grant';
+          await writeLog([{ fields:{ [L.entry]:`${nm} — auto-archived`, [L.type]:'Status change',
+            [L.detail]:`${nm} was deferred but its project window ended over a month ago, so it was archived automatically. If it's still wanted, set its stage back and update the project dates.`,
+            [L.pid]:p.id, 'fldDCLcDUyODA0AvP':[p.id] } }]);
+        }
+      }catch(e){ /* best effort */ }
+
       // non-critical: never let these crash the whole bootstrap
       const goals = await safe(fetchAll(T_GOALS, {}));
       // Attach the signed-in user's role + country scope, read from Approvers.
