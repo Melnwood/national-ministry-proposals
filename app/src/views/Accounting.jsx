@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'preact/hooks';
+import { useState, useMemo, useEffect } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval } from '../shared/format.js';
 import { F } from '../shared/schema.js';
@@ -23,6 +23,31 @@ export function Accounting({ boot, onRefresh }) {
   const seccFund = (boot.funds || []).find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
   const seccFundName = seccFund ? aval(seccFund.fields[F.funds.source]) : 'SE Christian Foundation';
 
+  // ── One email for everything ready ───────────────────────────────────────
+  // Every ready payment (projects + travel) carries a checkbox, all selected
+  // by default; the bar sends accounting a SINGLE email listing the selection.
+  const ready = useMemo(() => [
+    ...atAccounting.map(p => ({ key: 'project:' + p.id, kind: 'project', id: p.id, amt: awarded(p) || requested(p) })),
+    ...travelToPay.map(t => ({ key: 'travel:' + t.id, kind: 'travel', id: t.id, amt: t.appAmt || t.reqAmt || 0 })),
+  ], [atAccounting, travelToPay]);
+  const [sel, setSel] = useState(() => new Set(ready.map(r => r.key)));
+  useEffect(() => { setSel(new Set(ready.map(r => r.key))); setBatchSent(''); }, [ready.map(r => r.key).join('|')]);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchSent, setBatchSent] = useState('');
+  const [batchErr, setBatchErr] = useState('');
+  const toggle = key => setSel(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  const picked = ready.filter(r => sel.has(r.key));
+  const pickedTotal = picked.reduce((a, r) => a + (r.amt || 0), 0);
+
+  async function emailBatch() {
+    setBatchBusy(true); setBatchErr('');
+    try {
+      const d = await api('pay_request', { items: picked.map(r => ({ kind: r.kind, recordId: r.id })) });
+      setBatchSent(`One email sent to ${(d.sentTo || []).join(' & ') || 'accounting'} — ${picked.length} payment${picked.length === 1 ? '' : 's'}, ${money(pickedTotal)}`);
+    } catch (e) { setBatchErr(e.message || 'Could not send the email.'); }
+    setBatchBusy(false);
+  }
+
   return (
     <>
       <PipelineDash list={props} travel={travel} />
@@ -30,10 +55,28 @@ export function Accounting({ boot, onRefresh }) {
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
       <p class="lead">Every grant here has already been approved by the EVP and the Council Lead Team — that's how it got here. Everything Accounting needs to make the transfer is right here, no email required.</p>
 
+      {ready.length > 1 && (
+        <div class="panel" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+          <div><b>{picked.length}</b> of {ready.length} ready payments selected · <b>{money(pickedTotal)}</b></div>
+          <button type="button" class="mini" onClick={() => setSel(picked.length === ready.length ? new Set() : new Set(ready.map(r => r.key)))}>
+            {picked.length === ready.length ? 'Unselect all' : 'Select all'}
+          </button>
+          <div style="margin-left:auto">
+            {batchSent
+              ? <span class="sent-ok">✓ {batchSent}</span>
+              : <button class="savebtn" disabled={!picked.length || batchBusy} onClick={emailBatch}>
+                  {batchBusy ? 'Emailing…' : `📧 Email accounting — one email for ${picked.length}`}
+                </button>}
+          </div>
+          {batchErr && <div class="editerr" style="width:100%">{batchErr}</div>}
+        </div>
+      )}
+
       <div class="secthead" style="font-size:15px">Ready to transfer <span class="dim">— {atAccounting.length}</span></div>
       {!atAccounting.length && <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a transfer right now.</p></div>}
       <div class="cards">
-        {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh} />)}
+        {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh}
+          pick={ready.length > 1 ? { checked: sel.has('project:' + p.id), onToggle: () => toggle('project:' + p.id) } : null} />)}
       </div>
 
       {travelToPay.length > 0 && (
@@ -41,7 +84,8 @@ export function Accounting({ boot, onRefresh }) {
           <div class="secthead" style="font-size:15px;margin-top:30px">SECC travel — ready to pay <span class="dim">— {travelToPay.length}</span></div>
           <p class="lead">Approved by the Council Lead Team, paid from the {seccFundName} restricted fund. One click records the payment and emails the applicant.</p>
           <div class="cards">
-            {travelToPay.map(t => <TravelPayCard key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh} />)}
+            {travelToPay.map(t => <TravelPayCard key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh}
+              pick={ready.length > 1 ? { checked: sel.has('travel:' + t.id), onToggle: () => toggle('travel:' + t.id) } : null} />)}
           </div>
         </>
       )}
@@ -62,7 +106,7 @@ export function Accounting({ boot, onRefresh }) {
 
 const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
 
-function TransferCard({ p, fromAcct, onDone }) {
+function TransferCard({ p, fromAcct, onDone, pick }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [asked, setAsked] = useState(''); // who the nudge email went to
@@ -109,7 +153,14 @@ function TransferCard({ p, fromAcct, onDone }) {
     <div class="dcard">
       <div class="dc-head">
         <div><h3>{projectName(p)}</h3><div class="dc-meta">{country(p)}</div></div>
-        <div class="xfer-amt">{money(amt)}</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          {pick && (
+            <label class={`check inline${pick.checked ? ' on' : ''}`} title="Include in the one email to accounting">
+              <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include</span>
+            </label>
+          )}
+          <div class="xfer-amt">{money(amt)}</div>
+        </div>
       </div>
       {/* Both ends of the transfer, so Susan never has to look them up. */}
       <div class="acctrow">

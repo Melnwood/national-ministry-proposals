@@ -767,37 +767,45 @@ exports.handler = async (event) => {
     // both programs: a project transfer or an approved SECC travel grant.
     if(body.op === 'pay_request'){
       if(isScopedCountry(who)) return reply(403, { error:'Not permitted.' });
-      if(!body.recordId) return reply(400, { error:'Missing recordId.' });
+      // One payment ({kind, recordId}) or a batch ({items:[{kind, recordId}…]})
+      // — a batch becomes ONE email listing everything, never one per card.
+      const items = (Array.isArray(body.items) && body.items.length)
+        ? body.items.slice(0, 25)
+        : (body.recordId ? [{ kind: body.kind, recordId: body.recordId }] : []);
+      if(!items.length) return reply(400, { error:'Nothing selected.' });
       const team = await rolePeople(['Grant team','CFO']);
       if(!team.length) return reply(400, { error:'No one with the Grant team or CFO role is in People & access yet — add them there first so this email has somewhere to go.' });
       const N_NAME = 'fldykHqa2JyKlkykm';
       const asker = who.name || who.email;
-      let msg, logEntry;
-      if(body.kind === 'travel'){
-        const rec = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId+'?returnFieldsByFieldId=true');
-        const f = rec.fields || {};
-        const amt = usd(f[TR.appAmt] || f[TR.reqAmt]);
-        const applicant = (f[TR.name]||'').trim() || (f[TR.email]||'');
-        msg = `${asker} asked accounting to send an approved SECC travel grant: ${amt} to ${applicant}, from the SouthEast travel fund. It's ready on the Accounting page — one click records the payment.`;
-        logEntry = `SECC travel — payment requested: ${applicant}`;
-      } else {
-        const rec = await at(BASE+'/'+T_PROP+'/'+body.recordId+'?returnFieldsByFieldId=true');
-        const f = rec.fields || {};
-        const name = f[PNF.name] || 'a grant';
-        const amt = usd(f[PNF.awarded]);
-        const acct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
-        msg = `${asker} asked accounting to send the transfer for "${name}": ${amt} to Cedarstone account ${acct||'(shown on the card)'}. It's ready on the Accounting page — one click records it.`;
-        logEntry = `Payment requested: ${name}`;
+      const lines = [];
+      for(const it of items){
+        if(!it || !it.recordId) continue;
+        if(it.kind === 'travel'){
+          const rec = await at(BASE+'/'+T_TRAVEL+'/'+it.recordId+'?returnFieldsByFieldId=true');
+          const f = rec.fields || {};
+          const applicant = (f[TR.name]||'').trim() || (f[TR.email]||'');
+          lines.push(`${usd(f[TR.appAmt] || f[TR.reqAmt])} — SECC travel grant to ${applicant}${f[TR.team] ? ` (${f[TR.team]})` : ''}, from the SouthEast travel fund`);
+        } else {
+          const rec = await at(BASE+'/'+T_PROP+'/'+it.recordId+'?returnFieldsByFieldId=true');
+          const f = rec.fields || {};
+          const acct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
+          lines.push(`${usd(f[PNF.awarded])} — "${f[PNF.name] || 'a grant'}"${f[PNF.country] ? ` (${f[PNF.country]})` : ''} to Cedarstone account ${acct||'(shown on the card)'}`);
+        }
       }
+      if(!lines.length) return reply(400, { error:'Nothing selected.' });
+      const msg = lines.length === 1
+        ? `${asker} asked accounting to send this payment: ${lines[0]}. It's ready on the Accounting page — one click records it.`
+        : `${asker} asked accounting to send ${lines.length} payments that are ready:\n\n${lines.map(l => '• ' + l).join('\n')}\n\nThey're all on the Accounting page — one click on each records the payment and notifies everyone.`;
       // Type 'Transfer' so the existing email automation delivers it.
       await writeNotifs(team.map(p => ({ fields:{ [N.email]:p.email, [N.msg]:msg, [N.type]:'Transfer', [N.link]:SITE_URL, [N_NAME]:firstName(p.name, p.email) } })));
-      for(const p of team){ await sendEmail(p.email, 'Ready to send — payment requested', msg, SITE_URL); }
+      for(const p of team){ await sendEmail(p.email, lines.length === 1 ? 'Ready to send — payment requested' : `Ready to send — ${lines.length} payments requested`, msg, SITE_URL); }
       try{
-        await writeLog([{ fields:{ [L.entry]:logEntry, [L.type]:'Status change', [L.detail]:msg,
+        const onlyProject = items.length === 1 && items[0].kind !== 'travel' ? items[0].recordId : '';
+        await writeLog([{ fields:{ [L.entry]:lines.length === 1 ? 'Payment requested' : `${lines.length} payments requested`, [L.type]:'Status change', [L.detail]:msg,
           [L.user]:who.name||'', [L.email]:who.email||'',
-          ...(body.kind !== 'travel' ? { [L.pid]:body.recordId, 'fldDCLcDUyODA0AvP':[body.recordId] } : {}) } }]);
+          ...(onlyProject ? { [L.pid]:onlyProject, 'fldDCLcDUyODA0AvP':[onlyProject] } : {}) } }]);
       }catch(e){ /* best effort */ }
-      return reply(200, { ok:true, sentTo: team.map(p => firstName(p.name, p.email)), user:who });
+      return reply(200, { ok:true, count: lines.length, sentTo: team.map(p => firstName(p.name, p.email)), user:who });
     }
 
     if(body.op === 'update'){

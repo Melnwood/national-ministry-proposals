@@ -82,7 +82,7 @@ export function TravelCard({ t, onDone }) {
 
 // Accounting's payout card: both ends of the payment, one click, and the
 // applicant is emailed automatically (same "money moment" rule as projects).
-export function TravelPayCard({ t, fromFund, onDone }) {
+export function TravelPayCard({ t, fromFund, onDone, pick }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [asked, setAsked] = useState(''); // who the nudge email went to
@@ -111,7 +111,14 @@ export function TravelPayCard({ t, fromFund, onDone }) {
     <div class="dcard">
       <div class="dc-head">
         <div><h3>{t.name || '(no name)'}</h3><div class="dc-meta">{t.team || '—'} · {tripDates(t)}</div></div>
-        <div class="xfer-amt">{money(amt)}</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          {pick && (
+            <label class={`check inline${pick.checked ? ' on' : ''}`} title="Include in the one email to accounting">
+              <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include</span>
+            </label>
+          )}
+          <div class="xfer-amt">{money(amt)}</div>
+        </div>
       </div>
       <div class="acctrow">
         <div><div class="cstat-l">From — restricted travel fund</div>
