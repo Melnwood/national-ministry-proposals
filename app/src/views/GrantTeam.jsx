@@ -140,7 +140,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
       </>)}
 
       {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} canAct={canAct} />}
-      {view === 'travel' && <TravelPanel travel={travel} funds={boot.funds || []} />}
+      {view === 'travel' && <TravelPanel travel={travel} funds={boot.funds || []} canAct={canAct} onRefresh={onRefresh} />}
       {view === 'paid' && <PaidPanel boot={boot} />}
 
       {openGrant && (canAct
@@ -496,11 +496,26 @@ function PaidPanel({ boot }) {
 
 const TRAVEL_FORM_URL = 'https://national-ministry-proposals.netlify.app/travel.html';
 
-function TravelPanel({ travel, funds }) {
+function TravelPanel({ travel, funds, canAct, onRefresh }) {
   // Matched by name so a renamed Available Funds record still resolves.
   const fund = funds.find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
   const fundName = fund ? aval(fund.fields[F.funds.source]) : 'SE Christian Foundation';
+  const fundAcct = fund ? aval(fund.fields[F.funds.acct]) : '';
   const total = fund ? (fund.fields[F.funds.amount] || 0) : 0;
+  const [editAcct, setEditAcct] = useState(false);
+  const [acct, setAcct] = useState(fundAcct || '');
+  const [savingAcct, setSavingAcct] = useState(false);
+  const [acctErr, setAcctErr] = useState('');
+
+  async function saveAcct() {
+    setSavingAcct(true); setAcctErr('');
+    try {
+      await api('fund_update', { fundId: fund.id, acct: acct.trim() });
+      setEditAcct(false);
+      onRefresh && onRefresh();
+    } catch (e) { setAcctErr(e.message || 'Could not save.'); }
+    setSavingAcct(false);
+  }
   const committed = travel
     .filter(t => t.status === 'Approved' || t.status === 'Paid')
     .reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
@@ -513,7 +528,7 @@ function TravelPanel({ travel, funds }) {
         <div class="mtile">
           <div class="mlbl">The fund — {fundName}</div>
           <div class="mval">{money(total)}</div>
-          <div class="mnote">Restricted gift · SECC leader travel</div>
+          <div class="mnote">{fundAcct ? `Sits in account ${fundAcct}` : 'Restricted gift · SECC leader travel'}</div>
         </div>
         <div class="mtile">
           <div class="mlbl">Committed (approved + paid)</div>
@@ -525,6 +540,22 @@ function TravelPanel({ travel, funds }) {
           <div class="mnote">{fresh.length} new {fresh.length === 1 ? 'request' : 'requests'} asking {money(asked)}</div>
         </div>
       </section>
+
+      {canAct && fund && (
+        <div style="margin:-6px 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          {editAcct ? (
+            <>
+              <input value={acct} onInput={e => setAcct(e.currentTarget.value)} placeholder="Account number — blank = main 510181"
+                style="font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line-d);border-radius:7px;width:260px" />
+              <button class="mini" disabled={savingAcct} onClick={saveAcct}>{savingAcct ? 'Saving…' : 'Save'}</button>
+              <button class="mini" disabled={savingAcct} onClick={() => { setEditAcct(false); setAcct(fundAcct || ''); }}>Cancel</button>
+            </>
+          ) : (
+            <button class="mini" onClick={() => setEditAcct(true)}>✎ Set the account this fund sits in</button>
+          )}
+          {acctErr && <span class="editerr sm" style="margin:0">{acctErr}</span>}
+        </div>
+      )}
 
       <div class="secthead">All travel requests <span class="dim">— {travel.length}</span></div>
       <p class="lead">New applications are decided on the <b>Council Lead Team</b> tab; approved ones are paid out on <b>Accounting</b>. Anyone can apply — no app sign-in needed — with this link: <b>{TRAVEL_FORM_URL}</b></p>

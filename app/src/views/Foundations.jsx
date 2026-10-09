@@ -5,12 +5,14 @@ import { buildFoundations } from '../shared/foundations.js';
 import { projectName, country, awarded, requested, stageKey, stageLabel } from '../shared/grants.js';
 import { PipelineDash } from './PipelineDash.jsx';
 
-export function Foundations({ boot, onRefresh }) {
+export function Foundations({ boot, session, onRefresh }) {
   const data = useMemo(
     () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || []),
     [boot.cycles, boot.goals, boot.props]
   );
   const [adding, setAdding] = useState(false);
+  // Setting where a gift's money sits is an EVP action (it steers transfers).
+  const canAct = !!(session && session.role && session.role.key === 'evp');
 
   return (
     <>
@@ -38,7 +40,7 @@ export function Foundations({ boot, onRefresh }) {
             <h2>{fnd.foundation}</h2>
             <span class="fnd-total">{money(fnd.totalGift)} <span class="dim">given across {fnd.cycles.length} {fnd.cycles.length === 1 ? 'cycle' : 'cycles'}</span></span>
           </div>
-          {fnd.cycles.map(cy => <CycleCard key={cy.id} cy={cy} />)}
+          {fnd.cycles.map(cy => <CycleCard key={cy.id} cy={cy} canAct={canAct} onRefresh={onRefresh} />)}
         </div>
       ))}
       {!data.length && <div class="panel"><p style="color:var(--muted)">No foundations/cycles found.</p></div>}
@@ -54,6 +56,7 @@ function AddGiftForm({ foundations, onClose, onDone }) {
   const [newFnd, setNewFnd] = useState('');
   const [name, setName] = useState(String(new Date().getFullYear()));
   const [gift, setGift] = useState('');
+  const [acct, setAcct] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -64,7 +67,7 @@ function AddGiftForm({ foundations, onClose, onDone }) {
     if (!name.trim()) { setErr('Give the cycle a name — usually the year.'); return; }
     setBusy(true); setErr('');
     try {
-      await api('cycle_create', { fields: { foundation: foundationName, name: name.trim(), total: Number(gift) || 0 } });
+      await api('cycle_create', { fields: { foundation: foundationName, name: name.trim(), total: Number(gift) || 0, acct: acct.trim() } });
       onDone();
     } catch (e) { setErr(e.message || 'Could not save.'); setBusy(false); }
   }
@@ -97,6 +100,9 @@ function AddGiftForm({ foundations, onClose, onDone }) {
               <div class="moneyin"><span>$</span><input type="number" step="500" value={gift} onInput={e => setGift(e.currentTarget.value)} placeholder="0" /></div>
             </label>
           </div>
+          <label class="fld"><span class="flbl">Account where this money sits — transfers are drawn from here</span>
+            <input value={acct} onInput={e => setAcct(e.currentTarget.value)} placeholder="Leave blank to use the main account (510181)" />
+          </label>
         </div>
         {err && <div class="editerr">{err}</div>}
         <div class="modal-foot actions">
@@ -108,9 +114,24 @@ function AddGiftForm({ foundations, onClose, onDone }) {
   );
 }
 
-function CycleCard({ cy }) {
+function CycleCard({ cy, canAct, onRefresh }) {
   const [open, setOpen] = useState(false);
+  const [editAcct, setEditAcct] = useState(false);
+  const [acct, setAcct] = useState(cy.acct || '');
+  const [savingAcct, setSavingAcct] = useState(false);
+  const [acctErr, setAcctErr] = useState('');
   const remaining = cy.gift - cy.awarded;
+
+  async function saveAcct() {
+    setSavingAcct(true); setAcctErr('');
+    try {
+      await api('cycle_update', { cycleId: cy.id, acct: acct.trim() });
+      setEditAcct(false);
+      onRefresh && onRefresh();
+    } catch (e) { setAcctErr(e.message || 'Could not save.'); }
+    setSavingAcct(false);
+  }
+
   return (
     <div class="cycle">
       <div class="cycle-top">
@@ -120,8 +141,25 @@ function CycleCard({ cy }) {
           <Stat label="Awarded" val={money(cy.awarded)} />
           <Stat label="Remaining" val={money(remaining)} tone={remaining < 0 ? 'neg' : ''} />
           <Stat label="Grants" val={`${cy.fundedCount}${cy.grantCount !== cy.fundedCount ? ` / ${cy.grantCount}` : ''}`} />
+          <Stat label="Money sits in" val={cy.acct || 'Main (510181)'} />
         </div>
       </div>
+
+      {canAct && (
+        <div style="margin:6px 0 2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          {editAcct ? (
+            <>
+              <input value={acct} onInput={e => setAcct(e.currentTarget.value)} placeholder="Account number — blank = main 510181"
+                style="font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line-d);border-radius:7px;width:260px" />
+              <button class="mini" disabled={savingAcct} onClick={saveAcct}>{savingAcct ? 'Saving…' : 'Save'}</button>
+              <button class="mini" disabled={savingAcct} onClick={() => { setEditAcct(false); setAcct(cy.acct || ''); }}>Cancel</button>
+            </>
+          ) : (
+            <button class="mini" onClick={() => setEditAcct(true)}>✎ Set the account this gift sits in</button>
+          )}
+          {acctErr && <span class="editerr sm" style="margin:0">{acctErr}</span>}
+        </div>
+      )}
 
       {cy.goals.length > 0 && (
         <div class="goals">

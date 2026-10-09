@@ -15,6 +15,7 @@ const STATUS_META = [
 
 export function Reports({ boot, onRefresh }) {
   const [filter, setFilter] = useState(null);
+  const [reading, setReading] = useState(null); // proposalId whose reports are open
 
   const rows = useMemo(
     () => enrichReports(boot.reports || [], boot.props || [], NOW)
@@ -50,7 +51,7 @@ export function Reports({ boot, onRefresh }) {
           <thead><tr><th>Grant</th><th>Country</th><th>Report</th><th>Due</th><th>Status</th><th class="r">Impact (L / C / P)</th></tr></thead>
           <tbody>
             {shown.map(r => (
-              <tr key={r.id}>
+              <tr key={r.id} class="clk" onClick={() => setReading(r.proposalId)} title="Click to read this project's reports">
                 <td class="nm">{r.name}</td>
                 <td class="cty">{r.country || '—'}</td>
                 <td><span class={`kind ${r.kind.toLowerCase()}`}>{r.kind}</span></td>
@@ -63,7 +64,50 @@ export function Reports({ boot, onRefresh }) {
           </tbody>
         </table>
       </div>
+
+      {reading && <ReportReader rows={rows} proposalId={reading} onClose={() => setReading(null)} />}
     </>
+  );
+}
+
+// Click a project → every report it has, in full: the numbers and the whole
+// story, challenges and lessons, exactly as the country wrote them.
+function ReportReader({ rows, proposalId, onClose }) {
+  const mine = rows.filter(r => r.proposalId === proposalId)
+    .sort((a, b) => (a.kind === 'Mid' ? 0 : 1) - (b.kind === 'Mid' ? 0 : 1));
+  const head = mine[0] || {};
+  return (
+    <div class="modal-scrim" onClick={onClose}>
+      <div class="modal wide" onClick={e => e.stopPropagation()}>
+        <div class="modal-head">
+          <div><h2>{head.name || 'Reports'}</h2><div class="sub2">{head.country || ''} · {mine.length} {mine.length === 1 ? 'report' : 'reports'}</div></div>
+          <button class="ghostbtn" onClick={onClose}>Close ✕</button>
+        </div>
+        <div style="padding:0 24px 22px">
+          {mine.map(r => (
+            <div class="fullapp" style="margin-top:12px" key={r.id}>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span class={`kind ${r.kind.toLowerCase()}`}>{r.kind}</span>
+                <span class={`rbadge ${r.status.key}`}>{r.status.label}</span>
+                {r.done && <span class="cty" style="font-size:12.5px">filled out by {r.completedBy}{r.submitted ? ` · ${date(r.submitted)}` : ''}</span>}
+                {!r.done && r.due && <span class="cty" style="font-size:12.5px">due {date(r.due)}</span>}
+              </div>
+              {r.done ? (
+                <>
+                  <p style="margin:10px 0 0;font-size:13px"><b>Impact:</b> {r.leaders || 0} leaders · {r.churches || 0} churches · {r.people || 0} people{r.spent ? <> · <b>{money(r.spent)}</b> spent</> : null}</p>
+                  {r.story && <div style="margin-top:10px"><div class="dt">The story</div><p style="margin:4px 0 0;font-size:13.5px;white-space:pre-wrap">{r.story}</p></div>}
+                  {r.challenges && <div style="margin-top:10px"><div class="dt">Challenges</div><p style="margin:4px 0 0;font-size:13.5px;white-space:pre-wrap">{r.challenges}</p></div>}
+                  {r.lessons && <div style="margin-top:10px"><div class="dt">Lessons learned</div><p style="margin:4px 0 0;font-size:13.5px;white-space:pre-wrap">{r.lessons}</p></div>}
+                  {!r.story && !r.challenges && !r.lessons && <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">Numbers only — no written story on this one.</p>}
+                </>
+              ) : (
+                <p style="margin:10px 0 0;font-size:13px;color:var(--muted)">Not filled out yet — the country will see "Fill out report" on their page.</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

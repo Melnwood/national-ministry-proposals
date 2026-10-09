@@ -336,7 +336,8 @@ const RF = { proposal:'fldWLpL3N2yIRfn0t', cycle:'fldKa2XwRf3vLTdhW', type:'fldV
   spent:'fld25e4OC4ObhbyZw', people:'fldisUoMECHpHZwp5', leaders:'fldP8DjBL1S5l1WWA', churches:'fldkksYMIC3YMdsNx',
   prog1:'fldFhbKWiC1KjMiMh', prog2:'fldxr8mGkdALSFJPW', prog3:'fld53pqkxduIIDSzM',
   attachments:'fldN6cvQXDhM9aCpX' };
-const CYF = { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz' };
+const CYF = { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz', acct:'fldnA4eb4KTWZ20wz' };
+const FUND_ACCT_F = 'fldskrH1CeMz5CesJ'; // Available Funds → which account the fund's money sits in
 const PPF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fldeeQMQPRVyXbklW',
   requested:'fld3bvuKr1SIXAwUf', stage:STAGE_F, cycles:'flda02NPGg4TFd8wp' };
 const GLF = { type:'fldynRy5JVc8MHzmn', target:'fldC8KQzgngaBtmmL', actual:'fldrzoRt4JsDZb8gQ', cycle:'fldvzwukj9URXZoG7' };
@@ -771,6 +772,9 @@ exports.handler = async (event) => {
         user:r.fields[L.user]||'', proposalId:r.fields[L.pid]||''
       })).sort((a,b)=> new Date(b.at)-new Date(a.at)).slice(0,80);
       const bal = balRecs.length ? { account:balRecs[0].fields['fldkVMZNye4ZFkUtK']||'', balance:balRecs[0].fields['fld8Bv81lUPaMEAxS']||0, asOf:balRecs[0].fields['fld4Wy34J0iJjqGCC']||'' } : null;
+      // ALL account balances (multi-account: each foundation's money can sit
+      // in its own account; the first row stays the main 510181 picture).
+      const bals = balRecs.map(r => ({ account:r.fields['fldkVMZNye4ZFkUtK']||'', balance:r.fields['fld8Bv81lUPaMEAxS']||0, asOf:r.fields['fld4Wy34J0iJjqGCC']||'' }));
       const travelRecs = await safe(fetchAll(T_TRAVEL, {}));
       const travel = travelRecs.map(r => ({
         id:r.id, name:r.fields[TR.name]||'', email:r.fields[TR.email]||'', team:r.fields[TR.team]||'',
@@ -794,7 +798,7 @@ exports.handler = async (event) => {
         const mineTravel = travel.filter(t => (t.email||'').trim().toLowerCase() === myEmail);
         return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, user:who });
       }
-      return reply(200, { cycles, props, logs, funds, bal, goals, countries_meta, reports, travel, user:who });
+      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, user:who });
     }
 
     if(body.op === 'people_list'){
@@ -901,10 +905,19 @@ exports.handler = async (event) => {
       const LINK_TTL = 1000*60*60*24*45; // links stay valid for 45 days
       const sentLink = (kind, id) => `${SITE_URL}/.netlify/functions/airtable?op=sent&t=${makeActionToken({ a:'sent', k:kind==='travel'?'t':'p', id, exp:Date.now()+LINK_TTL })}`;
       // Both ends of every transfer, so accounting never has to look anything
-      // up: FROM is the National Ministries account on file (Account Balance),
+      // up. FROM is per-foundation: the Account Number on the grant's cycle
+      // (each foundation's money can sit in its own account), or the fund's
+      // own account for SECC travel — falling back to the main 510181 account.
       // TO is the Cedarstone account from the application / travel request.
-      const balRecs2 = await fetchAll(T_BAL, {}).catch(() => []);
-      const fromAcct = (balRecs2.length && balRecs2[0].fields['fldkVMZNye4ZFkUtK']) || '510181 - National Expansion Projects';
+      const [balRecs2, cyclesAll, fundsAll] = await Promise.all([
+        fetchAll(T_BAL, {}).catch(() => []),
+        fetchAll(T_CYCLE, {}).catch(() => []),
+        fetchAll(T_FUNDS, {}).catch(() => []),
+      ]);
+      const mainFrom = (balRecs2.length && balRecs2[0].fields['fldkVMZNye4ZFkUtK']) || '510181 - National Expansion Projects';
+      const cyclesById2 = Object.fromEntries(cyclesAll.map(c => [c.id, c]));
+      const seccFund2 = fundsAll.find(r => /SE\s*Christian|SouthEast/i.test(String((r.fields['fldVacsCCr02d612m'])||'')));
+      const travelFrom = (seccFund2 && String(seccFund2.fields[FUND_ACCT_F]||'').trim()) || mainFrom;
       const lines = [];
       for(const it of items){
         if(!it || !it.recordId) continue;
@@ -914,15 +927,23 @@ exports.handler = async (event) => {
           const applicant = (f[TR.name]||'').trim() || (f[TR.email]||'');
           const toAcct = String(f[TR.acct]||'').trim();
           lines.push(`${usd(f[TR.appAmt] || f[TR.reqAmt])} — SECC travel grant to ${applicant}${f[TR.team] ? ` (${f[TR.team]})` : ''}`
-            + `\n   From account: ${fromAcct} (SouthEast travel fund)`
+            + `\n   From account: ${travelFrom} (SouthEast travel fund)`
             + `\n   To Cedarstone account: ${toAcct || `not on file — check with ${applicant}`}`
             + `\n   ✅ When you've sent it, click here (everyone is notified automatically):\n   ${sentLink('travel', it.recordId)}`);
         } else {
           const rec = await at(BASE+'/'+T_PROP+'/'+it.recordId+'?returnFieldsByFieldId=true');
           const f = rec.fields || {};
           const toAcct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
+          // The grant's foundation account: first linked cycle with one set.
+          const cycIds = Array.isArray(f['flda02NPGg4TFd8wp']) ? f['flda02NPGg4TFd8wp'].map(x => (x && x.id) ? x.id : x) : [];
+          let fromAcct = mainFrom, fndName = '';
+          for(const cid of cycIds){
+            const c = cyclesById2[cid];
+            const a = c && String(c.fields[CYF.acct]||'').trim();
+            if(a){ fromAcct = a; fndName = String((c.fields[CYF.foundation] && (c.fields[CYF.foundation].name || c.fields[CYF.foundation])) || ''); break; }
+          }
           lines.push(`${usd(f[PNF.awarded])} — "${f[PNF.name] || 'a grant'}"${f[PNF.country] ? ` (${f[PNF.country]})` : ''}`
-            + `\n   From account: ${fromAcct}`
+            + `\n   From account: ${fromAcct}${fndName ? ` (${fndName})` : ''}`
             + `\n   To Cedarstone account: ${toAcct || 'not on file — check with the country'}`
             + `\n   ✅ When you've sent it, click here (everyone is notified automatically):\n   ${sentLink('project', it.recordId)}`);
         }
@@ -991,7 +1012,10 @@ exports.handler = async (event) => {
     }
 
     if(body.op === 'set_balance'){
-      // Update the account balance from the monthly CSV reconcile (EVP/Management).
+      // Update AN account's balance from its monthly CSV reconcile (EVP /
+      // Management). Multi-account: body.account says which account the CSV
+      // belongs to; the matching Account Balance row is updated, or a new row
+      // is created for a first-time account. No account given = the main row.
       if(!canBalance(who)) return reply(403, { error:'Only EVP can update the account balance.' });
       if(body.balance == null) return reply(400, { error:'Missing balance.' });
       const B = { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' };
@@ -999,20 +1023,27 @@ exports.handler = async (event) => {
       if(body.asOf) fields[B.asOf] = body.asOf;
       if(body.note != null) fields[B.note] = String(body.note);
       const existing = await fetchAll(T_BAL, {});
+      const want = String(body.account||'').trim();
+      const norm = s => String(s||'').trim().toLowerCase();
+      let target = want
+        ? (existing.find(r => norm(r.fields[B.account]) === norm(want))
+           || existing.find(r => want.split(/[\s-]/)[0] && norm(r.fields[B.account]).startsWith(norm(want.split(/[\s-]/)[0]))))
+        : existing[0];
       let rec;
-      if(existing.length){
-        rec = await at(BASE+'/'+T_BAL+'/'+existing[0].id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      if(target){
+        rec = await at(BASE+'/'+T_BAL+'/'+target.id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
       } else {
-        if(!fields[B.account]) fields[B.account] = '510181 - National Expansion Projects';
+        fields[B.account] = want || '510181 - National Expansion Projects';
         const created = await at(BASE+'/'+T_BAL, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
         rec = created.records && created.records[0];
       }
+      const acctName = want || (target && target.fields[B.account]) || '510181 - National Expansion Projects';
       try{
-        await writeLog([{ fields:{ [L.entry]:'Account balance updated', [L.type]:'Status change',
-          [L.detail]:(who.name||who.email)+' set the account balance to $'+Number(body.balance).toLocaleString('en-US')+(body.asOf?(' as of '+body.asOf):''),
+        await writeLog([{ fields:{ [L.entry]:'Account balance updated — '+acctName, [L.type]:'Status change',
+          [L.detail]:(who.name||who.email)+' set the balance of '+acctName+' to $'+Number(body.balance).toLocaleString('en-US')+(body.asOf?(' as of '+body.asOf):''),
           [L.user]:who.name||'', [L.email]:who.email||'' } }]);
       }catch(logErr){ /* best effort */ }
-      return reply(200, { ok:true, balance:Number(body.balance), asOf:body.asOf||'', user:who });
+      return reply(200, { ok:true, account:acctName, balance:Number(body.balance), asOf:body.asOf||'', user:who });
     }
 
     if(body.op === 'report_submit'){
@@ -1121,6 +1152,7 @@ exports.handler = async (event) => {
       if(!f.name || !String(f.name).trim()) return reply(400, { error:'Missing cycle name.' });
       const fields = { [CYF.name]:String(f.name).trim(), [CYF.foundation]:String(f.foundation).trim() };
       if(f.total != null && f.total !== '') fields[CYF.total] = Number(f.total) || 0;
+      if(f.acct) fields[CYF.acct] = String(f.acct).trim();
       const created = await at(BASE+'/'+T_CYCLE, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
       const rec = created.records && created.records[0];
       try{
@@ -1130,6 +1162,25 @@ exports.handler = async (event) => {
           [L.user]:who.name||'', [L.email]:who.email||'' } }]);
       }catch(logErr){ /* best effort */ }
       return reply(200, { ok:true, id: rec && rec.id, user:who });
+    }
+
+    // Set WHERE a foundation gift's money sits — the account transfers for
+    // its grants are drawn from. EVP only (it steers real money movements).
+    if(body.op === 'cycle_update'){
+      if(!canSendMoney(who)) return reply(403, { error:'Only the EVP team can change where a foundation\'s money is drawn from.' });
+      if(!body.cycleId) return reply(400, { error:'Missing cycleId.' });
+      if(body.acct == null) return reply(400, { error:'Nothing to update.' });
+      await at(BASE+'/'+T_CYCLE+'/'+body.cycleId, { method:'PATCH', body:JSON.stringify({ fields:{ [CYF.acct]:String(body.acct).trim() }, typecast:true }) });
+      return reply(200, { ok:true, user:who });
+    }
+
+    // Same, for a fund in Available Funds (e.g. the SECC travel fund).
+    if(body.op === 'fund_update'){
+      if(!canSendMoney(who)) return reply(403, { error:'Only the EVP team can change where a fund\'s money is drawn from.' });
+      if(!body.fundId) return reply(400, { error:'Missing fundId.' });
+      if(body.acct == null) return reply(400, { error:'Nothing to update.' });
+      await at(BASE+'/'+T_FUNDS+'/'+body.fundId, { method:'PATCH', body:JSON.stringify({ fields:{ [FUND_ACCT_F]:String(body.acct).trim() }, typecast:true }) });
+      return reply(200, { ok:true, user:who });
     }
 
     if(body.op === 'delete'){

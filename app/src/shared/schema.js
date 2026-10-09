@@ -112,13 +112,15 @@ export const F = {
     pid:    'fldB1xE98xE2LdsW2',
     proposal:'fldDCLcDUyODA0AvP', // linked
   },
-  cycle:   { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz', projects:'fld4GE2gj9YRXIrQv' },
+  cycle:   { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz', projects:'fld4GE2gj9YRXIrQv',
+             acct:'fldnA4eb4KTWZ20wz' }, // which account this gift's money sits in
   goal:    { type:'fldynRy5JVc8MHzmn', target:'fldC8KQzgngaBtmmL', actual:'fldrzoRt4JsDZb8gQ',
              cycleYear:'fldgijFFoi0e2LfjR', foundationCycle:'fldfKb4Blj2HsDvee', cycle:'fldvzwukj9URXZoG7' },
   report:  { type:'fldVK0eF1dBGNnMG0', proposal:'fldWLpL3N2yIRfn0t', submitted:'fldTytlPqwAo01YtX', due:'fldkjC4V3NmC4ylDy',
              completedBy:'fldemspw6LSoGMnIQ', leaders:'fldP8DjBL1S5l1WWA', churches:'fldkksYMIC3YMdsNx', people:'fldisUoMECHpHZwp5' },
   balance: { account:'fldkVMZNye4ZFkUtK', balance:'fld8Bv81lUPaMEAxS', asOf:'fld4Wy34J0iJjqGCC', note:'fld29bXKDcudyG0SZ' },
-  funds:   { source:'fldVacsCCr02d612m', amount:'fldcZFJwHyfu5IgCl', status:'fldXwNvQuraOWvgq7', note:'fldNn57TqCs35zJnj' },
+  funds:   { source:'fldVacsCCr02d612m', amount:'fldcZFJwHyfu5IgCl', status:'fldXwNvQuraOWvgq7', note:'fldNn57TqCs35zJnj',
+             acct:'fldskrH1CeMz5CesJ' }, // which account this fund's money sits in
   travel:  { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKEDpGAD9o1A',
              purpose:'fld8oHEtAeBQbsYWR', depart:'fldc3LDVsLMCU16Vd', ret:'fldMvpfZTKuBwAhmB',
              reqAmt:'fldRwm5T4wcLIeIuL', appAmt:'fldGoVMNTpc2jf0v5', status:'fldtcWGoQLVOQcG5P',

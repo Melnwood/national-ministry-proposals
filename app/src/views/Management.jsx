@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
-import { money, moneyCents, date } from '../shared/format.js';
+import { money, moneyCents, date, aval } from '../shared/format.js';
 import { parseBankCSV } from '../shared/csv.js';
-import { ROLES } from '../shared/schema.js';
+import { ROLES, F } from '../shared/schema.js';
 import { PlanManager } from './StrategicPlans.jsx';
 import { Accounting } from './Accounting.jsx';
 import { Foundations } from './Foundations.jsx';
@@ -36,7 +36,7 @@ export function Management({ boot, session, onRefresh, view, onViewed }) {
       </nav>
 
       {sub === 'accounting' && <Accounting boot={boot} session={session} onRefresh={onRefresh} />}
-      {sub === 'foundations' && <Foundations boot={boot} onRefresh={onRefresh} />}
+      {sub === 'foundations' && <Foundations boot={boot} session={session} onRefresh={onRefresh} />}
       {sub === 'reports' && <Reports boot={boot} onRefresh={onRefresh} />}
       {sub === 'admin' && (
         <>
@@ -73,7 +73,24 @@ function Reconcile({ boot, onRefresh }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
-  const bal = boot.bal || null;
+
+  // Multi-account: the money can live in several accounts (the main 510181,
+  // a foundation's own account, the SECC fund's account). Each gets its own
+  // monthly CSV; pick which account this file belongs to before applying.
+  const bals = (boot.bals && boot.bals.length) ? boot.bals : (boot.bal ? [boot.bal] : []);
+  const knownAccts = useMemo(() => {
+    const list = [];
+    const add = a => { const v = String(a || '').trim(); if (v && !list.includes(v)) list.push(v); };
+    bals.forEach(b => add(b.account));
+    (boot.cycles || []).forEach(c => add(aval((c.fields || {})[F.cycle.acct])));
+    (boot.funds || []).forEach(r => add(aval((r.fields || {})[F.funds.acct])));
+    if (!list.length) list.push('510181 - National Expansion Projects');
+    return list;
+  }, [boot]);
+  const [acctPick, setAcctPick] = useState(knownAccts[0]);
+  const [acctOther, setAcctOther] = useState('');
+  const chosenAcct = acctPick === '__other' ? acctOther.trim() : acctPick;
+  const bal = bals.find(b => String(b.account || '').trim() === chosenAcct) || null;
 
   function onFile(e) {
     const file = e.currentTarget.files && e.currentTarget.files[0];
@@ -92,10 +109,11 @@ function Reconcile({ boot, onRefresh }) {
 
   async function apply() {
     if (!parsed || parsed.balance == null) return;
+    if (!chosenAcct) { setErr('Pick which account this CSV is from.'); return; }
     setBusy(true); setErr(''); setMsg('');
     try {
-      await api('set_balance', { balance: parsed.balance, asOf: parsed.asOf, note: `Reconciled from ${fileName}` });
-      setMsg(`Balance updated to ${money(parsed.balance)} as of ${date(parsed.asOf)}.`);
+      await api('set_balance', { balance: parsed.balance, asOf: parsed.asOf, note: `Reconciled from ${fileName}`, account: chosenAcct });
+      setMsg(`${chosenAcct}: balance updated to ${money(parsed.balance)} as of ${date(parsed.asOf)}.`);
       onRefresh && onRefresh();
     } catch (e) { setErr(e.message || 'Could not update the balance.'); }
     finally { setBusy(false); }
@@ -103,20 +121,42 @@ function Reconcile({ boot, onRefresh }) {
 
   return (
     <section style="margin-bottom:34px">
-      <div class="secthead">Reconcile <span class="dim">— monthly CSV from account 510181</span></div>
-      <p class="lead">Download the transactions CSV from Cedarstone and drop it here. It reads the latest balance and shows where the money went, so the “available to grant” figure stays honest.</p>
+      <div class="secthead">Reconcile <span class="dim">— one monthly CSV per account</span></div>
+      <p class="lead">Download each account's transactions CSV from Cedarstone and drop it here — pick which account the file is from first. Each account keeps its own balance, so the money picture stays honest even when foundations keep their money in separate accounts.</p>
 
       <div class="panel">
+        <label class="fld" style="max-width:360px;margin-bottom:12px"><span class="flbl">Which account is this CSV from?</span>
+          <select value={acctPick} onChange={e => setAcctPick(e.currentTarget.value)}>
+            {knownAccts.map(a => <option value={a}>{a}</option>)}
+            <option value="__other">＋ Another account…</option>
+          </select>
+          {acctPick === '__other' && (
+            <input value={acctOther} onInput={e => setAcctOther(e.currentTarget.value)} placeholder="Account number / name" style="margin-top:8px" />
+          )}
+        </label>
         <div class="curbal">
-          <div><div class="mlbl">Current balance on file</div>
+          <div><div class="mlbl">Balance on file — {chosenAcct || 'pick an account'}</div>
             <div class="mval">{bal ? money(bal.balance) : '—'}</div>
-            <div class="mnote">{bal && bal.asOf ? `as of ${date(bal.asOf)}` : 'no balance recorded'}</div>
+            <div class="mnote">{bal && bal.asOf ? `as of ${date(bal.asOf)}` : 'no balance recorded yet for this account'}</div>
           </div>
           <label class="filebtn">
             Choose CSV…
             <input type="file" accept=".csv,text/csv" onChange={onFile} style="display:none" />
           </label>
         </div>
+
+        {bals.length > 1 && (
+          <div class="tablewrap" style="margin-top:12px">
+            <table class="grants">
+              <thead><tr><th>Account</th><th class="r">Balance on file</th><th>As of</th></tr></thead>
+              <tbody>
+                {bals.map(b => (
+                  <tr key={b.account}><td class="nm">{b.account || '—'}</td><td class="r">{money(b.balance)}</td><td class="cty">{b.asOf ? date(b.asOf) : '—'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {err && <div class="editerr" style="margin-top:14px">{err}</div>}
         {msg && <div class="okmsg">{msg}</div>}

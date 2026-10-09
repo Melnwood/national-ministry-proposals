@@ -25,6 +25,23 @@ export function Accounting({ boot, session, onRefresh }) {
   const travelToPay = travel.filter(t => t.status === 'Approved');
   const seccFund = (boot.funds || []).find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
   const seccFundName = seccFund ? aval(seccFund.fields[F.funds.source]) : 'SE Christian Foundation';
+  const mainAcct = (boot.bal && boot.bal.account) || '510181 - National Expansion Projects';
+  // Each foundation's money can sit in its own account: a grant's FROM is the
+  // Account Number on its cycle (set on the Foundations page), else the main.
+  const cyclesById = useMemo(() => {
+    const m = {}; (boot.cycles || []).forEach(c => { m[c.id] = c; }); return m;
+  }, [boot.cycles]);
+  const fromFor = p => {
+    const ids = Array.isArray(p.fields[F.proposal.cycles]) ? p.fields[F.proposal.cycles].map(x => (x && x.id) ? x.id : x) : [];
+    for (const id of ids) {
+      const c = cyclesById[id];
+      const a = c && aval(c.fields[F.cycle.acct]);
+      if (a) return `${a} (${aval(c.fields[F.cycle.foundation]) || 'foundation account'})`;
+    }
+    return mainAcct;
+  };
+  const seccAcct = seccFund ? aval(seccFund.fields[F.funds.acct]) : '';
+  const travelFrom = seccAcct ? `${seccAcct} — ${seccFundName}` : seccFundName;
 
   // ── One email for everything ready ───────────────────────────────────────
   // Every ready payment (projects + travel) carries a checkbox, all selected
@@ -78,7 +95,7 @@ export function Accounting({ boot, session, onRefresh }) {
       <div class="secthead" style="font-size:15px">Ready to transfer <span class="dim">— {atAccounting.length}</span></div>
       {!atAccounting.length && <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a transfer right now.</p></div>}
       <div class="cards">
-        {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh}
+        {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={fromFor(p)} onDone={onRefresh}
           canAct={canAct} pick={canAct ? { checked: sel.has('project:' + p.id), onToggle: () => toggle('project:' + p.id) } : null} />)}
       </div>
 
@@ -92,7 +109,7 @@ export function Accounting({ boot, session, onRefresh }) {
                 <tr><th style="width:28px"></th><th>Who</th><th>Trip</th><th>From — travel fund</th><th>To — Cedarstone acct</th><th class="r">Amount</th><th></th></tr>
               </thead>
               <tbody>
-                {travelToPay.map(t => <TravelPayRow key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh}
+                {travelToPay.map(t => <TravelPayRow key={t.id} t={t} fromFund={travelFrom} onDone={onRefresh}
                   canAct={canAct} pick={canAct ? { checked: sel.has('travel:' + t.id), onToggle: () => toggle('travel:' + t.id) } : null} />)}
               </tbody>
             </table>
