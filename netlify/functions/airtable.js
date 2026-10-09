@@ -705,8 +705,12 @@ exports.handler = async (event) => {
         const DEFERRED_LABELS = ['Deferred','Approved — Deferred','Grant Team Approved'];
         const stale = props.filter(p => {
           if(!DEFERRED_LABELS.includes(sname2(p.fields[STAGE_F]))) return false;
-          const ref = p.fields['fldxV1o8EVEXaitod'] || p.fields['fldVIJKaXqmUw8qFP'] || ''; // end, else start
-          return !!ref && String(ref).slice(0,10) < cutoff;
+          // BOTH dates must be a month in the past (per Mel) — so take the
+          // later of start/end. Protects projects with swapped/odd dates.
+          const dates = [p.fields['fldVIJKaXqmUw8qFP'], p.fields['fldxV1o8EVEXaitod']]
+            .filter(Boolean).map(d => String(d).slice(0,10)).sort();
+          const last = dates.pop();
+          return !!last && last < cutoff;
         });
         for(const p of stale.slice(0, 10)){ // bounded per load; rest next load
           const fields = { [STAGE_F]:'Archived' };
