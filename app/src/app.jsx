@@ -5,32 +5,30 @@ import { ROLE_BY_AIRTABLE, ROLES } from './shared/schema.js';
 import { SignIn } from './views/SignIn.jsx';
 import { GrantTeam } from './views/GrantTeam.jsx';
 import { Council } from './views/Council.jsx';
-import { Foundations } from './views/Foundations.jsx';
 import { Welcome } from './views/Welcome.jsx';
-import { Reports } from './views/Reports.jsx';
 import { Coach } from './views/Coach.jsx';
 import { Country } from './views/Country.jsx';
 import { Management } from './views/Management.jsx';
 import { CountryHistory } from './views/CountryHistory.jsx';
-import { Accounting } from './views/Accounting.jsx';
 import { NotificationBell } from './views/NotificationBell.jsx';
 
 // The workspace tabs and which roles can open each. A role with no match falls
 // back to seeing everything (useful before roles are fully populated).
 // CFO and President are grant-department users — they live in the Grant Team
-// view and its sibling tabs. The council decision + management tabs are EVP-only
-// (Ben & Amanda). Grant/Accounting/Foundations/Reports = the grant department.
+// view and its sibling tabs. The council decision tab is EVP-only (Ben &
+// Amanda). Management holds the back-office: Accounting, Foundations and
+// Reports for the whole grant department, plus setup & people for EVP only.
 const TABS = [
   { key: 'country',     label: 'My Country',   roles: ['country', 'evp'] },
   { key: 'coach',       label: 'Coach Review', roles: ['coach', 'evp'] },
   { key: 'council',     label: 'Council Lead Team', roles: ['evp'] },
   { key: 'grant',       label: 'Grant Team',  roles: ['evp', 'president', 'grant', 'cfo'] },
-  { key: 'accounting',  label: 'Accounting',  roles: ['evp', 'president', 'grant', 'cfo'] },
-  { key: 'foundations', label: 'Foundations', roles: ['evp', 'president', 'grant', 'cfo'] },
-  { key: 'reports',     label: 'Reports',     roles: ['evp', 'president', 'grant', 'cfo'] },
   { key: 'history',     label: 'Country History', roles: ['evp', 'president', 'grant', 'cfo'] },
-  { key: 'manage',      label: 'Management',  roles: ['evp'] },
+  { key: 'manage',      label: 'Management',  roles: ['evp', 'president', 'grant', 'cfo'] },
 ];
+// Old top-level tabs that now live INSIDE Management — a Welcome "jump" to one
+// of these opens Management on that section.
+const MANAGE_SUBS = ['accounting', 'foundations', 'reports'];
 
 export function App() {
   const [status, setStatus] = useState(getToken() ? 'loading' : 'signedout');
@@ -88,6 +86,7 @@ export function Workspace({ boot, session, onRefresh }) {
   const available = tabs.length ? tabs : TABS;
   const home = available.some(t => t.key === HOME[roleKey]) ? HOME[roleKey] : available[0].key;
   const [tab, setTab] = useState(home);
+  const [manageSub, setManageSub] = useState(null); // section Management should open on
   // When previewing a different role, jump to that role's home tab.
   useEffect(() => { setTab(home); }, [viewRole]);
 
@@ -125,7 +124,8 @@ export function Workspace({ boot, session, onRefresh }) {
       )}
 
       <Welcome boot={boot} session={viewSession} onGo={k => {
-        setTab(k);
+        if (MANAGE_SUBS.includes(k)) { setManageSub(k); setTab('manage'); }
+        else setTab(k);
         // Even when it's already the active tab, respond visibly: scroll down
         // to the content the button points at.
         setTimeout(() => { const el = document.querySelector('.tabs'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }, 0);
@@ -143,11 +143,9 @@ export function Workspace({ boot, session, onRefresh }) {
       {tab === 'coach' && <Coach boot={boot} session={viewSession} onRefresh={onRefresh} />}
       {tab === 'council' && <Council boot={boot} onRefresh={onRefresh} />}
       {tab === 'grant' && <GrantTeam boot={boot} session={viewSession} onRefresh={onRefresh} />}
-      {tab === 'accounting' && <Accounting boot={boot} session={viewSession} onRefresh={onRefresh} />}
-      {tab === 'foundations' && <Foundations boot={boot} onRefresh={onRefresh} />}
-      {tab === 'reports' && <Reports boot={boot} onRefresh={onRefresh} />}
       {tab === 'history' && <CountryHistory boot={boot} />}
-      {tab === 'manage' && <Management boot={boot} onRefresh={onRefresh} />}
+      {tab === 'manage' && <Management boot={boot} session={viewSession} onRefresh={onRefresh}
+        view={manageSub} onViewed={() => setManageSub(null)} />}
     </div>
   );
 }

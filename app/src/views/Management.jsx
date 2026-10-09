@@ -4,17 +4,51 @@ import { money, moneyCents, date } from '../shared/format.js';
 import { parseBankCSV } from '../shared/csv.js';
 import { ROLES } from '../shared/schema.js';
 import { PlanManager } from './StrategicPlans.jsx';
+import { Accounting } from './Accounting.jsx';
+import { Foundations } from './Foundations.jsx';
+import { Reports } from './Reports.jsx';
 
-export function Management({ boot, onRefresh }) {
+// Management is the back office, one tab with sections: Accounting (pay things
+// out), Foundations (the donors' money), Reports (what the countries owe us),
+// and — for EVP only — Setup & people (reconcile, people & access, strategic
+// plans). The whole grant department lands here; each role sees its sections.
+export function Management({ boot, session, onRefresh, view, onViewed }) {
+  const isEvp = !!(session && session.role && session.role.key === 'evp');
+  const subs = [
+    { key: 'accounting',  label: 'Accounting' },
+    { key: 'foundations', label: 'Foundations' },
+    { key: 'reports',     label: 'Reports' },
+    ...(isEvp ? [{ key: 'admin', label: 'Setup & people' }] : []),
+  ];
+  const [sub, setSub] = useState(view && subs.some(s => s.key === view) ? view : 'accounting');
+  // A Welcome "jump" can land on a specific section (e.g. ready-to-pay →
+  // Accounting); consume the request so later visits open normally.
+  useEffect(() => {
+    if (view && subs.some(s => s.key === view)) { setSub(view); onViewed && onViewed(); }
+  }, [view]);
+
   return (
     <>
-      <Reconcile boot={boot} onRefresh={onRefresh} />
-      <Fold title="People & access" dim="— roles, countries, and sign-ins">
-        <SignIns boot={boot} noHead />
-      </Fold>
-      <Fold title="Strategic plans" dim="— the yearly plan each grant is judged against">
-        <PlanManager countries={boot.countries_meta || []} noHead />
-      </Fold>
+      <nav class="subtabs" style="display:inline-flex;margin-bottom:16px">
+        {subs.map(s => (
+          <button class={`subtab${sub === s.key ? ' on' : ''}`} onClick={() => setSub(s.key)}>{s.label}</button>
+        ))}
+      </nav>
+
+      {sub === 'accounting' && <Accounting boot={boot} session={session} onRefresh={onRefresh} />}
+      {sub === 'foundations' && <Foundations boot={boot} onRefresh={onRefresh} />}
+      {sub === 'reports' && <Reports boot={boot} onRefresh={onRefresh} />}
+      {sub === 'admin' && (
+        <>
+          <Reconcile boot={boot} onRefresh={onRefresh} />
+          <Fold title="People & access" dim="— roles, countries, and sign-ins">
+            <SignIns boot={boot} noHead />
+          </Fold>
+          <Fold title="Strategic plans" dim="— the yearly plan each grant is judged against">
+            <PlanManager countries={boot.countries_meta || []} noHead />
+          </Fold>
+        </>
+      )}
     </>
   );
 }
