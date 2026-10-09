@@ -3,7 +3,7 @@ import { api } from '../shared/api.js';
 import { money, date, aval } from '../shared/format.js';
 import { STAGES, STAGE_BY_KEY, ACTIVE_STAGE_KEYS, TERMINAL_STAGE_KEYS, F } from '../shared/schema.js';
 import { moneySummary, byStage, projectName, country, coach, requested, awarded, paid, owed, stageKey, stageLabel } from '../shared/grants.js';
-import { PIPELINE_FLOW, TILE_LABEL } from './PipelineDash.jsx';
+import { PIPELINE_FLOW, TILE_LABEL, ViewGrant } from './PipelineDash.jsx';
 import { FoundationReport } from './FoundationReport.jsx';
 import { TravelTable } from './Travel.jsx';
 
@@ -31,6 +31,11 @@ export function GrantTeam({ boot, session, onRefresh }) {
 
   const travel = boot.travel || [];
   const travelNew = travel.filter(t => t.status === 'Submitted');
+
+  // Only the EVP team changes grants from here (for now). Everyone else on
+  // this tab — Kevin and the grant department — watches activity and builds
+  // foundation reports; clicking a grant opens the read-only card.
+  const canAct = !!(session.role && session.role.key === 'evp');
 
   const ongoing = useMemo(() => {
     const order = { deferred: 0 };
@@ -134,11 +139,13 @@ export function GrantTeam({ boot, session, onRefresh }) {
       )}
       </>)}
 
-      {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} />}
+      {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} canAct={canAct} />}
       {view === 'travel' && <TravelPanel travel={travel} funds={boot.funds || []} />}
       {view === 'paid' && <PaidPanel boot={boot} />}
 
-      {openGrant && <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />}
+      {openGrant && (canAct
+        ? <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />
+        : <ViewGrant p={openGrant} onClose={() => setOpenId(null)} />)}
       {reportOpen && <FoundationReport boot={boot} onClose={() => setReportOpen(false)} />}
     </>
   );
@@ -147,7 +154,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
 // Date a project has been waiting on funding — approval date, else created.
 function dateOf(p) { const f = p.fields || {}; return f[F.proposal.dateApproved] || f[F.proposal.createdTime] || ''; }
 
-function OngoingPanel({ list, onOpen, preview }) {
+function OngoingPanel({ list, onOpen, preview, canAct }) {
   return (
     <>
       <div class="secthead">Deferred projects <span class="dim">— {list.length} approved, waiting on funding</span></div>
@@ -159,10 +166,10 @@ function OngoingPanel({ list, onOpen, preview }) {
         <div class="tablewrap">
           <table class="grants ongoing">
             <thead>
-              <tr><th>Grant</th><th>Country</th><th>Coach</th><th class="r">Amount</th><th>Waiting since</th><th></th></tr>
+              <tr><th>Grant</th><th>Country</th><th>Coach</th><th class="r">Amount</th><th>Applied</th><th>Project start → end</th><th>Waiting since</th><th></th></tr>
             </thead>
             <tbody>
-              {list.map(p => <OngoingRow key={p.id} p={p} onOpen={onOpen} preview={preview} />)}
+              {list.map(p => <OngoingRow key={p.id} p={p} onOpen={onOpen} preview={preview} canAct={canAct} />)}
             </tbody>
           </table>
         </div>
@@ -171,7 +178,7 @@ function OngoingPanel({ list, onOpen, preview }) {
   );
 }
 
-function OngoingRow({ p, onOpen, preview }) {
+function OngoingRow({ p, onOpen, preview, canAct }) {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState('');
@@ -194,15 +201,21 @@ function OngoingRow({ p, onOpen, preview }) {
     setBusy(false);
   }
 
+  const f = p.fields || {};
+  const applied = f[F.proposal.createdTime] || '';
+  const start = f[F.proposal.startDate] || '', end = f[F.proposal.endDate] || '';
   return (
     <tr class="clk" onClick={() => onOpen(p.id)}>
       <td class="nm">{name}</td>
       <td class="cty">{country(p)}</td>
       <td class="cty">{coach(p) || '—'}</td>
       <td class="r">{amt ? money(amt) : '—'}</td>
+      <td class="cty">{applied ? date(applied) : '—'}</td>
+      <td class="cty">{start || end ? `${start ? date(start) : '?'} → ${end ? date(end) : '?'}` : '—'}</td>
       <td class="cty">{dateOf(p) ? date(dateOf(p)) : '—'}</td>
       <td class="r" onClick={e => e.stopPropagation()}>
-        {sent
+        {!canAct ? <span class="dim">—</span>
+          : sent
           ? <span class="sent-ok">✓ Asked{preview ? ' (preview)' : ''}</span>
           : <button class="mini-ask" disabled={busy} onClick={askStillNeeded} title="Message Ben, Amanda & the coach to check if this is still needed">
               {busy ? 'Sending…' : 'Ask if still needed'}

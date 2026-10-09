@@ -107,6 +107,10 @@ const isOversight = who => OVERSIGHT_ROLES.includes((who && who.role || '').trim
 // staff (they see the queue) until per-coach country assignment is populated.
 const isScopedCountry = who => (who && who.role || '').trim() === 'Country' && !(who && who.allCountries);
 const canDelete   = who => ['EVP','President','Grant team'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
+// Who may move money from inside the tool (decide travel requests, request
+// payments, record transfers): the EVP team only, for now. The grant team
+// (Kevin) watches activity and builds foundation reports.
+const canSendMoney = who => ['EVP'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
 const canBalance  = who => ['EVP','President'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
 const PROP_COUNTRY_LINK = 'fldaHnvEM4RokRDth';
 function inScope(who, propFields){
@@ -827,8 +831,8 @@ exports.handler = async (event) => {
     }
 
     if(body.op === 'travel_update'){
-      // Approving / paying travel requests is a grant-department action.
-      if(isScopedCountry(who)) return reply(403, { error:'Not permitted.' });
+      // Deciding and paying travel requests is an EVP action (for now).
+      if(!canSendMoney(who)) return reply(403, { error:'Only the EVP team can do that for now.' });
       if(!body.recordId || !body.fields) return reply(400, { error:'Missing recordId or fields.' });
       const before = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId+'?returnFieldsByFieldId=true');
       const upd = await at(BASE+'/'+T_TRAVEL+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields:body.fields, typecast:true }) });
@@ -851,7 +855,7 @@ exports.handler = async (event) => {
     // People & access), telling them a specific payment is ready. Works for
     // both programs: a project transfer or an approved SECC travel grant.
     if(body.op === 'pay_request'){
-      if(isScopedCountry(who)) return reply(403, { error:'Not permitted.' });
+      if(!canSendMoney(who)) return reply(403, { error:'Only the EVP team can send payment requests for now.' });
       // One payment ({kind, recordId}) or a batch ({items:[{kind, recordId}…]})
       // — a batch becomes ONE email listing everything, never one per card.
       const items = (Array.isArray(body.items) && body.items.length)

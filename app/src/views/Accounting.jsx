@@ -11,8 +11,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 // A grant only reaches At Accounting through a council approval, so being here
 // IS the sign-off. The stamps shown on each card are a record that the process
 // was followed — not a gate Accounting has to wait on. (2026-07-27, per Mel.)
-export function Accounting({ boot, onRefresh }) {
+export function Accounting({ boot, session, onRefresh }) {
   const props = boot.props || [];
+  // Only the EVP team sends transfer stuff from the tool (for now); everyone
+  // else sees the same queues read-only.
+  const canAct = !!(session && session.role && session.role.key === 'evp');
   const atAccounting = useMemo(() => props.filter(p => stageKey(p) === 'accounting'), [props]);
   const transferred = useMemo(() => props.filter(p => stageKey(p) === 'transferred'), [props]);
 
@@ -55,7 +58,7 @@ export function Accounting({ boot, onRefresh }) {
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
       <p class="lead">Every grant here has already been approved by the EVP and the Council Lead Team — that's how it got here. Everything Accounting needs to make the transfer is right here, no email required.</p>
 
-      {ready.length > 0 && (
+      {canAct && ready.length > 0 && (
         <div class="panel" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
           <div><b>{picked.length}</b> of {ready.length} ready payments selected · <b>{money(pickedTotal)}</b></div>
           <button type="button" class="mini" onClick={() => setSel(picked.length === ready.length ? new Set() : new Set(ready.map(r => r.key)))}>
@@ -76,7 +79,7 @@ export function Accounting({ boot, onRefresh }) {
       {!atAccounting.length && <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a transfer right now.</p></div>}
       <div class="cards">
         {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh}
-          pick={{ checked: sel.has('project:' + p.id), onToggle: () => toggle('project:' + p.id) }} />)}
+          canAct={canAct} pick={canAct ? { checked: sel.has('project:' + p.id), onToggle: () => toggle('project:' + p.id) } : null} />)}
       </div>
 
       {travelToPay.length > 0 && (
@@ -90,7 +93,7 @@ export function Accounting({ boot, onRefresh }) {
               </thead>
               <tbody>
                 {travelToPay.map(t => <TravelPayRow key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh}
-                  pick={{ checked: sel.has('travel:' + t.id), onToggle: () => toggle('travel:' + t.id) }} />)}
+                  canAct={canAct} pick={canAct ? { checked: sel.has('travel:' + t.id), onToggle: () => toggle('travel:' + t.id) } : null} />)}
               </tbody>
             </table>
           </div>
@@ -103,7 +106,7 @@ export function Accounting({ boot, onRefresh }) {
         <>
           <div class="secthead" style="font-size:15px;margin-top:30px">Funds transferred <span class="dim">— {transferred.length} to close out</span></div>
           <div class="cards">
-            {transferred.map(p => <ConfirmFundedCard key={p.id} p={p} onDone={onRefresh} />)}
+            {transferred.map(p => <ConfirmFundedCard key={p.id} p={p} onDone={onRefresh} canAct={canAct} />)}
           </div>
         </>
       )}
@@ -113,7 +116,7 @@ export function Accounting({ boot, onRefresh }) {
 
 const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
 
-function TransferCard({ p, fromAcct, onDone, pick }) {
+function TransferCard({ p, fromAcct, onDone, pick, canAct }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const amt = awarded(p) || requested(p);
@@ -162,21 +165,23 @@ function TransferCard({ p, fromAcct, onDone, pick }) {
           <div class="cstat-v" style="font-size:13px">EVP ✓ · Council Lead Team ✓</div></div>
       </div>
       {err && <div class="editerr">{err}</div>}
-      <div class="dc-confirm" style="align-items:center">
-        {pick && (
-          <label class="check inline" style="margin-right:auto" title="Include in the one email to accounting">
-            <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include in email</span>
-          </label>
-        )}
-        <button class="savebtn" disabled={busy} onClick={transfer} title="Records the transfer and emails the country leader, coach, Ben and Amanda">{busy ? 'Recording…' : 'Funds Transferred ✓'}</button>
-      </div>
+      {canAct !== false && (
+        <div class="dc-confirm" style="align-items:center">
+          {pick && (
+            <label class="check inline" style="margin-right:auto" title="Include in the one email to accounting">
+              <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include in email</span>
+            </label>
+          )}
+          <button class="savebtn" disabled={busy} onClick={transfer} title="Records the transfer and emails the country leader, coach, Ben and Amanda">{busy ? 'Recording…' : 'Funds Transferred ✓'}</button>
+        </div>
+      )}
     </div>
   );
 }
 
 // Money has left — this card closes the loop and moves the grant into the
 // all-time Project funded total.
-function ConfirmFundedCard({ p, onDone }) {
+function ConfirmFundedCard({ p, onDone, canAct }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const amt = awarded(p) || requested(p);
@@ -202,9 +207,11 @@ function ConfirmFundedCard({ p, onDone }) {
         <div class="xfer-amt">{money(amt)}</div>
       </div>
       {err && <div class="editerr">{err}</div>}
-      <div class="dc-confirm">
-        <button class="savebtn" disabled={busy} onClick={confirm}>{busy ? 'Saving…' : 'Project funded ✓'}</button>
-      </div>
+      {canAct !== false && (
+        <div class="dc-confirm">
+          <button class="savebtn" disabled={busy} onClick={confirm}>{busy ? 'Saving…' : 'Project funded ✓'}</button>
+        </div>
+      )}
     </div>
   );
 }

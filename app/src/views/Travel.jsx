@@ -82,7 +82,7 @@ export function TravelCard({ t, onDone }) {
 
 // Accounting's payout list: one compact ROW per approved travel grant —
 // checkbox for the batch email, both ends of the payment, and Mark Paid.
-export function TravelPayRow({ t, fromFund, onDone, pick }) {
+export function TravelPayRow({ t, fromFund, onDone, pick, canAct }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const amt = t.appAmt || t.reqAmt || 0;
@@ -104,7 +104,9 @@ export function TravelPayRow({ t, fromFund, onDone, pick }) {
       <td class={t.acct ? 'cty' : 'r owe'} style="text-align:left">{t.acct || 'not on file'}</td>
       <td class="r"><b>{money(amt)}</b></td>
       <td class="r">
-        <button class="paybtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Saving…' : 'Mark Paid ✓'}</button>
+        {canAct === false
+          ? <span class="dim">awaiting payment</span>
+          : <button class="paybtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Saving…' : 'Mark Paid ✓'}</button>}
         {err && <div class="editerr sm">{err}</div>}
       </td>
     </tr>
