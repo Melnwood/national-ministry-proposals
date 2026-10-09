@@ -197,6 +197,13 @@ function ReportDoc({ data, cycleId }) {
               ? <p class="rp-note noprint">The AI draft needs an Anthropic API key added in Netlify (like the email key). Until then, the stories below are pulled straight from the field reports and you can write the summary yourself.</p>
               : <p class="rp-note noprint">Click <b>Draft with AI</b> to turn the field reports below into a warm summary you can send — or write your own using the stories.</p>}
         {sumErr && <div class="editerr noprint">{sumErr}</div>}
+
+        {/* The statement itself, word for word, closing the letter — set in
+            the page so it is always present and always exact. */}
+        <div class="rp-mission">
+          <p>“A movement of God among the youth of Central and Eastern Europe that finds its home in the local church and transforms society.”</p>
+          <div class="rp-mission-sub">The vision your partnership fuels — equipping young leaders to fulfill Christ’s commission through the local church.</div>
+        </div>
       </section>
 
       {stories && stories.length > 0 && (
