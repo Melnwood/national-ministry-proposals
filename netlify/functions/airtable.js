@@ -753,7 +753,9 @@ exports.handler = async (event) => {
           spent: r.fields['fld25e4OC4ObhbyZw'] || 0,
           story: r.fields['fldoOYDPd2tbnzvgC'] || '',
           challenges: r.fields['fldqkWPn3hAFQXoFu'] || '',
-          lessons: r.fields['fldpM9VAWPVjMeUCm'] || ''
+          lessons: r.fields['fldpM9VAWPVjMeUCm'] || '',
+          photos: (Array.isArray(r.fields['fldN6cvQXDhM9aCpX']) ? r.fields['fldN6cvQXDhM9aCpX'] : []).slice(0, 6)
+            .map(a => ({ url: a.url, thumb: (a.thumbnails && a.thumbnails.large && a.thumbnails.large.url) || a.url, filename: a.filename || 'photo' }))
         };
       }).filter(x => x.proposalId);
       const countries_meta = countryRecs.map(r => {
@@ -1065,7 +1067,21 @@ exports.handler = async (event) => {
       rsetS(RF.story,src.story); rsetS(RF.challenges,src.challenges); rsetS(RF.lessons,src.lessons);
       rsetS(RF.nextSteps,src.nextSteps); rsetS(RF.comments,src.comments);
       rsetN(RF.spent,src.spent); rsetN(RF.people,src.people); rsetN(RF.leaders,src.leaders); rsetN(RF.churches,src.churches);
+      // The 3 best photos are part of the report (per Mel: 3 at mid-term, 3
+      // different at the end). Client resizes before sending; required there,
+      // checked again here so the rule holds.
+      const photos = Array.isArray(body.photos) ? body.photos.filter(ph => ph && ph.data).slice(0, 3) : [];
+      if(photos.length < 3) return reply(400, { error:'Please attach your 3 best photos of the project — they go straight into the foundation report.' });
       await at(BASE+'/'+T_REPORT+'/'+body.reportId, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      const PHOTOS_F = 'fldN6cvQXDhM9aCpX';
+      for(const ph of photos){
+        try{
+          await fetch('https://content.airtable.com/v0/'+BASE+'/'+body.reportId+'/'+PHOTOS_F+'/uploadAttachment', {
+            method:'POST', headers:{ Authorization:'Bearer '+TOKEN, 'Content-Type':'application/json' },
+            body: JSON.stringify({ contentType: ph.contentType||'image/jpeg', file: ph.data, filename: ph.filename||'photo.jpg' })
+          });
+        }catch(upErr){ /* best effort per photo — the report itself is saved */ }
+      }
       try{ await writeLog([{ fields:{ [L.entry]:(body.projectName? body.projectName+' — ':'')+'Project report submitted', [L.type]:'Status change',
         [L.detail]:(who.name||who.email)+' submitted a project report in the app', [L.user]:who.name||'', [L.email]:who.email||'', [L.pid]:pid||'' } }]); }catch(e){}
       return reply(200, { ok:true, user:who });

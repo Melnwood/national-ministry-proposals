@@ -4,6 +4,7 @@ import { money, date, aval, daysAgo } from '../shared/format.js';
 import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD } from '../shared/schema.js';
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
+import { shrinkImage } from '../shared/img.js';
 import { PipelineDash } from './PipelineDash.jsx';
 import { PlanManager } from './StrategicPlans.jsx';
 import { TravelTable } from './Travel.jsx';
@@ -429,14 +430,30 @@ function GrantStatus({ p, reports, onDone }) {
 function ReportForm({ r, p, midReport, onClose, onDone }) {
   const [v, setV] = useState({ spent: '', people: '', leaders: '', churches: '', story: '', challenges: '', lessons: '', nextSteps: '' });
   const set = (k, val) => setV(prev => ({ ...prev, [k]: val }));
+  const [photos, setPhotos] = useState([]); // [{filename, contentType, data, preview}]
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
+  async function onPhotos(e) {
+    const files = Array.from(e.currentTarget.files || []);
+    e.currentTarget.value = '';
+    setErr('');
+    for (const f of files) {
+      if (photos.length + files.indexOf(f) >= 3) break;
+      try {
+        const shrunk = await shrinkImage(f);
+        setPhotos(prev => (prev.length >= 3 ? prev : [...prev, shrunk]));
+      } catch (ex) { setErr(ex.message || 'Could not read that photo.'); }
+    }
+  }
+
   async function submit() {
     if (!v.story.trim()) { setErr('Tell the story — even a few sentences. This is what goes to the foundations who gave the money.'); return; }
+    if (photos.length !== 3) { setErr(`Add your 3 best photos of the project (you have ${photos.length}). They go straight into the foundation report.`); return; }
     setBusy(true); setErr('');
     try {
-      await api('report_submit', { reportId: r.id, fields: v, projectName: projectName(p) });
+      await api('report_submit', { reportId: r.id, fields: v, projectName: projectName(p),
+        photos: photos.map(({ filename, contentType, data }) => ({ filename, contentType, data })) });
       onDone();
     } catch (e) { setErr(e.message || 'Could not submit the report.'); setBusy(false); }
   }
@@ -469,6 +486,14 @@ function ReportForm({ r, p, midReport, onClose, onDone }) {
             {midReport.story && <p style="margin:6px 0 0;font-size:13px"><b>Story:</b> {midReport.story}</p>}
             {midReport.challenges && <p style="margin:6px 0 0;font-size:13px"><b>Challenges:</b> {midReport.challenges}</p>}
             {midReport.lessons && <p style="margin:6px 0 0;font-size:13px"><b>Lessons:</b> {midReport.lessons}</p>}
+            {Array.isArray(midReport.photos) && midReport.photos.length > 0 && (
+              <div style="margin-top:8px">
+                <div class="dt">Photos you sent at mid-term — pick 3 different ones below</div>
+                <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+                  {midReport.photos.map(ph => <img src={ph.thumb} alt={ph.filename} style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)" />)}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -493,6 +518,23 @@ function ReportForm({ r, p, midReport, onClose, onDone }) {
             <textarea rows="3" value={v.lessons} onInput={e => set('lessons', e.currentTarget.value)} /></label>
           <label class="fld"><span class="flbl">Next steps</span>
             <textarea rows="2" value={v.nextSteps} onInput={e => set('nextSteps', e.currentTarget.value)} /></label>
+
+          <label class="fld">
+            <span class="flbl">Your 3 best photos of the project — required{r.kind === 'Final' ? ' (different from the mid-term ones)' : ''}</span>
+            <input type="file" accept="image/*" multiple onChange={onPhotos} disabled={photos.length >= 3} />
+            <span class="mini dim">{photos.length} of 3 added · photos are what the foundations love most</span>
+          </label>
+          {photos.length > 0 && (
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+              {photos.map((ph, i) => (
+                <div style="position:relative">
+                  <img src={ph.preview} alt={ph.filename} style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--line-d)" />
+                  <button type="button" class="mini" style="position:absolute;top:4px;right:4px;padding:2px 7px"
+                    onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {err && <div class="editerr">{err}</div>}
         <div class="modal-foot actions">

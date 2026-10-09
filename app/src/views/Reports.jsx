@@ -95,6 +95,15 @@ function ReportReader({ rows, proposalId, onClose }) {
               {r.done ? (
                 <>
                   <p style="margin:10px 0 0;font-size:13px"><b>Impact:</b> {r.leaders || 0} leaders · {r.churches || 0} churches · {r.people || 0} people{r.spent ? <> · <b>{money(r.spent)}</b> spent</> : null}</p>
+                  {Array.isArray(r.photos) && r.photos.length > 0 && (
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+                      {r.photos.map(ph => (
+                        <a href={ph.url} target="_blank" rel="noopener" title={ph.filename}>
+                          <img src={ph.thumb} alt={ph.filename} style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {r.story && <div style="margin-top:10px"><div class="dt">The story</div><p style="margin:4px 0 0;font-size:13.5px;white-space:pre-wrap">{r.story}</p></div>}
                   {r.challenges && <div style="margin-top:10px"><div class="dt">Challenges</div><p style="margin:4px 0 0;font-size:13.5px;white-space:pre-wrap">{r.challenges}</p></div>}
                   {r.lessons && <div style="margin-top:10px"><div class="dt">Lessons learned</div><p style="margin:4px 0 0;font-size:13.5px;white-space:pre-wrap">{r.lessons}</p></div>}
