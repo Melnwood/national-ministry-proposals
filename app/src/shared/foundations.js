@@ -10,19 +10,26 @@ import { awarded, stageKey } from './grants.js';
 const linkIds = v => Array.isArray(v) ? v.map(x => (x && x.id) ? x.id : x) : [];
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 
-export function buildFoundations(cycles = [], goals = [], props = []) {
+export function buildFoundations(cycles = [], goals = [], props = [], reports = []) {
   const cycleList = cycles.map(c => {
     const grants = props.filter(p => linkIds(p.fields[F.proposal.cycles]).includes(c.id));
     const fundedCount = grants.filter(p => stageKey(p) === 'funded').length;
+    // The cycle's filed reports, joined report → grant → cycle (the report's
+    // own links are unreliable); goal actuals are summed from these.
+    const grantIds = new Set(grants.map(p => p.id));
+    const cycReports = reports.filter(r => grantIds.has(r.proposalId));
+    const sumR = k => cycReports.reduce((a, r) => a + num(r[k]), 0);
 
     const cycleGoals = goals
       .filter(g => linkIds(g.fields[F.goal.cycle]).includes(c.id))
       .map(g => {
         const type = aval(g.fields[F.goal.type]);
         const rollup = num(g.fields[F.goal.actual]);
-        // "Projects funded" actual is reliably the count of funded grants;
-        // impact goals (leaders/churches/people) use the report rollup.
-        const actual = /project/i.test(type) ? fundedCount : rollup;
+        const actual = /project/i.test(type) ? fundedCount
+          : /leader/i.test(type) ? sumR('leaders')
+          : /church/i.test(type) ? sumR('churches')
+          : /people|individual/i.test(type) ? sumR('people')
+          : rollup;
         return { type, target: num(g.fields[F.goal.target]), actual };
       })
       .sort((a, b) => b.target - a.target);

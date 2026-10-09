@@ -403,13 +403,20 @@ async function gatherCycle(cycleId){
     };
   }).filter(s => s.story || s.lessons || s.challenges || s.nextSteps || s.comments || s.objectives.length);
 
+  const sumReports = key => reports.reduce((a, r) => a + nnum(r.fields[RF[key]]), 0);
+
+  // Goal actuals come from the SAME filed reports as the headline tiles —
+  // never from the Airtable rollup, which needs report→goal links nobody sets.
   const goalRows = goals.map(g => {
     const type = sname(g.fields[GLF.type]);
     const rollup = nnum(g.fields[GLF.actual]);
-    return { type, target: nnum(g.fields[GLF.target]), actual: /project/i.test(type) ? funded.length : rollup };
+    const actual = /project/i.test(type) ? funded.length
+      : /leader/i.test(type) ? sumReports('leaders')
+      : /church/i.test(type) ? sumReports('churches')
+      : /people|individual/i.test(type) ? sumReports('people')
+      : rollup;
+    return { type, target: nnum(g.fields[GLF.target]), actual };
   }).sort((a, b) => b.target - a.target);
-
-  const sumReports = key => reports.reduce((a, r) => a + nnum(r.fields[RF[key]]), 0);
 
   return {
     cycle: { id: cycleId, foundation: sname(cf[CYF.foundation]) || 'This foundation', year: cf[CYF.name] || '', gift: nnum(cf[CYF.total]) },

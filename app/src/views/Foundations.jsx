@@ -7,8 +7,8 @@ import { PipelineDash } from './PipelineDash.jsx';
 
 export function Foundations({ boot, session, onRefresh }) {
   const data = useMemo(
-    () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || []),
-    [boot.cycles, boot.goals, boot.props]
+    () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || []),
+    [boot.cycles, boot.goals, boot.props, boot.reports]
   );
   const [adding, setAdding] = useState(false);
   // Setting where a gift's money sits is an EVP action (it steers transfers).

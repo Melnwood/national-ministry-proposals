@@ -11,8 +11,8 @@ import { buildFoundations } from '../shared/foundations.js';
 // real report data is in.
 export function FoundationReport({ boot, onClose }) {
   const foundations = useMemo(
-    () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || []),
-    [boot.cycles, boot.goals, boot.props]
+    () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || []),
+    [boot.cycles, boot.goals, boot.props, boot.reports]
   );
 
   const [foundation, setFoundation] = useState(foundations[0] ? foundations[0].foundation : '');
