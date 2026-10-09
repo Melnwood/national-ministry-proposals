@@ -74,6 +74,22 @@ function verifyToken(token){
   if(!data.exp || Date.now() > data.exp) return null;
   return { email:data.email, name:data.name, role:data.role||'', allCountries:!!data.allCountries, countryIds:data.countryIds||[] };
 }
+// Single-purpose signed links for the buttons inside emails: accounting (who
+// never signs in to the app) clicks "I've sent it" and the grant is marked
+// transferred + everyone notified. Signed with the same server secret as
+// session tokens; can't be forged or edited, and each link does one thing to
+// one record. a:'sent', k:'t' (travel) | 'p' (project).
+function makeActionToken(obj){ const p = b64u(JSON.stringify(obj)); return p + '.' + sign(p); }
+function readActionToken(t){
+  if(!t || t.indexOf('.') < 0) return null;
+  const [p, sig] = String(t).split('.');
+  const expect = sign(p);
+  if(sig.length !== expect.length) return null;
+  if(!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
+  let o; try{ o = JSON.parse(Buffer.from(p.replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; }
+  if(!o.exp || Date.now() > o.exp) return null;
+  return o;
+}
 
 // ---- role scope ----
 // Oversight roles see everything and may act broadly; coach/country are scoped
@@ -201,6 +217,38 @@ const firstName = (name, email) => {
   const m = String(email||'').split('@')[0];
   return m ? m.charAt(0).toUpperCase()+m.slice(1) : 'friend';
 };
+// Everything that should happen when a travel request's status changes —
+// shared by the in-app buttons (travel_update) and the one-click email links.
+// bf = the record's fields BEFORE the change (by field id).
+async function travelStatusEffects(bf, newStatus, appAmtNew, actorLabel){
+  const applicant = (bf[TR.name]||'').trim();
+  const email = (bf[TR.email]||'').trim();
+  const amt = usd(appAmtNew != null ? appAmtNew : (bf[TR.appAmt] || bf[TR.reqAmt]));
+  const N_NAME = 'fldykHqa2JyKlkykm';
+  const msgs = {
+    'Approved': `Good news — your SECC travel request was approved for ${amt}. You'll get another message the moment the money is sent.`,
+    'Paid':     `Your SECC travel grant has been paid — ${amt} from the SouthEast travel fund is on its way to you.`,
+    'Denied':   `Your SECC travel request was not approved this time. If you have questions, reach out to the National Ministries team — and you're welcome to request again for a future trip.`
+  };
+  const types = { 'Approved':'Decision', 'Paid':'Transfer', 'Denied':'Denied' };
+  if(msgs[newStatus] && email){
+    await writeNotifs([{ fields:{ [N.email]:email, [N.msg]:msgs[newStatus], [N.type]:types[newStatus], [N.link]:SITE_URL, [N_NAME]:firstName(applicant, email) } }]);
+    await sendEmail(email, newStatus==='Paid' ? 'Your SECC travel grant has been paid' : 'An update on your SECC travel request', msgs[newStatus], SITE_URL);
+  }
+  // The money moment fans out like a project transfer: Ben & Amanda hear it
+  // too, not just the applicant.
+  if(newStatus === 'Paid'){
+    const council = await councilPeople();
+    const cmsg = `SECC travel paid: ${amt} sent to ${applicant||email} from the SouthEast travel fund.`;
+    if(council.length){
+      await writeNotifs(council.map(p => ({ fields:{ [N.email]:p.email, [N.msg]:cmsg, [N.type]:'Transfer', [N.link]:SITE_URL, [N_NAME]:firstName(p.name, p.email) } })));
+      for(const p of council){ await sendEmail(p.email, 'SECC travel grant paid', cmsg, SITE_URL); }
+    }
+  }
+  await writeLog([{ fields:{ [L.entry]:`SECC travel — ${newStatus}: ${applicant||email||'a request'}`, [L.type]:'Status change',
+    [L.detail]:`${actorLabel} marked the SECC travel request from ${applicant||email} (${amt}) as ${newStatus}` } }]);
+}
+
 async function notifyEvent(event, recordId, opts={}){
   const rec = await at(BASE+'/'+T_PROP+'/'+recordId+'?returnFieldsByFieldId=true');
   const f = rec.fields || {};
@@ -456,6 +504,62 @@ exports.handler = async (event) => {
   // ---- BUDGET FILE PROXY (GET, serves the attachment through our own domain so ad/content blockers don't block it) ----
   if(event.httpMethod === 'GET'){
     const qs = event.queryStringParameters || {};
+
+    // ---- "I'VE SENT IT" EMAIL LINKS (no sign-in — a signed one-purpose link) ----
+    // Accounting clicks the link in the "ready to send" email; the grant is
+    // marked transferred/paid and every notification fires, same as the
+    // in-app button. Safe to click twice: the second click says "already done".
+    if(qs.op === 'sent'){
+      const page = (title, text) => ({ statusCode:200, headers:{'Content-Type':'text/html; charset=utf-8'},
+        body:`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<body style="margin:0;background:#F6F3EC;font-family:Georgia,serif;color:#1E2A24"><div style="max-width:460px;margin:80px auto;padding:36px;background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.07);text-align:center">
+<div style="font-size:42px;margin-bottom:12px">${title.includes('✓') ? '✅' : '⏳'}</div>
+<h1 style="font-size:22px;margin:0 0 10px">${title}</h1>
+<p style="font-size:15px;line-height:1.6;color:#44503F;margin:0">${text}</p>
+<p style="font-size:12px;color:#8a927f;margin-top:24px">Josiah Venture · National Ministries</p></div></body>` });
+      if(!TOKEN || !SECRET) return page('Something is missing', 'The server is not fully configured — let the grant team know.');
+      const tk = readActionToken(qs.t);
+      if(!tk || tk.a !== 'sent' || !/^rec[A-Za-z0-9]{14}$/.test(tk.id||''))
+        return page('This link has expired', 'Ask the grant team for a fresh "ready to send" email and use the link in that one.');
+      try{
+        if(tk.k === 't'){
+          const rec = await at(BASE+'/'+T_TRAVEL+'/'+tk.id+'?returnFieldsByFieldId=true');
+          const bf = rec.fields || {};
+          const cur = (bf[TR.status] && (bf[TR.status].name || bf[TR.status])) || '';
+          const label = `${usd(bf[TR.appAmt] || bf[TR.reqAmt])} travel grant for ${(bf[TR.name]||'').trim() || bf[TR.email] || 'the applicant'}`;
+          if(cur === 'Paid') return page('Already recorded ✓', `The ${label} was already marked as sent — nothing more to do.`);
+          await at(BASE+'/'+T_TRAVEL+'/'+tk.id, { method:'PATCH', body:JSON.stringify({ fields:{ [TR.status]:'Paid' }, typecast:true }) });
+          try{ await travelStatusEffects(bf, 'Paid', null, 'Accounting (email link)'); }catch(e){ /* best effort */ }
+          return page('Recorded ✓', `The ${label} is marked as sent. The applicant, Ben and Amanda have been notified automatically. You can close this window.`);
+        } else {
+          const rec = await at(BASE+'/'+T_PROP+'/'+tk.id+'?returnFieldsByFieldId=true');
+          const f = rec.fields || {};
+          const name = f['fld1qi35letQtg6yC'] || 'this grant';
+          const curStage = (f[STAGE_F] && (f[STAGE_F].name || f[STAGE_F])) || '';
+          const amt = f['fldeeQMQPRVyXbklW'] || f['fld3bvuKr1SIXAwUf'] || 0; // awarded, else requested
+          if(curStage === 'Funded') return page('Already recorded ✓', `"${name}" was already marked as funded — nothing more to do.`);
+          const fields = {
+            [STAGE_F]:'Funded',
+            'fldvXoWNaxcBX8qXq': new Date().toISOString().slice(0,10), // Date Funded
+            'fldHug3aktd9okS1W': amt,     // Amount Paid to Date
+            'fldp5F3Q4B8xphHGl': true,    // transfer-out milestone
+            'fldMRxlxWLMghpyVE': true,    // EVP approval stamp (backfill)
+            'fldmvzGjvzDOSGlux': true,    // Council approval stamp (backfill)
+          };
+          if(STAGE_TO_STATUS['Funded']) fields[STATUS_F] = STAGE_TO_STATUS['Funded'];
+          await at(BASE+'/'+T_PROP+'/'+tk.id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+          try{
+            await writeLog([{ fields:{ [L.entry]:`${name} — funds transferred (via email link)`, [L.type]:'Funding assignment',
+              [L.detail]:`Accounting confirmed by email link: ${usd(amt)} transferred for "${name}"`, [L.pid]:tk.id, 'fldDCLcDUyODA0AvP':[tk.id] } }]);
+          }catch(e){ /* best effort */ }
+          try{ await notifyEvent('transfer', tk.id, {}); }catch(e){ /* best effort */ }
+          return page('Recorded ✓', `"${name}" is marked as funded — ${usd(amt)} sent. The country leader, their coach, Ben and Amanda have been notified automatically. You can close this window.`);
+        }
+      }catch(e){
+        return page('Something went wrong', 'The payment could not be recorded — try the link once more, or let the grant team know.');
+      }
+    }
+
     if(qs.op === 'budget_file'){
       if(!TOKEN) return { statusCode:500, headers:{'Content-Type':'text/plain'}, body:'Server missing AIRTABLE_TOKEN' };
       const recId = qs.rec || ''; const idx = parseInt(qs.i||'0',10) || 0;
@@ -729,33 +833,7 @@ exports.handler = async (event) => {
         const newStatus = body.fields[TR.status];
         const prevStatus = (bf[TR.status] && (bf[TR.status].name || bf[TR.status])) || '';
         if(newStatus && newStatus !== prevStatus){
-          const applicant = (bf[TR.name]||'').trim();
-          const email = (bf[TR.email]||'').trim();
-          const amt = usd(body.fields[TR.appAmt] != null ? body.fields[TR.appAmt] : (bf[TR.appAmt] || bf[TR.reqAmt]));
-          const N_NAME = 'fldykHqa2JyKlkykm';
-          const msgs = {
-            'Approved': `Good news — your SECC travel request was approved for ${amt}. You'll get another message the moment the money is sent.`,
-            'Paid':     `Your SECC travel grant has been paid — ${amt} from the SouthEast travel fund is on its way to you.`,
-            'Denied':   `Your SECC travel request was not approved this time. If you have questions, reach out to the National Ministries team — and you're welcome to request again for a future trip.`
-          };
-          const types = { 'Approved':'Decision', 'Paid':'Transfer', 'Denied':'Denied' };
-          if(msgs[newStatus] && email){
-            await writeNotifs([{ fields:{ [N.email]:email, [N.msg]:msgs[newStatus], [N.type]:types[newStatus], [N.link]:SITE_URL, [N_NAME]:firstName(applicant, email) } }]);
-            await sendEmail(email, newStatus==='Paid' ? 'Your SECC travel grant has been paid' : 'An update on your SECC travel request', msgs[newStatus], SITE_URL);
-          }
-          // The money moment fans out like a project transfer: Ben & Amanda
-          // hear it too, not just the applicant.
-          if(newStatus === 'Paid'){
-            const council = await councilPeople();
-            const cmsg = `SECC travel paid: ${amt} sent to ${applicant||email} from the SouthEast travel fund.`;
-            if(council.length){
-              await writeNotifs(council.map(p => ({ fields:{ [N.email]:p.email, [N.msg]:cmsg, [N.type]:'Transfer', [N.link]:SITE_URL, [N_NAME]:firstName(p.name, p.email) } })));
-              for(const p of council){ await sendEmail(p.email, 'SECC travel grant paid', cmsg, SITE_URL); }
-            }
-          }
-          await writeLog([{ fields:{ [L.entry]:`SECC travel — ${newStatus}: ${applicant||email||'a request'}`, [L.type]:'Status change',
-            [L.detail]:`${who.name||who.email} marked the SECC travel request from ${applicant||email} (${amt}) as ${newStatus}`,
-            [L.user]: who.name||'', [L.email]: who.email||'' } }]);
+          await travelStatusEffects(bf, newStatus, body.fields[TR.appAmt], who.name||who.email);
         }
       }catch(e){ /* notifications and logs are best-effort; the update itself succeeded */ }
       return reply(200, { fields:upd.fields, user:who });
@@ -777,6 +855,11 @@ exports.handler = async (event) => {
       if(!team.length) return reply(400, { error:'No one with the Grant team or CFO role is in People & access yet — add them there first so this email has somewhere to go.' });
       const N_NAME = 'fldykHqa2JyKlkykm';
       const asker = who.name || who.email;
+      // Each payment gets its own "I've sent it" link, so accounting works
+      // entirely from the email — no app sign-in. Clicking the link marks the
+      // grant transferred/paid and fires the notifications to everyone.
+      const LINK_TTL = 1000*60*60*24*45; // links stay valid for 45 days
+      const sentLink = (kind, id) => `${SITE_URL}/.netlify/functions/airtable?op=sent&t=${makeActionToken({ a:'sent', k:kind==='travel'?'t':'p', id, exp:Date.now()+LINK_TTL })}`;
       const lines = [];
       for(const it of items){
         if(!it || !it.recordId) continue;
@@ -784,18 +867,20 @@ exports.handler = async (event) => {
           const rec = await at(BASE+'/'+T_TRAVEL+'/'+it.recordId+'?returnFieldsByFieldId=true');
           const f = rec.fields || {};
           const applicant = (f[TR.name]||'').trim() || (f[TR.email]||'');
-          lines.push(`${usd(f[TR.appAmt] || f[TR.reqAmt])} — SECC travel grant to ${applicant}${f[TR.team] ? ` (${f[TR.team]})` : ''}, from the SouthEast travel fund`);
+          lines.push(`${usd(f[TR.appAmt] || f[TR.reqAmt])} — SECC travel grant to ${applicant}${f[TR.team] ? ` (${f[TR.team]})` : ''}, from the SouthEast travel fund`
+            + `\n   ✅ When you've sent it, click here (everyone is notified automatically):\n   ${sentLink('travel', it.recordId)}`);
         } else {
           const rec = await at(BASE+'/'+T_PROP+'/'+it.recordId+'?returnFieldsByFieldId=true');
           const f = rec.fields || {};
           const acct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
-          lines.push(`${usd(f[PNF.awarded])} — "${f[PNF.name] || 'a grant'}"${f[PNF.country] ? ` (${f[PNF.country]})` : ''} to Cedarstone account ${acct||'(shown on the card)'}`);
+          lines.push(`${usd(f[PNF.awarded])} — "${f[PNF.name] || 'a grant'}"${f[PNF.country] ? ` (${f[PNF.country]})` : ''} to Cedarstone account ${acct||'(ask the grant team)'}`
+            + `\n   ✅ When you've sent it, click here (everyone is notified automatically):\n   ${sentLink('project', it.recordId)}`);
         }
       }
       if(!lines.length) return reply(400, { error:'Nothing selected.' });
       const msg = lines.length === 1
-        ? `${asker} asked accounting to send this payment: ${lines[0]}. It's ready on the Accounting page — one click records it.`
-        : `${asker} asked accounting to send ${lines.length} payments that are ready:\n\n${lines.map(l => '• ' + l).join('\n')}\n\nThey're all on the Accounting page — one click on each records the payment and notifies everyone.`;
+        ? `${asker} asked accounting to send this payment:\n\n• ${lines[0]}`
+        : `${asker} asked accounting to send ${lines.length} payments that are ready:\n\n${lines.map(l => '• ' + l).join('\n\n')}`;
       // Type 'Transfer' so the existing email automation delivers it.
       await writeNotifs(team.map(p => ({ fields:{ [N.email]:p.email, [N.msg]:msg, [N.type]:'Transfer', [N.link]:SITE_URL, [N_NAME]:firstName(p.name, p.email) } })));
       for(const p of team){ await sendEmail(p.email, lines.length === 1 ? 'Ready to send — payment requested' : `Ready to send — ${lines.length} payments requested`, msg, SITE_URL); }
