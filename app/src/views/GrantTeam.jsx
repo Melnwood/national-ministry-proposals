@@ -227,11 +227,16 @@ function OngoingRow({ p, onOpen, preview, canAct }) {
 }
 
 function GrantTable({ list, onOpen, empty }) {
+  const dates = p => {
+    const f = p.fields || {};
+    const s = f[F.proposal.startDate] || '', e = f[F.proposal.endDate] || '';
+    return (s || e) ? `${s ? date(s) : '?'} → ${e ? date(e) : '?'}` : '—';
+  };
   return (
     <div class="tablewrap">
       <table class="grants">
         <thead>
-          <tr><th>Grant</th><th>Country</th><th>Coach</th><th>Stage</th><th class="r">Requested</th><th class="r">Awarded</th><th class="r">Owed</th></tr>
+          <tr><th>Grant</th><th>Country</th><th>Coach</th><th>Stage</th><th>Project start → end</th><th class="r">Requested</th><th class="r">Awarded</th><th class="r">Owed</th></tr>
         </thead>
         <tbody>
           {list.map(p => (
@@ -240,12 +245,13 @@ function GrantTable({ list, onOpen, empty }) {
               <td class="cty">{country(p)}</td>
               <td class="cty">{coach(p) || '—'}</td>
               <td><StageBadge k={stageKey(p)} /></td>
+              <td class="cty">{dates(p)}</td>
               <td class="r">{requested(p) ? money(requested(p)) : '—'}</td>
               <td class="r">{awarded(p) ? money(awarded(p)) : '—'}</td>
               <td class="r owe">{owed(p) ? money(owed(p)) : '—'}</td>
             </tr>
           ))}
-          {!list.length && <tr><td colspan="7" class="empty-row">{empty || 'None.'}</td></tr>}
+          {!list.length && <tr><td colspan="8" class="empty-row">{empty || 'None.'}</td></tr>}
         </tbody>
       </table>
     </div>
