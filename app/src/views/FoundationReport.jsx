@@ -106,12 +106,14 @@ function ReportDoc({ data, cycleId }) {
   const [sumBusy, setSumBusy] = useState(false);
   const [sumErr, setSumErr] = useState('');
   const [needsKey, setNeedsKey] = useState(false);
+  const [noReports, setNoReports] = useState(false);
 
   async function writeSummary() {
-    setSumBusy(true); setSumErr(''); setNeedsKey(false);
+    setSumBusy(true); setSumErr(''); setNeedsKey(false); setNoReports(false);
     try {
       const r = await api('cycle_summary', { cycleId, data });
       if (r.needsKey) setNeedsKey(true);
+      else if (r.noReports) setNoReports(true);
       else setSummary(r.summary || '');
     } catch (e) { setSumErr(e.message || 'Could not write the summary.'); }
     setSumBusy(false);
@@ -180,9 +182,11 @@ function ReportDoc({ data, cycleId }) {
         </div>
         {summary
           ? summary.split(/\n{2,}/).map(para => <p class="rp-summary">{para}</p>)
-          : needsKey
-            ? <p class="rp-note noprint">The AI draft needs an Anthropic API key added in Netlify (like the email key). Until then, the stories below are pulled straight from the field reports and you can write the summary yourself.</p>
-            : <p class="rp-note noprint">Click <b>Draft with AI</b> to turn the field reports below into a warm summary you can send — or write your own using the stories.</p>}
+          : noReports
+            ? <p class="rp-note noprint"><b>There are no project reports to build from yet.</b> The countries funded by this gift haven't filed their mid-project or final reports, and a letter to the foundation should be built from their real stories — not just numbers. Go to Management → Reports to request or chase the reports, then come back here.</p>
+            : needsKey
+              ? <p class="rp-note noprint">The AI draft needs an Anthropic API key added in Netlify (like the email key). Until then, the stories below are pulled straight from the field reports and you can write the summary yourself.</p>
+              : <p class="rp-note noprint">Click <b>Draft with AI</b> to turn the field reports below into a warm summary you can send — or write your own using the stories.</p>}
         {sumErr && <div class="editerr noprint">{sumErr}</div>}
       </section>
 

@@ -418,27 +418,34 @@ async function gatherCycle(cycleId){
 // Guarded: a no-op returning null until ANTHROPIC_API_KEY is set in Netlify.
 async function writeImpactSummary(data){
   if(!ANTHROPIC_KEY) return null;
+  // No field reports = nothing true to write from. Never pad a donor letter
+  // out of bare numbers — the caller tells the user to gather reports first.
+  if(!(data.stories && data.stories.length)) return null;
   const t = data.totals || {}, c = data.cycle || {};
   const stories = (data.stories || []).slice(0, 40).map(s => {
-    const parts = [`PROJECT: ${s.name}${s.country ? ' — ' + s.country : ''}`];
-    if(s.story)      parts.push(`Impact story: ${s.story}`);
+    const parts = [`PROJECT: ${s.name}${s.country ? ' — ' + s.country : ''}${s.completedBy ? ` (report written by ${s.completedBy})` : ''}`];
+    if(s.story)      parts.push(`Their story, in their words: ${s.story}`);
     if(s.objectives && s.objectives.length) parts.push(`Progress: ${s.objectives.join(' | ')}`);
-    if(s.lessons)    parts.push(`Lessons learned: ${s.lessons}`);
-    if(s.challenges) parts.push(`Challenges: ${s.challenges}`);
+    if(s.challenges) parts.push(`Challenges they named: ${s.challenges}`);
+    if(s.lessons)    parts.push(`What they learned: ${s.lessons}`);
+    if(s.nextSteps)  parts.push(`What's next: ${s.nextSteps}`);
     return parts.join('\n');
   }).join('\n\n');
-  const facts = `The foundation is "${c.foundation}". Their grant for ${c.year || 'this cycle'} was ${usd(c.gift)}. `
+  const facts = `The foundation is "${c.foundation}". Their gift for ${c.year || 'this cycle'} was ${usd(c.gift)}. `
     + `It funded ${t.fundedCount} project(s) across ${t.countryCount} countries. `
-    + `Across the field reports, the funded work has so far impacted ${t.leaders} leaders, ${t.churches} churches, and ${t.people} people.`;
-  const prompt = `You are writing a warm, sincere impact/stewardship report addressed directly to a foundation that gave money to Josiah Venture's national ministry work in Central and Eastern Europe. The purpose is to help the foundation see how their gift was used and the real impact it made possible.
+    + `Adding up the field reports so far: ${t.leaders} leaders, ${t.churches} churches, and ${t.people} people reached.`;
+  const prompt = `You are helping the Josiah Venture National Ministries team write to ${c.foundation || 'a foundation'} — friends who gave money so that national leaders in Central and Eastern Europe could do ministry. This is a letter between partners in the same work, not a report from a development office.
 
-Facts you may use (do not invent numbers or facts beyond these and the reports):
-${facts}
+How it should sound: like one person writing to a friend they're deeply grateful for. Plain, warm, specific. Use contractions. Short sentences are fine. The country leaders' reports talk about what God did — keep that language; it's how this community speaks. When a detail is good, use the leader's own words (lightly cleaned up) and name them and their country, e.g. 'Timo, who leads the work in Slovakia, wrote that…'. Be honest about hard things the reports name — partners trust honesty.
 
-Field reports from the country teams:
-${stories || '(No narrative field reports were submitted yet.)'}
+Never do this: do not invent any fact, number, name, or story beyond what is below. Do not use words like impact metrics, leverage, utilize, strategic, outcomes, 'we are pleased to report', or 'it is our privilege'. Do not pad — if the reports are thin, write less.
 
-Write 3–4 short paragraphs, addressed to the foundation ("your gift", "because of your partnership"). (1) Open with genuine thanks. (2) Tell the story of the impact their money made possible, in human terms, drawing specifics from the reports above. (3) Name one or two specific projects or moments from the reports. (4) Close with gratitude and a note of shared mission. Warm and sincere, not flowery or salesy. Plain text only — no headings, no markdown, no bullet points.`;
+The facts: ${facts}
+
+The country leaders' reports (your only source material):
+${stories}
+
+Write 3–4 short paragraphs addressed to them ('your gift', 'because of you'). Open with real thanks, let the leaders' own stories carry the middle, and close simply — gratitude and shared mission, no sales pitch. Plain text only: no headings, no markdown, no bullet points.`;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -1299,6 +1306,9 @@ exports.handler = async (event) => {
       // Reuse the report data the front-end already fetched when present; only
       // re-gather from Airtable if it wasn't passed.
       const data = (body.data && body.data.stories) ? body.data : await gatherCycle(body.cycleId);
+      // No project reports = nothing true to write from. Say so instead of
+      // composing a donor letter out of bare numbers.
+      if(!(data.stories && data.stories.length)) return reply(200, { noReports:true, user:who });
       const summary = await writeImpactSummary(data);
       return reply(200, { summary, generated:true, user:who });
     }
