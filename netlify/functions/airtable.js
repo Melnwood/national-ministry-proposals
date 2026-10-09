@@ -458,7 +458,7 @@ ${stories}
 Return ONLY valid JSON, no markdown fences, in exactly this shape:
 {"letter": "3 short paragraphs addressed to them ('your gift', 'because of you'), separated by blank lines. Open with real thanks, let one or two of the leaders' stories carry the middle, close simply — gratitude and shared mission, no sales pitch.",
  "vignettes": [{"project": "<the project name EXACTLY as given above>", "text": "2–3 sentences for this project: concise, heartfelt, inspiring. Keep the leader's own best phrase where there is one, and their name. No statistics unless one is the point of the story."}]}
-Write a vignette ONLY for projects above that have real narrative to work with (skip numbers-only reports), up to 8 of the strongest.`;
+Write ONE vignette for EVERY project above — a project's mid and final reports count as one project, so draw on both. If a project's reports hold only numbers and no narrative, write one simple true sentence from what is there; never invent.`;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -472,7 +472,7 @@ Write a vignette ONLY for projects above that have real narrative to work with (
   try{
     const parsed = JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''));
     if(parsed && parsed.letter) return { summary: String(parsed.letter).trim(),
-      vignettes: Array.isArray(parsed.vignettes) ? parsed.vignettes.filter(v => v && v.project && v.text).slice(0, 12) : [] };
+      vignettes: Array.isArray(parsed.vignettes) ? parsed.vignettes.filter(v => v && v.project && v.text).slice(0, 50) : [] };
   }catch(e){ /* fall through */ }
   return { summary: text, vignettes: [] };
 }

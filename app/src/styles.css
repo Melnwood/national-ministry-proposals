@@ -492,8 +492,31 @@ td.ok { color:var(--green); }
 .rp-story-nums { display:flex; gap:14px; margin-top:6px; }
 .rp-story-nums span { font-size:12.5px; font-weight:600; color:var(--green-d); }
 
-.rp-foot { text-align:center; font-size:14px; color:var(--ink-soft); border-top:2px solid var(--line-d); padding-top:18px; margin-top:10px; font-style:italic; }
+.rp-foot { text-align:center; font-size:14px; color:var(--ink-soft); border-top:3px solid var(--orange); padding-top:18px; margin-top:10px; font-style:italic; }
 .rp-org2 { font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:8px; font-style:normal; }
+
+/* Josiah Venture branding on the report */
+.rp-brandrow { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px; }
+.rp-brandrow .rp-mark { margin:0; }
+.rp-brandname { font-family:'Fraunces',serif; font-weight:700; font-size:24px; letter-spacing:.14em; color:var(--ink); }
+.rp-brandname span { color:var(--orange); margin-left:.3em; }
+.rp-head { border-bottom:3px solid var(--orange); padding-bottom:16px; margin-bottom:20px; }
+
+/* Stories from the field — one closed accordion per project */
+.rp-acchead {
+  width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px;
+  background:none; border:none; padding:10px 0; font:inherit; font-size:15px; color:var(--ink);
+  cursor:pointer; text-align:left;
+}
+.rp-acchead:hover b { color:var(--orange); }
+.rp-caret { color:var(--muted); }
+.rp-accbody { display:none; padding-bottom:12px; }
+.rp-accbody.open { display:block; }
+.rp-acc { border-bottom:1px solid var(--line); margin:0; padding:0; }
+@media print {
+  .rp-accbody { display:block !important; }
+  .rp-caret { display:none; }
+}
 
 @media (max-width:640px) { .rp-tiles { grid-template-columns:repeat(2,1fr); } .reportpage { padding:26px 20px; } }
 

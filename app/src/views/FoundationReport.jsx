@@ -128,8 +128,11 @@ function ReportDoc({ data, cycleId }) {
   return (
     <div class="reportpage">
       <header class="rp-head">
-        <div class="rp-mark">JV</div>
-        <div class="rp-org">Josiah Venture · National Ministries</div>
+        <div class="rp-brandrow">
+          <div class="rp-mark">JV</div>
+          <div class="rp-brandname">JOSIAH<span>VENTURE</span></div>
+        </div>
+        <div class="rp-org">National Ministries</div>
         <h1>Impact Report</h1>
         <div class="rp-for">Prepared for <b>{cycle.foundation}</b>{cycle.year ? ` · ${cycle.year}` : ''}</div>
       </header>
@@ -199,44 +202,10 @@ function ReportDoc({ data, cycleId }) {
       {stories && stories.length > 0 && (
         <section class="rp-sec">
           <h2>Stories from the field</h2>
-          {Object.keys(vignettes).length > 0 && (
-            <p class="rp-note noprint">Distilled from the full field reports — concise and heartfelt for the foundation. The complete reports stay in the app (Management → Reports).</p>
-          )}
-          {stories
-            // Once distilled, show only the projects with a vignette — the
-            // strongest stories, short and from the heart, not a data dump.
-            .filter(s => !Object.keys(vignettes).length || vignettes[String(s.name).trim()])
-            .map(s => {
-            const v = vignettes[String(s.name).trim()];
-            return (
-            <article class="rp-story">
-              <div class="rp-story-head">
-                <b>{s.name}</b>{s.country ? <span class="rp-cty"> · {s.country}</span> : null}
-                {s.kind ? <span class="rp-kind">{s.kind} report</span> : null}
-              </div>
-              {v
-                ? <p class="rp-lead-para">{v}</p>
-                : s.story ? <p class="rp-lead-para">{s.story}</p> : null}
-              {s.photos && s.photos.length > 0 && (
-                <div class="rp-photos">
-                  {s.photos.slice(0, 3).map(ph => ph === 'sample'
-                    ? <div class="rp-photo ph"><span>photo</span></div>
-                    : <img class="rp-photo" src={ph} alt="" loading="lazy" />)}
-                </div>
-              )}
-              {!v && s.objectives && s.objectives.map(o => <p class="rp-obj">{o}</p>)}
-              {!v && s.lessons && <p class="rp-mini"><span class="dt">Lessons learned</span> {s.lessons}</p>}
-              {!v && s.challenges && <p class="rp-mini"><span class="dt">Challenges</span> {s.challenges}</p>}
-              {(s.leaders || s.churches || s.people) ? (
-                <div class="rp-story-nums">
-                  {s.leaders ? <span>{num(s.leaders)} leaders</span> : null}
-                  {s.churches ? <span>{num(s.churches)} churches</span> : null}
-                  {s.people ? <span>{num(s.people)} people</span> : null}
-                </div>
-              ) : null}
-            </article>
-            );
-          })}
+          <p class="rp-note">One story per project — click any project to read it{Object.keys(vignettes).length ? '. Distilled from the full field reports, which stay in the app (Management → Reports)' : ''}.</p>
+          {groupStories(stories).map(g => (
+            <StoryFold key={g.name} g={g} v={vignettes[String(g.name).trim()]} />
+          ))}
         </section>
       )}
 
@@ -257,7 +226,7 @@ function ReportDoc({ data, cycleId }) {
 
       <footer class="rp-foot">
         With gratitude for your partnership in the gospel across Central &amp; Eastern Europe.
-        <div class="rp-org2">Josiah Venture · National Ministries</div>
+        <div class="rp-org2"><b>Josiah Venture</b> · National Ministries · josiahventure.com</div>
       </footer>
     </div>
   );
@@ -265,6 +234,64 @@ function ReportDoc({ data, cycleId }) {
 
 function Tile({ n, l }) {
   return <div class="rp-tile"><div class="rp-tile-n">{n}</div><div class="rp-tile-l">{l}</div></div>;
+}
+
+// One story per PROJECT: a project's mid and final reports fold into a single
+// entry (final's words and photos first), with up to 2 of the best pictures.
+function groupStories(stories) {
+  const byName = {};
+  const order = [];
+  stories.forEach(s => {
+    const k = String(s.name || '').trim();
+    if (!byName[k]) { byName[k] = { name: s.name, country: s.country, entries: [] }; order.push(k); }
+    byName[k].entries.push(s);
+  });
+  return order.map(k => {
+    const g = byName[k];
+    const final = g.entries.find(e => e.kind === 'Final');
+    const mid = g.entries.find(e => e.kind === 'Mid');
+    const primary = final || mid || g.entries[0] || {};
+    const photos = [...((final && final.photos) || []), ...((mid && mid.photos) || []),
+      ...g.entries.flatMap(e => (e !== final && e !== mid) ? (e.photos || []) : [])];
+    return {
+      name: g.name, country: g.country,
+      story: primary.story || (mid && mid.story) || '',
+      photos: photos.slice(0, 2),
+      leaders: primary.leaders || 0, churches: primary.churches || 0, people: primary.people || 0,
+    };
+  });
+}
+
+// Closed by default so the foundation opens only what interests them; print
+// CSS forces every story open so nothing is lost on paper.
+function StoryFold({ g, v }) {
+  const [open, setOpen] = useState(false);
+  const text = v || g.story;
+  return (
+    <article class="rp-story rp-acc">
+      <button type="button" class="rp-acchead" onClick={() => setOpen(o => !o)}>
+        <span><b>{g.name}</b>{g.country ? <span class="rp-cty"> · {g.country}</span> : null}</span>
+        <span class="rp-caret noprint">{open ? '▾' : '▸'}</span>
+      </button>
+      <div class={`rp-accbody${open ? ' open' : ''}`}>
+        {text && <p class="rp-lead-para">{text}</p>}
+        {g.photos && g.photos.length > 0 && (
+          <div class="rp-photos">
+            {g.photos.map(ph => ph === 'sample'
+              ? <div class="rp-photo ph"><span>photo</span></div>
+              : <img class="rp-photo" src={ph} alt="" loading="lazy" />)}
+          </div>
+        )}
+        {(g.leaders || g.churches || g.people) ? (
+          <div class="rp-story-nums">
+            {g.leaders ? <span>{num(g.leaders)} leaders</span> : null}
+            {g.churches ? <span>{num(g.churches)} churches</span> : null}
+            {g.people ? <span>{num(g.people)} people</span> : null}
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
 }
 
 const num = n => (Number(n) || 0).toLocaleString('en-US');
