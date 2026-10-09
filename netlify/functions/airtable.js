@@ -27,6 +27,11 @@ const FUND_AMT_F = 'fldcZFJwHyfu5IgCl', FUND_STAT_F = 'fldXwNvQuraOWvgq7'; // Av
 const T_NOTIF = 'tblEpClYAomtd5t2l';  // Notifications
 const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS', link:'fldkcJpvziAQoRSWz' };
 const SITE_URL = 'https://national-ministry-proposals.netlify.app'; // recipients sign in and land on their own page
+// Where the "ready to send" payment emails go. Accounting is NOT an app user —
+// they work entirely from these emails and the one-click links inside them.
+// Roles in People & access only control what app users can see.
+const ACCOUNTING_EMAIL = 'accountingteam@josiahventure.com';
+const ACCOUNTING_NAME  = 'Accounting team';
 const AT     = 'https://api.airtable.com/v0/';
 const TOKEN  = process.env.AIRTABLE_TOKEN;
 const SECRET = process.env.SESSION_SECRET;
@@ -851,8 +856,7 @@ exports.handler = async (event) => {
         ? body.items.slice(0, 25)
         : (body.recordId ? [{ kind: body.kind, recordId: body.recordId }] : []);
       if(!items.length) return reply(400, { error:'Nothing selected.' });
-      const team = await rolePeople(['Grant team','CFO']);
-      if(!team.length) return reply(400, { error:'No one with the Grant team or CFO role is in People & access yet — add them there first so this email has somewhere to go.' });
+      const team = [{ email: ACCOUNTING_EMAIL, name: ACCOUNTING_NAME }];
       const N_NAME = 'fldykHqa2JyKlkykm';
       const asker = who.name || who.email;
       // Each payment gets its own "I've sent it" link, so accounting works

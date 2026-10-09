@@ -67,6 +67,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
           <button class={`subtab${view === 'travel' ? ' on' : ''}`} onClick={() => setView('travel')}>
             SECC travel{travelNew.length ? <span class="pillcount">{travelNew.length}</span> : null}
           </button>
+          <button class={`subtab${view === 'paid' ? ' on' : ''}`} onClick={() => setView('paid')}>Paid out</button>
         </nav>
         <button class="reportbtn" onClick={() => setReportOpen(true)}>📄 Foundation report</button>
       </div>
@@ -135,6 +136,7 @@ export function GrantTeam({ boot, session, onRefresh }) {
 
       {view === 'ongoing' && <OngoingPanel list={ongoing} onOpen={setOpenId} preview={session.previewing} />}
       {view === 'travel' && <TravelPanel travel={travel} funds={boot.funds || []} />}
+      {view === 'paid' && <PaidPanel boot={boot} />}
 
       {openGrant && <GrantDetail p={openGrant} onClose={() => setOpenId(null)} onSaved={onRefresh} />}
       {reportOpen && <FoundationReport boot={boot} onClose={() => setReportOpen(false)} />}
@@ -380,6 +382,81 @@ function GrantDetail({ p, onClose, onSaved }) {
 }
 
 function today() { return new Date().toISOString().slice(0, 10); }
+
+// ── PAID OUT: what has actually left the accounts, and what's left in them ──
+// The grant-team lead's bookkeeping view: both balances side by side, every
+// funded project grant with its paid amount and date, and every paid SECC
+// travel grant.
+function PaidPanel({ boot }) {
+  const props = boot.props || [];
+  const travel = boot.travel || [];
+  const bal = boot.bal || null;
+
+  const funded = [...props.filter(p => stageKey(p) === 'funded')]
+    .sort((a, b) => String((b.fields || {})[F.proposal.dateFunded] || '').localeCompare(String((a.fields || {})[F.proposal.dateFunded] || '')));
+  const fundedTotal = funded.reduce((a, p) => a + (paid(p) || awarded(p) || 0), 0);
+
+  const fund = (boot.funds || []).find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
+  const fundName = fund ? aval(fund.fields[F.funds.source]) : 'SE Christian Foundation';
+  const fundTotal = fund ? (fund.fields[F.funds.amount] || 0) : 0;
+  const travelCommitted = travel.filter(t => t.status === 'Approved' || t.status === 'Paid')
+    .reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
+  const travelPaid = travel.filter(t => t.status === 'Paid');
+  const travelPaidTotal = travelPaid.reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
+
+  return (
+    <>
+      <section class="money">
+        <div class="mtile">
+          <div class="mlbl">Cash in account {bal && bal.account ? String(bal.account).split(' ')[0] : '510181'}</div>
+          <div class="mval">{bal ? money(bal.balance) : '—'}</div>
+          <div class="mnote">{bal && bal.asOf ? `As of ${date(bal.asOf)}` : 'No balance on file'}</div>
+        </div>
+        <div class="mtile">
+          <div class="mlbl">Left in the SECC travel fund</div>
+          <div class="mval">{money(fundTotal - travelCommitted)}</div>
+          <div class="mnote">{fundName} · {money(fundTotal)} gift</div>
+        </div>
+        <div class="mtile hero">
+          <div class="mlbl">Paid out all-time</div>
+          <div class="mval">{money(fundedTotal + travelPaidTotal)}</div>
+          <div class="mnote">{funded.length} funded {funded.length === 1 ? 'grant' : 'grants'} · {travelPaid.length} travel</div>
+        </div>
+      </section>
+
+      <div class="secthead">Funded project grants <span class="dim">— {funded.length} · {money(fundedTotal)}</span></div>
+      <div class="tablewrap">
+        <table class="grants">
+          <thead>
+            <tr><th>Grant</th><th>Country</th><th class="r">Awarded</th><th class="r">Paid</th><th>Date funded</th></tr>
+          </thead>
+          <tbody>
+            {funded.map(p => {
+              const f = p.fields || {};
+              return (
+                <tr key={p.id}>
+                  <td class="nm">{projectName(p)}</td>
+                  <td class="cty">{country(p)}</td>
+                  <td class="r">{awarded(p) ? money(awarded(p)) : '—'}</td>
+                  <td class="r">{money(paid(p) || awarded(p) || 0)}</td>
+                  <td class="cty">{f[F.proposal.dateFunded] ? date(f[F.proposal.dateFunded]) : '—'}</td>
+                </tr>
+              );
+            })}
+            {!funded.length && <tr><td colspan="5" class="empty-row">Nothing funded yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {travelPaid.length > 0 && (
+        <>
+          <div class="secthead" style="margin-top:22px">Paid SECC travel grants <span class="dim">— {travelPaid.length} · {money(travelPaidTotal)}</span></div>
+          <TravelTable list={travelPaid} />
+        </>
+      )}
+    </>
+  );
+}
 
 // ── SECC travel grants: the MONEY OVERVIEW ───────────────────────────────────
 // Grant Team is where the fund lives: the SE Christian restricted gift, what's
