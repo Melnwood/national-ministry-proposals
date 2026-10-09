@@ -122,7 +122,8 @@ export const F = {
   travel:  { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKEDpGAD9o1A',
              purpose:'fld8oHEtAeBQbsYWR', depart:'fldc3LDVsLMCU16Vd', ret:'fldMvpfZTKuBwAhmB',
              reqAmt:'fldRwm5T4wcLIeIuL', appAmt:'fldGoVMNTpc2jf0v5', status:'fldtcWGoQLVOQcG5P',
-             notes:'fldbcUSKRon6HgyDC', timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C' },
+             notes:'fldbcUSKRon6HgyDC', timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C',
+             acct:'fld79txN2YZDxffqu' }, // Cedarstone account the money gets sent to
   countries: { name:'fldzgWM7sqaFDM4Cl', phase:'flduog58oXfNq2aEt', recordId:'fldca6uVjtxsluVK1', approvers:'fldwpCrK2Mr68tQh5' },
 };
 

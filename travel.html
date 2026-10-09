@@ -91,6 +91,7 @@
       <div class="fld"><label id="lblRet">Return date</label><input id="ret" type="date"></div>
     </div>
     <div class="fld"><label id="lblAmt">Amount requested <span class="req">*</span></label><div class="moneywrap"><span class="pre">$</span><input id="reqAmt" type="number" step="50" min="0" placeholder="0"></div></div>
+    <div class="fld"><label>Your JV account number at Cedarstone</label><input id="acct" type="text" placeholder="e.g. 510xxx — where we send the money if approved"></div>
     <div class="fld"><label>Anything else we should know?</label><textarea id="notes" placeholder="Optional — other funding, special circumstances, etc."></textarea></div>
     <button class="submit" id="submit">Submit request</button>
   </div>
@@ -141,6 +142,7 @@ async function submit(){
       name,email,team:$('#team').value.trim(),purpose,timing,
       depart:$('#depart').value||'',ret:$('#ret').value||'',
       reqAmt:amount, actualCost: taken ? amount : '',
+      acct:$('#acct').value.trim(),
       notes:$('#notes').value.trim()
     }});
     $('#formCard').style.display='none';

@@ -22,7 +22,8 @@ const T_TRAVEL= 'tbl89ML7snRz5BQqL';   // Travel Fund Requests (SE Christian)
 const TR = { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKEDpGAD9o1A',
              purpose:'fld8oHEtAeBQbsYWR', depart:'fldc3LDVsLMCU16Vd', ret:'fldMvpfZTKuBwAhmB',
              reqAmt:'fldRwm5T4wcLIeIuL', appAmt:'fldGoVMNTpc2jf0v5', status:'fldtcWGoQLVOQcG5P', notes:'fldbcUSKRon6HgyDC',
-             timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C' };
+             timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C',
+             acct:'fld79txN2YZDxffqu' }; // Cedarstone account the money gets sent to
 const FUND_AMT_F = 'fldcZFJwHyfu5IgCl', FUND_STAT_F = 'fldXwNvQuraOWvgq7'; // Available Funds amount + status
 const T_NOTIF = 'tblEpClYAomtd5t2l';  // Notifications
 const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS', link:'fldkcJpvziAQoRSWz' };
@@ -647,6 +648,7 @@ exports.handler = async (event) => {
     };
     if(f.depart) fields[TR.depart]=f.depart;
     if(f.ret)    fields[TR.ret]=f.ret;
+    if(f.acct)   fields[TR.acct]=String(f.acct).trim();
     if(f.notes)  fields[TR.notes]=(f.notes||'').trim();
     if(f.timing) fields[TR.timing]=f.timing;
     if(f.actualCost!=null && f.actualCost!=='') fields[TR.actual]=Number(f.actualCost);
@@ -739,7 +741,7 @@ exports.handler = async (event) => {
       const travel = travelRecs.map(r => ({
         id:r.id, name:r.fields[TR.name]||'', email:r.fields[TR.email]||'', team:r.fields[TR.team]||'',
         purpose:r.fields[TR.purpose]||'', depart:r.fields[TR.depart]||'', ret:r.fields[TR.ret]||'',
-        reqAmt:r.fields[TR.reqAmt]||0, appAmt:r.fields[TR.appAmt]||0,
+        reqAmt:r.fields[TR.reqAmt]||0, appAmt:r.fields[TR.appAmt]||0, acct:r.fields[TR.acct]||'',
         timing:(r.fields[TR.timing]&&(r.fields[TR.timing].name||r.fields[TR.timing]))||'',
         actual:r.fields[TR.actual]||0,
         status:(r.fields[TR.status]&&(r.fields[TR.status].name||r.fields[TR.status]))||'Submitted'
@@ -864,6 +866,11 @@ exports.handler = async (event) => {
       // grant transferred/paid and fires the notifications to everyone.
       const LINK_TTL = 1000*60*60*24*45; // links stay valid for 45 days
       const sentLink = (kind, id) => `${SITE_URL}/.netlify/functions/airtable?op=sent&t=${makeActionToken({ a:'sent', k:kind==='travel'?'t':'p', id, exp:Date.now()+LINK_TTL })}`;
+      // Both ends of every transfer, so accounting never has to look anything
+      // up: FROM is the National Ministries account on file (Account Balance),
+      // TO is the Cedarstone account from the application / travel request.
+      const balRecs2 = await fetchAll(T_BAL, {}).catch(() => []);
+      const fromAcct = (balRecs2.length && balRecs2[0].fields['fldkVMZNye4ZFkUtK']) || '510181 - National Expansion Projects';
       const lines = [];
       for(const it of items){
         if(!it || !it.recordId) continue;
@@ -871,13 +878,18 @@ exports.handler = async (event) => {
           const rec = await at(BASE+'/'+T_TRAVEL+'/'+it.recordId+'?returnFieldsByFieldId=true');
           const f = rec.fields || {};
           const applicant = (f[TR.name]||'').trim() || (f[TR.email]||'');
-          lines.push(`${usd(f[TR.appAmt] || f[TR.reqAmt])} — SECC travel grant to ${applicant}${f[TR.team] ? ` (${f[TR.team]})` : ''}, from the SouthEast travel fund`
+          const toAcct = String(f[TR.acct]||'').trim();
+          lines.push(`${usd(f[TR.appAmt] || f[TR.reqAmt])} — SECC travel grant to ${applicant}${f[TR.team] ? ` (${f[TR.team]})` : ''}`
+            + `\n   From account: ${fromAcct} (SouthEast travel fund)`
+            + `\n   To Cedarstone account: ${toAcct || `not on file — check with ${applicant}`}`
             + `\n   ✅ When you've sent it, click here (everyone is notified automatically):\n   ${sentLink('travel', it.recordId)}`);
         } else {
           const rec = await at(BASE+'/'+T_PROP+'/'+it.recordId+'?returnFieldsByFieldId=true');
           const f = rec.fields || {};
-          const acct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
-          lines.push(`${usd(f[PNF.awarded])} — "${f[PNF.name] || 'a grant'}"${f[PNF.country] ? ` (${f[PNF.country]})` : ''} to Cedarstone account ${acct||'(ask the grant team)'}`
+          const toAcct = String(f['fldrqg7gy2oEhfdvw']||'').trim(); // Cedarstone account on the application
+          lines.push(`${usd(f[PNF.awarded])} — "${f[PNF.name] || 'a grant'}"${f[PNF.country] ? ` (${f[PNF.country]})` : ''}`
+            + `\n   From account: ${fromAcct}`
+            + `\n   To Cedarstone account: ${toAcct || 'not on file — check with the country'}`
             + `\n   ✅ When you've sent it, click here (everyone is notified automatically):\n   ${sentLink('project', it.recordId)}`);
         }
       }

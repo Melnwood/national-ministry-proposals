@@ -281,7 +281,7 @@ function ProjectGrantForm({ countries, myCountryIds, draftKey, onClose, onDone }
 
 function TravelGrantForm({ user, onClose }) {
   const [v, setV] = useState({ name: (user && user.name) || '', email: (user && user.email) || '', team: '',
-    purpose: '', timing: 'Upcoming', depart: '', ret: '', reqAmt: '', notes: '' });
+    purpose: '', timing: 'Upcoming', depart: '', ret: '', reqAmt: '', acct: '', notes: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
@@ -295,7 +295,7 @@ function TravelGrantForm({ user, onClose }) {
     try {
       await api('travel_submit', { fields: {
         name: v.name, email: v.email, team: v.team, purpose: v.purpose, timing: v.timing,
-        depart: v.depart, ret: v.ret, reqAmt: Number(v.reqAmt),
+        depart: v.depart, ret: v.ret, reqAmt: Number(v.reqAmt), acct: v.acct,
         actualCost: v.timing === 'Already taken' ? Number(v.reqAmt) : '', notes: v.notes } });
       setDone(true);
     } catch (e) { setErr(e.message || 'Could not submit.'); setBusy(false); }
@@ -325,6 +325,7 @@ function TravelGrantForm({ user, onClose }) {
               <Fld label={v.timing === 'Already taken' ? 'Trip end' : 'Return date'}><input type="date" value={v.ret} onInput={e => set('ret', e.currentTarget.value)} /></Fld>
             </div>
             <Fld label={v.timing === 'Already taken' ? 'What did the trip cost?' : 'Amount requested'}><div class="moneyin"><span>$</span><input type="number" step="50" value={v.reqAmt} onInput={e => set('reqAmt', e.currentTarget.value)} /></div></Fld>
+            <Fld label="Your JV account number at Cedarstone — where we send the money if approved"><input value={v.acct} onInput={e => set('acct', e.currentTarget.value)} placeholder="e.g. 510xxx" /></Fld>
             <Fld label="Anything else we should know?"><textarea rows="2" value={v.notes} onInput={e => set('notes', e.currentTarget.value)} /></Fld>
             {err && <div class="editerr">{err}</div>}
             <div class="dc-confirm">

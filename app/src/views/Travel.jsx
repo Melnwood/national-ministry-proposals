@@ -123,8 +123,8 @@ export function TravelPayCard({ t, fromFund, onDone, pick }) {
       <div class="acctrow">
         <div><div class="cstat-l">From — restricted travel fund</div>
           <div class="acctno">{fromFund || 'SE Christian Foundation'}</div></div>
-        <div><div class="cstat-l">To — the applicant</div>
-          <div class="acctno">{t.email || '—'}</div></div>
+        <div><div class="cstat-l">To — {t.name ? `${t.name}'s` : "the applicant's"} Cedarstone account</div>
+          <div class={`acctno${t.acct ? '' : ' missing'}`}>{t.acct || `Not on file — check with ${t.name || t.email || 'the applicant'}`}</div></div>
       </div>
       {err && <div class="editerr">{err}</div>}
       <div class="dc-confirm">
