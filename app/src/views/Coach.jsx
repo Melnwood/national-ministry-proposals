@@ -11,7 +11,7 @@ const QUEUE_STAGES = new Set(['submitted', 'coach']);
 
 export function Coach({ boot, session, onRefresh }) {
   const me = (session.user && (session.user.name || '')).trim().toLowerCase();
-  const isCoach = session.role && session.role.key === 'coach';
+  const isCoach = (session.role && session.role.key === 'coach') || (session.roleKeys || []).includes('coach');
 
   // A coach sees only their own grants (by Regional Coach Name); oversight
   // roles (EVP/president) see everything.

@@ -41,18 +41,31 @@ const PROP_CREATED = 'fldkSi7mZ7RhhqPvC';
 const L = { type:'fldWdXntN7qxzP27w', detail:'fldxS6j7X32kek3sA', user:'fldhcgVDw0620rPOq',
             email:'fldHgUJthRzbKAFBj', pid:'fldB1xE98xE2LdsW2', entry:'fldY2QaCQeesowSUP' };
 const A = { email:'fldE3WddwlJbCRq7U', name:'fldmHfuuitDTDnPXR', salt:'fldzmEAe6cH17xFRw', hash:'fldv0hVikFT0fJlCx',
-            role:'fldX8zlGcfHjCXzUx', countries:'fldiXyPUnQ476bAYo', allCountries:'fldA6ibSWz73jves6' };
+            role:'fldX8zlGcfHjCXzUx', countries:'fldiXyPUnQ476bAYo', allCountries:'fldA6ibSWz73jves6',
+            leads:'fldSrR6NxGBPhiIpA' }; // countries this person LEADS (vs. coaches)
 
-// Attach role + country scope to a signed-in user, read from their Approvers
-// record. Additive and backward-compatible: existing pages ignore these fields;
-// the v2 app uses them to route to the right role view and (later) to enforce
-// what each person may see. Falls back to an empty scope if anything fails.
+// A person can hold several roles (the Role field is a multiple-select since
+// 2026-10-09, e.g. Peter and Josh are both coach AND country leader). This
+// reads one role, several, old string data, or select objects — all the same.
+const ROLE_PRIORITY = ['EVP','President','Grant team','CFO','National Ministries Coaches','Country'];
+function normRoles(v){
+  const arr = Array.isArray(v) ? v : (v ? [v] : []);
+  return arr.map(x => String((x && x.name) || x || '').trim()).filter(Boolean);
+}
+const primaryRole = roles => ROLE_PRIORITY.find(r => roles.includes(r)) || roles[0] || '';
+const rolesOf = who => (who && Array.isArray(who.roles) && who.roles.length) ? who.roles : normRoles(who && who.role);
+
+// Attach roles + country scope to a signed-in user, read from their Approvers
+// record. user.role stays a single string (the primary role) for everything
+// that predates multi-role; user.roles carries them all.
 function attachScope(user, rec){
   try{
-    user.role = rec.fields[A.role] || '';
+    user.roles = normRoles(rec.fields[A.role]);
+    user.role = primaryRole(user.roles);
     user.allCountries = !!rec.fields[A.allCountries];
     user.countryIds = Array.isArray(rec.fields[A.countries]) ? rec.fields[A.countries] : [];
-  }catch(e){ user.role = user.role || ''; }
+    user.leadsCountryIds = Array.isArray(rec.fields[A.leads]) ? rec.fields[A.leads] : [];
+  }catch(e){ user.role = user.role || ''; user.roles = user.roles || []; }
   return user;
 }
 // Who may reset another person's sign-in. Add an email here to grant that power.
@@ -66,7 +79,8 @@ function b64u(buf){ return Buffer.from(buf).toString('base64').replace(/\+/g,'-'
 function sign(payload){ return b64u(crypto.createHmac('sha256', SECRET).update(payload).digest()); }
 function makeToken(user){
   const payload = b64u(JSON.stringify({ email:user.email, name:user.name,
-    role:user.role||'', allCountries:!!user.allCountries, countryIds:user.countryIds||[],
+    role:user.role||'', roles:user.roles||[], allCountries:!!user.allCountries,
+    countryIds:user.countryIds||[], leadsCountryIds:user.leadsCountryIds||[],
     exp:Date.now()+1000*60*60*12 })); // 12h
   return payload + '.' + sign(payload);
 }
@@ -78,7 +92,8 @@ function verifyToken(token){
   if(!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
   let data; try{ data = JSON.parse(Buffer.from(payload.replace(/-/g,'+').replace(/_/g,'/'),'base64').toString()); }catch(e){ return null; }
   if(!data.exp || Date.now() > data.exp) return null;
-  return { email:data.email, name:data.name, role:data.role||'', allCountries:!!data.allCountries, countryIds:data.countryIds||[] };
+  return { email:data.email, name:data.name, role:data.role||'', roles:data.roles||[],
+    allCountries:!!data.allCountries, countryIds:data.countryIds||[], leadsCountryIds:data.leadsCountryIds||[] };
 }
 // Single-purpose signed links for the buttons inside emails: accounting (who
 // never signs in to the app) clicks "I've sent it" and the grant is marked
@@ -102,16 +117,24 @@ function readActionToken(t){
 // to their assigned Countries. Enforced server-side (defense in depth on top of
 // the front-end tabs).
 const OVERSIGHT_ROLES = ['EVP','President','Grant team','CFO'];
-const isOversight = who => OVERSIGHT_ROLES.includes((who && who.role || '').trim());
-// Only country leaders are hard-scoped to their own countries. Coaches are
-// staff (they see the queue) until per-coach country assignment is populated.
-const isScopedCountry = who => (who && who.role || '').trim() === 'Country' && !(who && who.allCountries);
-const canDelete   = who => ['EVP','President','Grant team'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
+const hasAnyRole = (who, list) => rolesOf(who).some(r => list.includes(r));
+const isOversight = who => hasAnyRole(who, OVERSIGHT_ROLES);
+// Only PURE country leaders are hard-scoped to their own countries. Coaches
+// are staff (they see the queue) — so a coach who ALSO leads a country (Peter,
+// Josh) keeps the coach's full view, and their My Country page scopes itself.
+const isScopedCountry = who => {
+  const roles = rolesOf(who);
+  return roles.includes('Country')
+    && !roles.includes('National Ministries Coaches')
+    && !hasAnyRole(who, OVERSIGHT_ROLES)
+    && !(who && who.allCountries);
+};
+const canDelete   = who => hasAnyRole(who, ['EVP','President','Grant team']) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
 // Who may move money from inside the tool (decide travel requests, request
 // payments, record transfers): the EVP team only, for now. The grant team
 // (Kevin) watches activity and builds foundation reports.
-const canSendMoney = who => ['EVP'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
-const canBalance  = who => ['EVP','President'].includes((who && who.role||'').trim()) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
+const canSendMoney = who => hasAnyRole(who, ['EVP']) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
+const canBalance  = who => hasAnyRole(who, ['EVP','President']) || ADMINS.includes((who&&who.email||'').trim().toLowerCase());
 const PROP_COUNTRY_LINK = 'fldaHnvEM4RokRDth';
 function inScope(who, propFields){
   if(isOversight(who) || (who && who.allCountries)) return true;
@@ -199,7 +222,7 @@ const PNF = { name:'fld1qi35letQtg6yC', country:'fldpZ00pUwm1gB4zN', awarded:'fl
 async function rolePeople(roles){
   try{
     const ppl = await fetchAll(T_APP, {});
-    return ppl.filter(p => roles.includes((p.fields[A.role]||'').trim()))
+    return ppl.filter(p => normRoles(p.fields[A.role]).some(r => roles.includes(r)))
               .map(p => ({ email:(p.fields[A.email]||'').trim(), name:(p.fields[A.name]||'').trim() }))
               .filter(p => p.email);
   }catch(e){ return []; }
@@ -213,7 +236,7 @@ async function coachForCountry(countryId){
   if(!countryId) return { email:'', name:'' };
   try{
     const ppl = await fetchAll(T_APP, {});
-    const c = ppl.find(p => (p.fields[A.role]||'').trim() === 'National Ministries Coaches'
+    const c = ppl.find(p => normRoles(p.fields[A.role]).includes('National Ministries Coaches')
       && Array.isArray(p.fields[A.countries])
       && p.fields[A.countries].some(id => (id && id.id ? id.id : id) === countryId));
     return c ? { email:(c.fields[A.email]||'').trim(), name:(c.fields[A.name]||'').trim() } : { email:'', name:'' };
@@ -850,7 +873,9 @@ exports.handler = async (event) => {
         id:r.id,
         email:r.fields[A.email]||'',
         name:r.fields[A.name]||'',
-        role:r.fields[A.role]||'',
+        role:primaryRole(normRoles(r.fields[A.role])),
+        roles:normRoles(r.fields[A.role]),
+        leads: Array.isArray(r.fields[A.leads]) ? r.fields[A.leads] : [],
         countries: Array.isArray(r.fields[A.countries]) ? r.fields[A.countries] : [],
         allCountries: !!r.fields[A.allCountries],
         hasPassword: !!(r.fields[A.salt] && r.fields[A.hash])
@@ -863,9 +888,12 @@ exports.handler = async (event) => {
       const f = body.fields || {};
       const fields = {};
       if(f.name != null) fields[A.name] = String(f.name).trim();
-      if(f.role != null) fields[A.role] = String(f.role).trim();
+      // Roles are a LIST now; a lone string still works (old clients).
+      if(f.roles != null) fields[A.role] = normRoles(f.roles);
+      else if(f.role != null) fields[A.role] = f.role ? [String(f.role).trim()] : [];
       if(f.allCountries != null) fields[A.allCountries] = !!f.allCountries;
       if(Array.isArray(f.countries)) fields[A.countries] = f.countries;
+      if(Array.isArray(f.leads)) fields[A.leads] = f.leads;
       const upd = await at(BASE+'/'+T_APP+'/'+body.recordId, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
       try{ await writeLog([{ fields:{ [L.entry]:'Updated access for '+((upd.fields&&upd.fields[A.email])||body.recordId), [L.type]:'Login',
         [L.detail]:(who.name||who.email)+' updated a person\'s role/access', [L.user]:who.name||'', [L.email]:who.email||'' } }]); }catch(e){}
@@ -882,9 +910,11 @@ exports.handler = async (event) => {
       if(existing.some(p => ((p.fields[A.email]||'').trim().toLowerCase()) === email))
         return reply(400, { error:'Someone with that email already exists.' });
       const fields = { [A.email]:emailRaw, [A.name]:(f.name||'').trim() };
-      if(f.role) fields[A.role] = String(f.role).trim();
+      if(f.roles != null && normRoles(f.roles).length) fields[A.role] = normRoles(f.roles);
+      else if(f.role) fields[A.role] = [String(f.role).trim()];
       if(f.allCountries != null) fields[A.allCountries] = !!f.allCountries;
       if(Array.isArray(f.countries) && f.countries.length) fields[A.countries] = f.countries;
+      if(Array.isArray(f.leads) && f.leads.length) fields[A.leads] = f.leads;
       const created = await at(BASE+'/'+T_APP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
       const id = created.records && created.records[0] && created.records[0].id;
       try{ await writeLog([{ fields:{ [L.entry]:'Added person '+emailRaw, [L.type]:'Login',
@@ -1155,7 +1185,7 @@ exports.handler = async (event) => {
       // Amanda/oversight and coaches can save any country's plan; a country
       // leader can save their own.
       if(!body.countryId) return reply(400, { error:'Missing countryId.' });
-      const isCoachRole = (who.role||'').trim() === 'National Ministries Coaches';
+      const isCoachRole = rolesOf(who).includes('National Ministries Coaches');
       const own = (who.countryIds||[]).includes(body.countryId);
       const allowed = isOversight(who) || isCoachRole || own || ADMINS.includes((who.email||'').trim().toLowerCase());
       if(!allowed) return reply(403, { error:'Not permitted.' });

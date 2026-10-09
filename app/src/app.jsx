@@ -44,10 +44,14 @@ export function App() {
     setStatus('loading');
     try {
       const data = await api('bootstrap', {});
-      const roleName = data.user && data.user.role;
-      const role = roleName ? ROLE_BY_AIRTABLE[roleName] : null;
+      // A person can hold several roles (coach AND country leader, like Peter
+      // and Josh). roleKeys carries them all; role stays the primary one.
+      const names = (data.user && (Array.isArray(data.user.roles) && data.user.roles.length
+        ? data.user.roles : (data.user.role ? [data.user.role] : []))) || [];
+      const roleKeys = names.map(n => ROLE_BY_AIRTABLE[n] && ROLE_BY_AIRTABLE[n].key).filter(Boolean);
+      const role = roleKeys.length ? ROLES[roleKeys[0]] : null;
       setBoot(data);
-      setSession({ user: data.user || {}, role });
+      setSession({ user: data.user || {}, role, roleKeys });
       setStatus('signedin');
     } catch (e) {
       if (e.message !== 'Session expired') { setGateErr(e.message || 'Could not load your dashboard.'); setStatus('signedout'); }
@@ -77,12 +81,17 @@ const VIEW_AS = [
 
 export function Workspace({ boot, session, onRefresh }) {
   const realRole = session.role && session.role.key;
+  // All of this person's roles — their tab row is the UNION of what each
+  // role can see (a coach+leader gets Coach Review AND My Country).
+  const realKeys = (session.roleKeys && session.roleKeys.length) ? session.roleKeys : (realRole ? [realRole] : []);
   // Full-oversight preview ("View as") stays with EVP / council (Ben & Amanda).
-  const canPreview = realRole === 'evp';
+  const canPreview = realKeys.includes('evp');
   const [viewRole, setViewRole] = useState(realRole);
-  const roleKey = canPreview ? viewRole : realRole;
+  const previewing = canPreview && viewRole !== realRole;
+  const activeKeys = previewing ? [viewRole] : realKeys;
+  const roleKey = previewing ? viewRole : realRole;
 
-  const tabs = TABS.filter(t => !roleKey || t.roles.includes(roleKey));
+  const tabs = TABS.filter(t => !activeKeys.length || t.roles.some(k => activeKeys.includes(k)));
   const available = tabs.length ? tabs : TABS;
   const home = available.some(t => t.key === HOME[roleKey]) ? HOME[roleKey] : available[0].key;
   const [tab, setTab] = useState(home);
@@ -92,8 +101,8 @@ export function Workspace({ boot, session, onRefresh }) {
 
   // The session handed to the views reflects the previewed role (keeps the real
   // identity + full oversight data, so the previewed screens still populate).
-  const viewSession = (canPreview && viewRole !== realRole)
-    ? { ...session, role: (ROLES[viewRole] || session.role), previewing: true }
+  const viewSession = previewing
+    ? { ...session, role: (ROLES[viewRole] || session.role), roleKeys: [viewRole], previewing: true }
     : session;
 
   return (

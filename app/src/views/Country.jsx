@@ -13,9 +13,12 @@ const NOW = Date.now();
 
 export function Country({ boot, session, onRefresh }) {
   // Scope to the signed-in leader's country/countries. Oversight roles (EVP)
-  // see everything so they can preview what a leader sees.
-  const isCountry = session.role && session.role.key === 'country';
-  const myCountryIds = (session.user && session.user.countryIds) || [];
+  // see everything so they can preview what a leader sees. A coach who ALSO
+  // leads a country (Peter, Josh) is scoped here to the country they LEAD
+  // (Leads Countries), not the countries they coach.
+  const isCountry = (session.role && session.role.key === 'country') || (session.roleKeys || []).includes('country');
+  const leadIds = (session.user && session.user.leadsCountryIds) || [];
+  const myCountryIds = leadIds.length ? leadIds : ((session.user && session.user.countryIds) || []);
 
   const grants = useMemo(() => {
     let list = boot.props || [];

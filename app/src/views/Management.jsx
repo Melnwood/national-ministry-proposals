@@ -239,7 +239,9 @@ function SignIns({ boot, noHead }) {
               <tr key={p.id} class="clk" onClick={() => setEditing(p)}>
                 <td class="nm">{p.name || '—'}</td>
                 <td class="cty">{p.email}</td>
-                <td class="cty">{ROLE_LABEL[p.role] || p.role || <span class="rbadge upcoming">No role</span>}</td>
+                <td class="cty">{(p.roles && p.roles.length)
+                  ? p.roles.map(r => ROLE_LABEL[r] || r).join(' + ')
+                  : (ROLE_LABEL[p.role] || p.role || <span class="rbadge upcoming">No role</span>)}</td>
                 <td class="cty">{p.allCountries ? 'All' : (p.countries && p.countries.length ? p.countries.length : '—')}</td>
                 <td>{p.hasPassword ? <span class="rbadge submitted">Set</span> : <span class="rbadge upcoming">Not yet</span>}</td>
                 <td class="r" onClick={e => e.stopPropagation()}>
@@ -269,18 +271,27 @@ function PersonEditor({ person, countries, onClose, onSaved }) {
   const isNew = !person;
   const [name, setName] = useState(person ? person.name || '' : '');
   const [email, setEmail] = useState(person ? person.email || '' : '');
-  const [role, setRole] = useState(person ? person.role || '' : '');
+  // A person can hold several roles (e.g. Regional Coach + Country Leader).
+  const [rset, setRset] = useState(() => new Set(
+    person ? ((person.roles && person.roles.length) ? person.roles : (person.role ? [person.role] : [])) : []));
   const [allC, setAllC] = useState(person ? !!person.allCountries : false);
   const [cset, setCset] = useState(() => new Set(person && person.countries ? person.countries : []));
+  const [leadSet, setLeadSet] = useState(() => new Set(person && person.leads ? person.leads : []));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
   const toggleC = id => setCset(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleL = id => setLeadSet(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleR = r => setRset(prev => { const n = new Set(prev); n.has(r) ? n.delete(r) : n.add(r); return n; });
+  const isCountryRole = rset.has(ROLES.country.airtable);
+  const isCoachRole = rset.has(ROLES.coach.airtable);
 
   async function save() {
     if (isNew && !email.trim()) { setErr('Email is required.'); return; }
+    if (isCountryRole && !allC && !leadSet.size) { setErr('Pick which country they lead (the Country Leader role needs one).'); return; }
     setBusy(true); setErr('');
-    const fields = { name, role, allCountries: allC, countries: allC ? [] : Array.from(cset) };
+    const fields = { name, roles: Array.from(rset), allCountries: allC,
+      countries: allC ? [] : Array.from(cset), leads: Array.from(leadSet) };
     try {
       if (isNew) { await api('people_add', { fields: { ...fields, email } }); onSaved(`Added ${name || email}.`); }
       else { await api('people_update', { recordId: person.id, fields }); onSaved(`Saved ${name || email}.`); }
@@ -303,17 +314,33 @@ function PersonEditor({ person, countries, onClose, onSaved }) {
             <label class="fld"><span class="flbl">Email</span>
               <input type="email" value={email} onInput={e => setEmail(e.currentTarget.value)} placeholder="name@josiahventure.com" /></label>
           )}
-          <label class="fld"><span class="flbl">Role</span>
-            <select value={role} onChange={e => setRole(e.currentTarget.value)}>
-              <option value="">— No role —</option>
-              {Object.values(ROLES).map(r => <option value={r.airtable}>{r.label}</option>)}
-            </select>
+          <label class="fld"><span class="flbl">Roles — tick every hat they wear</span>
+            <div class="country-pick">
+              {Object.values(ROLES).map(r => (
+                <label class={`check${rset.has(r.airtable) ? ' on' : ''}`}>
+                  <input type="checkbox" checked={rset.has(r.airtable)} onChange={() => toggleR(r.airtable)} /><span>{r.label}</span>
+                </label>
+              ))}
+            </div>
           </label>
+
+          {isCountryRole && (
+            <label class="fld"><span class="flbl">Country they LEAD — their My Country page</span>
+              <div class="country-pick">
+                {countries.map(c => (
+                  <label class={`check${leadSet.has(c.id) ? ' on' : ''}`}>
+                    <input type="checkbox" checked={leadSet.has(c.id)} onChange={() => toggleL(c.id)} /><span>{c.name}</span>
+                  </label>
+                ))}
+                {!countries.length && <span class="dim">No countries loaded.</span>}
+              </div>
+            </label>
+          )}
 
           <label class="check inline"><input type="checkbox" checked={allC} onChange={e => setAllC(e.currentTarget.checked)} /><span>Can see every country</span></label>
 
           {!allC && (
-            <label class="fld"><span class="flbl">Countries they can see</span>
+            <label class="fld"><span class="flbl">{isCoachRole ? 'Countries they COACH' : 'Countries they can see'}</span>
               <div class="country-pick">
                 {countries.map(c => (
                   <label class={`check${cset.has(c.id) ? ' on' : ''}`}>
