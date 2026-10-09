@@ -391,6 +391,9 @@ async function gatherCycle(cycleId){
     return {
       name: p ? (p.fields[PPF.name] || '') : '(a funded project)',
       country: p ? (p.fields[PPF.country] || '').toString() : '',
+      // What the project IS, from its application — so a reader who has never
+      // heard of "The Leadership Challenge" gets a plain-words explanation.
+      about: p ? String(p.fields['fldb0TRzRi1nzkN7v'] || p.fields['fld17fOaX3yAe3s4O'] || '').trim().slice(0, 500) : '',
       kind: /final/i.test(sname(rf[RF.type])) ? 'Final' : /mid/i.test(sname(rf[RF.type])) ? 'Mid' : sname(rf[RF.type]),
       completedBy: rf[RF.completedBy] || '',
       story: (rf[RF.story] || '').trim(),
@@ -439,6 +442,7 @@ async function writeImpactSummary(data){
   const t = data.totals || {}, c = data.cycle || {};
   const stories = (data.stories || []).slice(0, 40).map(s => {
     const parts = [`PROJECT: ${s.name}${s.country ? ' — ' + s.country : ''}${s.completedBy ? ` (report written by ${s.completedBy})` : ''}`];
+    if(s.about)      parts.push(`What the project is (from its application): ${s.about}`);
     if(s.story)      parts.push(`Their story, in their words: ${s.story}`);
     if(s.objectives && s.objectives.length) parts.push(`Progress: ${s.objectives.join(' | ')}`);
     if(s.challenges) parts.push(`Challenges they named: ${s.challenges}`);
@@ -455,7 +459,7 @@ Josiah Venture's vision is a movement of God among the youth of Central and East
 
 How it should sound: like one person writing to a friend they're deeply grateful for, about moments that genuinely moved them. Plain, warm, specific. Use contractions. Vary sentence length; short sentences are fine. The country leaders' reports talk about what God did — keep that language; it's how this community speaks. When a detail shines, use the leader's own words (lightly cleaned up) and name them and their country.
 
-The letter and the vignettes appear on the SAME page, so they must not repeat each other. The vignettes (below) carry the individual project stories. The LETTER is the big picture: step back and tell them what their whole gift added up to — the movement you can see when you read all the reports together, the themes that keep repeating (leaders stepping up, churches strengthened, young people meeting Jesus), the sweep across countries. You may gesture broadly ('from camps in Slovakia to new leaders in Romania') but do NOT retell any specific project story, quote, or moment that a vignette uses — the reader will read both, and reading the same story twice kills it. Inspiring, not info-heavy: at most two or three numbers in the whole letter; no project lists, no inventories of activities.
+The letter and the vignettes appear on the SAME page, so they must not repeat each other. The vignettes (below) carry the individual project stories. The LETTER is the big picture: step back and tell them what their whole gift added up to — the movement you can see when you read all the reports together, the themes that keep repeating (leaders stepping up, churches strengthened, young people meeting Jesus), the sweep across countries. You may gesture broadly ('from camps in Slovakia to new leaders in Romania') but do NOT retell any specific project story, quote, or moment that a vignette uses — the reader will read both, and reading the same story twice kills it. If you ever name a project, add a few plain words saying what it is; the reader has never heard these names. Inspiring, not info-heavy: at most two or three numbers in the whole letter; no project lists, no inventories of activities.
 
 Never do this: do not invent any fact, number, name, or story beyond what is below. No 'impact metrics', 'leverage', 'utilize', 'strategic', 'outcomes', 'we are pleased to report', 'it is our privilege'. Do not pad — if the reports are thin, write less.
 
@@ -466,7 +470,7 @@ ${stories}
 
 Return ONLY valid JSON, no markdown fences, in exactly this shape:
 {"letter": "3 short paragraphs addressed to them ('your gift', 'because of you'), separated by blank lines. Open with real thanks; the middle paints the BIG PICTURE of what their gift set in motion across the region — themes and movement, never retelling the individual stories the vignettes tell; close simply — gratitude and shared mission, no sales pitch.",
- "vignettes": [{"project": "<the project name EXACTLY as given above>", "text": "2–3 sentences for this project: concise, heartfelt, inspiring. Keep the leader's own best phrase where there is one, and their name. No statistics unless one is the point of the story."}]}
+ "vignettes": [{"project": "<the project name EXACTLY as given above>", "text": "2–3 sentences for this project: concise, heartfelt, inspiring. The FIRST few words must tell a stranger what the project actually is, in plain language (use 'What the project is' above) — never assume a name like 'The Leadership Challenge' explains itself. Then the story: keep the leader's own best phrase where there is one, and their name. No statistics unless one is the point of the story."}]}
 Write ONE vignette for EVERY project above — a project's mid and final reports count as one project, so draw on both. If a project's reports hold only numbers and no narrative, write one simple true sentence from what is there; never invent.`;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
