@@ -101,6 +101,7 @@ const EMPTY_APP = {
   requested: '', totalBudget: '', otherFunding: '', receivedFunds: '', unusedFunds: '', cedarstoneAccount: '',
   objective: '', objective2: '', objective3: '',
   strategicFit: '', success: '', sustainability: '', checklist: [], budgetFile: null,
+  photoCommit: false,
 };
 
 // A saved-but-not-submitted application, kept in this browser's localStorage so
@@ -145,6 +146,7 @@ function ProjectGrantForm({ countries, myCountryIds, draftKey, onClose, onDone }
     if (!v.name.trim()) { setErr('Give your project a name.'); return; }
     if (!v.requested || Number(v.requested) <= 0) { setErr('Enter the amount you are requesting.'); return; }
     if (!v.countryId) { setErr('Choose your country.'); return; }
+    if (!v.photoCommit) { setErr('Please check the photo commitment — the reports can\'t be filed without the photos, so we ask you to plan for them now.'); return; }
     setErr(''); setStep('assessment');
   }
   function onBudgetFile(e) {
@@ -244,6 +246,13 @@ function ProjectGrantForm({ countries, myCountryIds, draftKey, onClose, onDone }
             <Fld label="How does this project fit into your strategic plans?"><textarea rows="2" value={v.strategicFit} onInput={e => set('strategicFit', e.currentTarget.value)} /></Fld>
             <Fld label="How will the success of the project be measured?"><textarea rows="2" value={v.success} onInput={e => set('success', e.currentTarget.value)} /></Fld>
             <Fld label="How will the project be sustained after the grant ends?"><textarea rows="2" value={v.sustainability} onInput={e => set('sustainability', e.currentTarget.value)} /></Fld>
+
+            <div class="formsec">Telling the story</div>
+            <p class="lead" style="margin:0 0 8px;font-size:13px">If this grant is funded, you'll file a mid-project and a final report in this app — and each one requires <b>3 different photos</b> of the project (6 meaningful photos in all). They help us tell the story of what God did and how we stewarded the grant, and that goes a long way with the foundations and churches that give to support what you're doing. Plan now to capture them as the project runs.</p>
+            <label class={`check${v.photoCommit ? ' on' : ''}`}>
+              <input type="checkbox" checked={v.photoCommit} onChange={e => set('photoCommit', e.currentTarget.checked)} />
+              <span>We will provide 6 meaningful photos of the project — 3 different ones with the mid-term report and 3 different ones with the final report.</span>
+            </label>
 
             {step === 'form' && err && <div class="editerr">{err}</div>}
             <div class="dc-confirm" style="margin-top:16px;align-items:center">

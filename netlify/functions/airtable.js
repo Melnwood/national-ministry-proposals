@@ -1262,6 +1262,8 @@ exports.handler = async (event) => {
       setS(PA.success,f.success); setS(PA.sustain,f.sustainability); setS(PA.fit,f.strategicFit);
       setS(PA.team,f.team); setS(PA.lead,f.projectLead); setS(PA.otherFunding,f.otherFunding);
       setS(PA.received,f.receivedFunds); setS(PA.unused,f.unusedFunds); setS(PA.acct,f.cedarstoneAccount);
+      // The applicant's promise of 6 meaningful photos (3 per report).
+      if(f.photoCommit) fields['fldT69Tof0YR2Qvn1'] = true;
       if(f.start) fields[PA.start]=f.start; if(f.end) fields[PA.end]=f.end;
       if(Array.isArray(f.checklist) && f.checklist.length) fields[PA.checklist]=f.checklist;
       const created = await at(BASE+'/'+T_PROP, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
