@@ -521,8 +521,9 @@ function ReportForm({ r, p, midReport, onClose, onDone }) {
 
           <label class="fld">
             <span class="flbl">Your 3 best photos of the project — required{r.kind === 'Final' ? ' (different from the mid-term ones)' : ''}</span>
+            <p class="lead" style="margin:2px 0 8px;font-size:13px">These photos help us tell the story of what God did and how we stewarded the grant we were given — and that goes a long way with the foundations and churches that give to support what you're doing.</p>
             <input type="file" accept="image/*" multiple onChange={onPhotos} disabled={photos.length >= 3} />
-            <span class="mini dim">{photos.length} of 3 added · photos are what the foundations love most</span>
+            <span class="mini dim">{photos.length} of 3 added</span>
           </label>
           {photos.length > 0 && (
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
