@@ -290,6 +290,7 @@ function GrantDetail({ p, onClose, onSaved }) {
   const [stage, setStage]     = useState(stageLabel(p) || 'Submitted');
   const [award, setAward]     = useState(awarded(p) ? String(awarded(p)) : '');
   const [paidAmt, setPaidAmt] = useState(paid(p) ? String(paid(p)) : '');
+  const [acct, setAcct]       = useState(aval(f[F.proposal.cedarstoneAccount]) || '');
   const [busy, setBusy]       = useState(false);
   const [err, setErr]         = useState('');
 
@@ -299,8 +300,10 @@ function GrantDetail({ p, onClose, onSaved }) {
   const owedNow  = paidAmt !== '' && awardNum - paidNum > 0 ? awardNum - paidNum : 0;
 
   const origStage = stageLabel(p) || '';
+  const origAcct = aval(f[F.proposal.cedarstoneAccount]) || '';
   const dirty = stage !== origStage
     || awardNum !== (awarded(p) || 0)
+    || acct.trim() !== origAcct
     || (paidAmt === '' ? paid(p) !== 0 && paid(p) != null : paidNum !== (paid(p) || 0));
 
   async function save() {
@@ -322,6 +325,10 @@ function GrantDetail({ p, onClose, onSaved }) {
     if (paidChanged) {
       fields[F.proposal.paid] = paidAmt === '' ? null : paidNum;
       changes.push({ type: 'Funding assignment', label: `Paid to date ${money(paidNum)}`, detail: `Amount Paid to Date set to ${money(paidNum)}` });
+    }
+    if (acct.trim() !== origAcct) {
+      fields[F.proposal.cedarstoneAccount] = acct.trim();
+      changes.push({ type: 'Funding assignment', label: 'Cedarstone account updated', detail: `Cedarstone account set to ${acct.trim() || '(cleared)'}` });
     }
     try {
       await api('update', { recordId: p.id, fields, changes, projectName: projectName(p) });
@@ -372,6 +379,11 @@ function GrantDetail({ p, onClose, onSaved }) {
               <span class="mini dim">{owedNow ? `Still owed ${money(owedNow)}` : 'Blank = paid in full'}</span>
             </label>
           </div>
+
+          <label class="fld">
+            <span class="flbl">Cedarstone account — where the money gets sent</span>
+            <input value={acct} onInput={e => setAcct(e.currentTarget.value)} placeholder="e.g. 510xxx" />
+          </label>
         </div>
 
         {/* read-only context */}

@@ -24,13 +24,14 @@ export function TravelBadge({ status }) {
 export function TravelCard({ t, onDone }) {
   const [mode, setMode] = useState(null); // 'approve' | 'deny' | null
   const [amount, setAmount] = useState(t.reqAmt ? String(t.reqAmt) : '');
+  const [acct, setAcct] = useState(t.acct || '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
   async function decide(kind) {
     setBusy(true); setErr('');
     const fields = kind === 'approve'
-      ? { [F.travel.appAmt]: Number(amount) || 0, [F.travel.status]: 'Approved' }
+      ? { [F.travel.appAmt]: Number(amount) || 0, [F.travel.status]: 'Approved', [F.travel.acct]: acct.trim() }
       : { [F.travel.status]: 'Denied' };
     try {
       await api('travel_update', { recordId: t.id, fields });
@@ -61,10 +62,15 @@ export function TravelCard({ t, onDone }) {
       {mode && (
         <div class="dc-form">
           {mode === 'approve' && (
-            <label class="fld"><span class="flbl">Approved amount — from the SECC fund</span>
-              <div class="moneyin"><span>$</span><input type="number" step="50" value={amount} onInput={e => setAmount(e.currentTarget.value)} /></div>
-              {t.reqAmt > 0 && <button type="button" class="mini" onClick={() => setAmount(String(t.reqAmt))}>Requested = {money(t.reqAmt)}</button>}
-            </label>
+            <div class="fldrow">
+              <label class="fld"><span class="flbl">Approved amount — from the SECC fund</span>
+                <div class="moneyin"><span>$</span><input type="number" step="50" value={amount} onInput={e => setAmount(e.currentTarget.value)} /></div>
+                {t.reqAmt > 0 && <button type="button" class="mini" onClick={() => setAmount(String(t.reqAmt))}>Requested = {money(t.reqAmt)}</button>}
+              </label>
+              <label class="fld"><span class="flbl">Cedarstone account — where it gets sent</span>
+                <input value={acct} onInput={e => setAcct(e.currentTarget.value)} placeholder="e.g. 510xxx" />
+              </label>
+            </div>
           )}
           {mode === 'deny' && <p class="lead" style="margin:0">Mark this request as denied? {t.name || 'The applicant'} will get an email letting them know.</p>}
           {err && <div class="editerr">{err}</div>}
@@ -85,7 +91,10 @@ export function TravelCard({ t, onDone }) {
 export function TravelPayRow({ t, fromFund, onDone, pick, canAct }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [acct, setAcct] = useState(t.acct || '');
+  const [savingAcct, setSavingAcct] = useState(false);
   const amt = t.appAmt || t.reqAmt || 0;
+  const acctDirty = acct.trim() !== (t.acct || '');
 
   async function pay() {
     setBusy(true); setErr('');
@@ -95,13 +104,31 @@ export function TravelPayRow({ t, fromFund, onDone, pick, canAct }) {
     } catch (e) { setErr(e.message || 'Could not record the payment.'); setBusy(false); }
   }
 
+  // The EVP team can type a missing account number right here in the row.
+  async function saveAcct() {
+    setSavingAcct(true); setErr('');
+    try {
+      await api('travel_update', { recordId: t.id, fields: { [F.travel.acct]: acct.trim() } });
+      onDone && onDone();
+    } catch (e) { setErr(e.message || 'Could not save the account.'); }
+    setSavingAcct(false);
+  }
+
   return (
     <tr>
       <td>{pick && <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} title="Include in the one email to accounting" />}</td>
       <td class="nm" title={t.email}>{t.name || '—'}{t.team ? <div class="cty" style="font-weight:400">{t.team}</div> : null}</td>
       <td class="cty">{tripDates(t)}</td>
       <td class="cty">{fromFund || 'SE Christian Foundation'}</td>
-      <td class={t.acct ? 'cty' : 'r owe'} style="text-align:left">{t.acct || 'not on file'}</td>
+      <td style="text-align:left">
+        {canAct === false
+          ? <span class={t.acct ? 'cty' : 'owe'}>{t.acct || 'not on file'}</span>
+          : <span style="display:inline-flex;align-items:center;gap:6px">
+              <input value={acct} onInput={e => setAcct(e.currentTarget.value)} placeholder="not on file — type it"
+                style="width:130px;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line-d);border-radius:7px" />
+              {acctDirty && <button class="mini" disabled={savingAcct} onClick={saveAcct}>{savingAcct ? '…' : 'Save'}</button>}
+            </span>}
+      </td>
       <td class="r"><b>{money(amt)}</b></td>
       <td class="r">
         {canAct === false
