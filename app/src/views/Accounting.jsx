@@ -4,7 +4,7 @@ import { money, date, aval } from '../shared/format.js';
 import { F } from '../shared/schema.js';
 import { projectName, country, awarded, requested, stageKey } from '../shared/grants.js';
 import { PipelineDash } from './PipelineDash.jsx';
-import { TravelPayCard } from './Travel.jsx';
+import { TravelPayRow } from './Travel.jsx';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -55,7 +55,7 @@ export function Accounting({ boot, onRefresh }) {
       <div class="secthead">Accounting <span class="dim">— transfers to country accounts</span></div>
       <p class="lead">Every grant here has already been approved by the EVP and the Council Lead Team — that's how it got here. Everything Accounting needs to make the transfer is right here, no email required.</p>
 
-      {ready.length > 1 && (
+      {ready.length > 0 && (
         <div class="panel" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
           <div><b>{picked.length}</b> of {ready.length} ready payments selected · <b>{money(pickedTotal)}</b></div>
           <button type="button" class="mini" onClick={() => setSel(picked.length === ready.length ? new Set() : new Set(ready.map(r => r.key)))}>
@@ -76,16 +76,23 @@ export function Accounting({ boot, onRefresh }) {
       {!atAccounting.length && <div class="panel"><p style="color:var(--muted)">Nothing is waiting on a transfer right now.</p></div>}
       <div class="cards">
         {atAccounting.map(p => <TransferCard key={p.id} p={p} fromAcct={(boot.bal && boot.bal.account) || '510181 - National Expansion Projects'} onDone={onRefresh}
-          pick={ready.length > 1 ? { checked: sel.has('project:' + p.id), onToggle: () => toggle('project:' + p.id) } : null} />)}
+          pick={{ checked: sel.has('project:' + p.id), onToggle: () => toggle('project:' + p.id) }} />)}
       </div>
 
       {travelToPay.length > 0 && (
         <>
           <div class="secthead" style="font-size:15px;margin-top:30px">SECC travel — ready to pay <span class="dim">— {travelToPay.length}</span></div>
-          <p class="lead">Approved by the Council Lead Team, paid from the {seccFundName} restricted fund. One click records the payment and emails the applicant.</p>
-          <div class="cards">
-            {travelToPay.map(t => <TravelPayCard key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh}
-              pick={ready.length > 1 ? { checked: sel.has('travel:' + t.id), onToggle: () => toggle('travel:' + t.id) } : null} />)}
+          <p class="lead">Approved by the Council Lead Team, paid from the {seccFundName} restricted fund. Mark Paid records the payment and emails the applicant, Ben and Amanda.</p>
+          <div class="tablewrap">
+            <table class="grants">
+              <thead>
+                <tr><th style="width:28px"></th><th>Who</th><th>Trip</th><th>From — travel fund</th><th>To — Cedarstone acct</th><th class="r">Amount</th><th></th></tr>
+              </thead>
+              <tbody>
+                {travelToPay.map(t => <TravelPayRow key={t.id} t={t} fromFund={seccFundName} onDone={onRefresh}
+                  pick={{ checked: sel.has('travel:' + t.id), onToggle: () => toggle('travel:' + t.id) }} />)}
+              </tbody>
+            </table>
           </div>
         </>
       )}
@@ -109,21 +116,9 @@ const acctNo = p => aval(p.fields[F.proposal.cedarstoneAccount]) || '';
 function TransferCard({ p, fromAcct, onDone, pick }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [asked, setAsked] = useState(''); // who the nudge email went to
-  const [asking, setAsking] = useState(false);
   const amt = awarded(p) || requested(p);
   const acct = acctNo(p);
   const approvedOn = p.fields[F.proposal.dateApproved] || '';
-
-  // Amanda's one click: email the people who send money that this is ready.
-  async function askToPay() {
-    setAsking(true); setErr('');
-    try {
-      const d = await api('pay_request', { kind: 'project', recordId: p.id });
-      setAsked((d.sentTo || []).join(' & ') || 'accounting');
-    } catch (e) { setErr(e.message || 'Could not send the email.'); }
-    setAsking(false);
-  }
 
   async function transfer() {
     setBusy(true); setErr('');
@@ -153,14 +148,7 @@ function TransferCard({ p, fromAcct, onDone, pick }) {
     <div class="dcard">
       <div class="dc-head">
         <div><h3>{projectName(p)}</h3><div class="dc-meta">{country(p)}</div></div>
-        <div style="display:flex;align-items:center;gap:14px">
-          {pick && (
-            <label class={`check inline${pick.checked ? ' on' : ''}`} title="Include in the one email to accounting">
-              <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include</span>
-            </label>
-          )}
-          <div class="xfer-amt">{money(amt)}</div>
-        </div>
+        <div class="xfer-amt">{money(amt)}</div>
       </div>
       {/* Both ends of the transfer, so Susan never has to look them up. */}
       <div class="acctrow">
@@ -174,12 +162,12 @@ function TransferCard({ p, fromAcct, onDone, pick }) {
           <div class="cstat-v" style="font-size:13px">EVP ✓ · Council Lead Team ✓</div></div>
       </div>
       {err && <div class="editerr">{err}</div>}
-      <div class="dc-confirm">
-        {asked
-          ? <span class="sent-ok">✓ Emailed {asked}</span>
-          : <button class="ghostbtn" disabled={asking || busy} onClick={askToPay} title="Email the accounting team that this transfer is ready to send">
-              {asking ? 'Emailing…' : '📧 Email accounting — ready to send'}
-            </button>}
+      <div class="dc-confirm" style="align-items:center">
+        {pick && (
+          <label class="check inline" style="margin-right:auto" title="Include in the one email to accounting">
+            <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include in email</span>
+          </label>
+        )}
         <button class="savebtn" disabled={busy} onClick={transfer} title="Records the transfer and emails the country leader, coach, Ben and Amanda">{busy ? 'Recording…' : 'Funds Transferred ✓'}</button>
       </div>
     </div>

@@ -528,6 +528,13 @@ table.ongoing td.nm { font-weight:600; }
 .mini-ask:disabled { opacity:.6; cursor:default; }
 .sent-ok { font-size:12.5px; font-weight:600; color:var(--green); white-space:nowrap; }
 .editerr.sm { font-size:11.5px; margin-top:4px; padding:4px 7px; }
+/* Small solid action button for table rows (Mark Paid etc.) */
+.paybtn {
+  background:var(--orange); color:#fff; border:0; border-radius:8px;
+  font-family:inherit; font-size:12.5px; font-weight:700; padding:7px 13px; cursor:pointer; white-space:nowrap;
+}
+.paybtn:hover { filter:brightness(1.06); }
+.paybtn:disabled { opacity:.6; cursor:default; }
 
 /* ── Foundation report: picker extras ── */
 .linkbtn { border:none; background:none; color:var(--orange); font:inherit; font-weight:600; cursor:pointer; padding:0; text-decoration:underline; }

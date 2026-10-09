@@ -80,13 +80,11 @@ export function TravelCard({ t, onDone }) {
   );
 }
 
-// Accounting's payout card: both ends of the payment, one click, and the
-// applicant is emailed automatically (same "money moment" rule as projects).
-export function TravelPayCard({ t, fromFund, onDone, pick }) {
+// Accounting's payout list: one compact ROW per approved travel grant —
+// checkbox for the batch email, both ends of the payment, and Mark Paid.
+export function TravelPayRow({ t, fromFund, onDone, pick }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const [asked, setAsked] = useState(''); // who the nudge email went to
-  const [asking, setAsking] = useState(false);
   const amt = t.appAmt || t.reqAmt || 0;
 
   async function pay() {
@@ -97,45 +95,19 @@ export function TravelPayCard({ t, fromFund, onDone, pick }) {
     } catch (e) { setErr(e.message || 'Could not record the payment.'); setBusy(false); }
   }
 
-  // Amanda's one click: email the people who send money that this is ready.
-  async function askToPay() {
-    setAsking(true); setErr('');
-    try {
-      const d = await api('pay_request', { kind: 'travel', recordId: t.id });
-      setAsked((d.sentTo || []).join(' & ') || 'accounting');
-    } catch (e) { setErr(e.message || 'Could not send the email.'); }
-    setAsking(false);
-  }
-
   return (
-    <div class="dcard">
-      <div class="dc-head">
-        <div><h3>{t.name || '(no name)'}</h3><div class="dc-meta">{t.team || '—'} · {tripDates(t)}</div></div>
-        <div style="display:flex;align-items:center;gap:14px">
-          {pick && (
-            <label class={`check inline${pick.checked ? ' on' : ''}`} title="Include in the one email to accounting">
-              <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} /><span>Include</span>
-            </label>
-          )}
-          <div class="xfer-amt">{money(amt)}</div>
-        </div>
-      </div>
-      <div class="acctrow">
-        <div><div class="cstat-l">From — restricted travel fund</div>
-          <div class="acctno">{fromFund || 'SE Christian Foundation'}</div></div>
-        <div><div class="cstat-l">To — {t.name ? `${t.name}'s` : "the applicant's"} Cedarstone account</div>
-          <div class={`acctno${t.acct ? '' : ' missing'}`}>{t.acct || `Not on file — check with ${t.name || t.email || 'the applicant'}`}</div></div>
-      </div>
-      {err && <div class="editerr">{err}</div>}
-      <div class="dc-confirm">
-        {asked
-          ? <span class="sent-ok">✓ Emailed {asked}</span>
-          : <button class="ghostbtn" disabled={asking || busy} onClick={askToPay} title="Email the accounting team that this payment is ready to send">
-              {asking ? 'Emailing…' : '📧 Email accounting — ready to send'}
-            </button>}
-        <button class="savebtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Recording…' : 'Mark Paid ✓'}</button>
-      </div>
-    </div>
+    <tr>
+      <td>{pick && <input type="checkbox" checked={pick.checked} onChange={pick.onToggle} title="Include in the one email to accounting" />}</td>
+      <td class="nm" title={t.email}>{t.name || '—'}{t.team ? <div class="cty" style="font-weight:400">{t.team}</div> : null}</td>
+      <td class="cty">{tripDates(t)}</td>
+      <td class="cty">{fromFund || 'SE Christian Foundation'}</td>
+      <td class={t.acct ? 'cty' : 'r owe'} style="text-align:left">{t.acct || 'not on file'}</td>
+      <td class="r"><b>{money(amt)}</b></td>
+      <td class="r">
+        <button class="paybtn" disabled={busy} onClick={pay} title="Records the payment and emails the applicant, Ben and Amanda">{busy ? 'Saving…' : 'Mark Paid ✓'}</button>
+        {err && <div class="editerr sm">{err}</div>}
+      </td>
+    </tr>
   );
 }
 
