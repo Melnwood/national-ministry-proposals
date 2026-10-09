@@ -352,7 +352,15 @@ async function gatherCycle(cycleId){
     fetchAll(T_PROP, {}), fetchAll(T_REPORT, {}), fetchAll(T_GOALS, {})
   ]);
   const props   = allProps.filter(p => linkHas(p.fields[PPF.cycles], cycleId));
-  const reports = allReports.filter(r => linkHas(r.fields[RF.cycle], cycleId));
+  // Reports belong to a cycle THROUGH their project: report → grant → cycle.
+  // The report's own cycle link proved unreliable (finals never had one, and
+  // some mids pointed at the wrong cycle), while the grant's cycle link is
+  // set at approval and is the truth.
+  const propIds = new Set(props.map(p => p.id));
+  const reports = allReports.filter(r => {
+    const link = r.fields[RF.proposal];
+    return Array.isArray(link) && link.some(x => propIds.has((x && x.id) ? x.id : x));
+  });
   const goals   = allGoals.filter(g => linkHas(g.fields[GLF.cycle], cycleId));
   const propById = Object.fromEntries(props.map(p => [p.id, p]));
 
