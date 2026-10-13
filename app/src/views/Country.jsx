@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval, daysAgo } from '../shared/format.js';
-import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD, ACC_SEASONS, ACC_ITEMS, ACC_STATUSES, nextAccDue } from '../shared/schema.js';
+import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD, ACC_SEASONS, ACC_ITEMS, ACC_STATUSES, nextAccDue, STAGE_BY_KEY } from '../shared/schema.js';
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
 import { shrinkImage } from '../shared/img.js';
@@ -74,6 +74,23 @@ export function Country({ boot, session, onRefresh }) {
     return { overdue, dueSoon, waiting };
   }, [grants, reportsByProp]);
 
+  // Grants grouped by where they are in the process — each group an accordion,
+  // shut by default (per Mel). The group header carries a report flag so a
+  // closed section never hides a deadline.
+  const grantGroups = useMemo(() => {
+    const order = ['submitted', 'coach', 'council', 'accounting', 'transferred', 'deferred', 'funded', 'denied', 'archived'];
+    const m = {};
+    grants.forEach(p => { const k = order.includes(stageKey(p)) ? stageKey(p) : 'other'; (m[k] = m[k] || []).push(p); });
+    const groups = order.filter(k => m[k]).map(k => ({ key: k, label: STAGE_BY_KEY[k].label, list: m[k] }));
+    if (m.other) groups.push({ key: 'other', label: 'Other', list: m.other });
+    return groups.map(g => ({
+      ...g,
+      total: g.list.reduce((a, p) => a + (awarded(p) || requested(p) || 0), 0),
+      reportFlags: g.list.reduce((a, p) => a + (reportsByProp[p.id] || [])
+        .filter(r => r.status.key === 'overdue' || r.status.key === 'due-soon').length, 0),
+    }));
+  }, [grants, reportsByProp]);
+
   // The NEXT board deadline, and how that country stands against it — this is
   // what pops up on the dashboard with enough runway to get things done.
   const accDue = useMemo(() => {
@@ -112,14 +129,15 @@ export function Country({ boot, session, onRefresh }) {
           <div class="mval">{todo.waiting}</div>
           <div class="mnote">Submitted, in coach review, or with the council</div>
         </div>
-        <div class="mtile">
+        <div class="mtile mtile-link" role="button" tabindex="0" title="Jump to the accountability section"
+          onClick={() => { const el = document.getElementById('acc-section'); el && el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
           <div class="mlbl">{accDue ? `Accountability — ${accDue.season.short}` : 'Accountability'}</div>
           <div class={`mval${accDue && accDue.open && accDue.days <= 21 ? ' neg' : ''}`}>{accDue ? accDue.open : '—'}</div>
           <div class="mnote">{accDue
             ? (accDue.open
               ? `${accDue.open === 1 ? 'item' : 'items'} to finish · due ${date(accDue.dueIso)} — ${accDue.days} ${accDue.days === 1 ? 'day' : 'days'} left`
               : `All done — due ${date(accDue.dueIso)}`)
-            : 'NFP board items — see below'}</div>
+            : 'NFP board items'} · <b>click to work on it ↓</b></div>
         </div>
       </section>
 
@@ -134,13 +152,21 @@ export function Country({ boot, session, onRefresh }) {
 
       <PipelineDash list={grants} travel={myTravel} />
 
-      <div class="secthead" style="font-size:15px">Your grants <span class="dim">— {grants.length} · click one to open it</span></div>
+      <div class="secthead" style="font-size:15px">Your grants <span class="dim">— {grants.length} · click a section to open it</span></div>
       {!grants.length && <div class="panel"><p style="color:var(--muted)">No grants on file yet — apply for one above.</p></div>}
       <div class="ch-list">
-        {grants.map(p => (
-          <GrantFold key={p.id} p={p} reports={reportsByProp[p.id] || []}>
-            <GrantStatus p={p} reports={reportsByProp[p.id] || []} onDone={onRefresh} />
-          </GrantFold>
+        {grantGroups.map(g => (
+          <Fold key={g.key} title={g.label}
+            dim={`— ${g.list.length} ${g.list.length === 1 ? 'grant' : 'grants'}${g.reportFlags ? ` · ⚠ ${g.reportFlags} ${g.reportFlags === 1 ? 'report' : 'reports'} to file` : ''}`}
+            right={g.total ? <span class="ch-total">{money(g.total)}</span> : null}>
+            <div class="ch-list">
+              {g.list.map(p => (
+                <GrantFold key={p.id} p={p} reports={reportsByProp[p.id] || []}>
+                  <GrantStatus p={p} reports={reportsByProp[p.id] || []} onDone={onRefresh} />
+                </GrantFold>
+              ))}
+            </div>
+          </Fold>
         ))}
       </div>
 
@@ -154,7 +180,9 @@ export function Country({ boot, session, onRefresh }) {
       )}
 
       {accCountries.length > 0 && (
-        <Accountability countries={accCountries} acc={boot.acc || []} year={accYear} accDue={accDue} onRefresh={onRefresh} />
+        <div id="acc-section" style="scroll-margin-top:16px">
+          <Accountability countries={accCountries} acc={boot.acc || []} year={accYear} accDue={accDue} onRefresh={onRefresh} />
+        </div>
       )}
 
       <div class="ch-list" style="margin:14px 0 34px">
