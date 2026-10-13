@@ -4,7 +4,7 @@
 
 import { F } from './schema.js';
 import { aval } from './format.js';
-import { awarded, stageKey } from './grants.js';
+import { awarded, paid, stageKey } from './grants.js';
 
 // Linked-record fields come back as id strings (REST) or {id,name} (some tools).
 const linkIds = v => Array.isArray(v) ? v.map(x => (x && x.id) ? x.id : x) : [];
@@ -18,6 +18,15 @@ export function buildFoundations(cycles = [], goals = [], props = [], reports = 
     const directGifts = gifts.filter(g => g.cycleId === c.id)
       .sort((a, b) => b.amount - a.amount || String(a.person).localeCompare(String(b.person)));
     const directTotal = directGifts.reduce((a, g) => a + num(g.amount), 0);
+
+    // Money actually out of this gift vs still promised. A funded grant with
+    // no paid amount recorded predates payment tracking and counts as fully
+    // paid (same convention as the Paid-out tab's all-time total); an explicit
+    // partial payment leaves the remainder as "still promised".
+    const effPaid = p => { const pd = num(paid(p)); if (pd) return pd; return stageKey(p) === 'funded' ? awarded(p) : 0; };
+    const live = grants.filter(p => !['denied', 'archived'].includes(stageKey(p)));
+    const paidOut = live.reduce((a, p) => a + effPaid(p), 0) + directTotal;
+    const stillToPay = live.reduce((a, p) => a + Math.max(0, awarded(p) - effPaid(p)), 0);
     const fundedCount = grants.filter(p => stageKey(p) === 'funded').length;
     // The cycle's filed reports, joined report → grant → cycle (the report's
     // own links are unreliable); goal actuals are summed from these.
@@ -53,6 +62,8 @@ export function buildFoundations(cycles = [], goals = [], props = [], reports = 
       grants,
       directGifts,
       directTotal,
+      paidOut,
+      stillToPay,
     };
   });
 

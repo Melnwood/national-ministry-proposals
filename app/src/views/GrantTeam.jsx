@@ -6,6 +6,7 @@ import { moneySummary, byStage, projectName, country, coach, requested, awarded,
 import { PIPELINE_FLOW, TILE_LABEL, ViewGrant } from './PipelineDash.jsx';
 import { FoundationReport } from './FoundationReport.jsx';
 import { TravelTable } from './Travel.jsx';
+import { buildFoundations } from '../shared/foundations.js';
 
 // Approved but waiting on money — the projects the grant team can pay for if
 // funds free up. Council-pending, at-accounting, funded, denied and archived
@@ -435,6 +436,21 @@ function PaidPanel({ boot }) {
   const travelPaid = travel.filter(t => t.status === 'Paid');
   const travelPaidTotal = travelPaid.reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
 
+  // ── Each gift as its own pot (per Mel, 2026-10-13): the grants stay
+  // separate even when the money shares a bank account. SECC travel counts
+  // against the SECC gift; everything else against its own cycle.
+  const pots = buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || [], boot.gifts || [])
+    .flatMap(f => f.cycles)
+    .map(cy => {
+      const isSecc = /southeast|se\s*christian/i.test(cy.foundation);
+      const goneOut = cy.paidOut + (isSecc ? travelPaidTotal : 0);
+      const promised = cy.stillToPay + (isSecc ? travelCommitted - travelPaidTotal : 0);
+      const free = cy.gift - cy.awarded - cy.directTotal - (isSecc ? travelCommitted : 0);
+      return { ...cy, goneOut, promised, free };
+    });
+  const potTot = pots.reduce((a, r) => ({ gift: a.gift + r.gift, gone: a.gone + r.goneOut, prom: a.prom + r.promised, free: a.free + r.free }),
+    { gift: 0, gone: 0, prom: 0, free: 0 });
+
   return (
     <>
       <section class="money">
@@ -455,7 +471,43 @@ function PaidPanel({ boot }) {
         </div>
       </section>
 
-      <div class="secthead">Funded project grants <span class="dim">— {funded.length} · {money(fundedTotal)}</span></div>
+      <div class="secthead">Each gift, kept separate <span class="dim">— even when the money shares an account</span></div>
+      <p class="lead">Every foundation gift is its own pot, whatever account it sits in. <b>Gone out</b> is money actually sent (grant payments, SECC travel, gifts to individuals); <b>Still promised</b> is awarded or approved but not yet sent; <b>Free</b> is what's left of that gift to give. A negative Free means the gift is over-committed and leans on carry-over money.</p>
+      <div class="tablewrap">
+        <table class="grants">
+          <thead>
+            <tr><th>Foundation</th><th>Cycle</th><th>Sits in</th><th class="r">Gift</th><th class="r">Gone out</th><th class="r">Still promised</th><th class="r">Free</th></tr>
+          </thead>
+          <tbody>
+            {pots.map(r => (
+              <tr key={r.id}>
+                <td class="nm">{r.foundation}</td>
+                <td class="cty">{r.year}</td>
+                <td class="cty">{r.acct || '510181'}</td>
+                <td class="r">{money(r.gift)}</td>
+                <td class="r">{r.goneOut ? money(r.goneOut) : '—'}</td>
+                <td class="r owe">{r.promised ? money(r.promised) : '—'}</td>
+                <td class={`r${r.free < 0 ? ' owe' : ''}`}><b>{money(r.free)}</b></td>
+              </tr>
+            ))}
+            {pots.length > 1 && (
+              <tr>
+                <td class="nm"><b>All gifts</b></td><td></td><td></td>
+                <td class="r"><b>{money(potTot.gift)}</b></td>
+                <td class="r"><b>{money(potTot.gone)}</b></td>
+                <td class="r owe"><b>{money(potTot.prom)}</b></td>
+                <td class={`r${potTot.free < 0 ? ' owe' : ''}`}><b>{money(potTot.free)}</b></td>
+              </tr>
+            )}
+            {!pots.length && <tr><td colspan="7" class="empty-row">No foundation gifts on file.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {pots.filter(r => r.note).map(r => (
+        <p class="lead" style="margin-top:8px">📌 <b>{r.foundation} {r.year}:</b> {r.note}</p>
+      ))}
+
+      <div class="secthead" style="margin-top:22px">Funded project grants <span class="dim">— {funded.length} · {money(fundedTotal)}</span></div>
       <div class="tablewrap">
         <table class="grants">
           <thead>
