@@ -747,11 +747,14 @@ function Accountability({ countries, acc, year, accDue, onRefresh }) {
           const sDone = s.items.filter(i => { const r = byItem[i.key]; return r && (r.status === 'Yes' || r.status === 'N/A'); }).length;
           const isActive = s.key === activeSeason;
           const dueTxt = isActive ? `due ${date(accDue.dueIso)} · ${accDue.days} ${accDue.days === 1 ? 'day' : 'days'} left` : '';
+          const allDone = sDone >= s.items.length;
           return (
             <Fold key={s.key + cty.id} defaultOpen={isActive}
               title={s.label}
               dim={`— ${sDone} of ${s.items.length} done${dueTxt ? ` · ${dueTxt}` : ''}`}
-              right={isActive && sDone < s.items.length ? <span class="pillcount">{s.items.length - sDone}</span> : null}>
+              right={allDone
+                ? <span class="accpill ok">✓ Done</span>
+                : <span class="accpill todo">{s.items.length - sDone} to do</span>}>
               <p class="lead" style="margin:0 0 10px">{s.blurb}</p>
               {s.items.map(i => (
                 <AccRow key={i.key} item={i} rec={byItem[i.key]} cty={cty} year={year} onRefresh={onRefresh} />
@@ -793,11 +796,12 @@ function AccRow({ item, rec, cty, year, onRefresh }) {
   }
 
   const st = rec && rec.status;
+  const itemDone = st === 'Yes' || st === 'N/A';
   const latest = rec && rec.files && rec.files.length ? rec.files[rec.files.length - 1] : null;
   return (
     <div class="accrow">
       <div class="accmain">
-        <div class="accname">{item.label}</div>
+        <div class="accname"><span class={`accdot ${itemDone ? 'ok' : 'todo'}`}></span>{item.label}</div>
         <div class="accmeta">
           {latest && <a href={latest.url} target="_blank" rel="noopener">📎 {latest.filename}</a>}
           {rec && rec.updated
