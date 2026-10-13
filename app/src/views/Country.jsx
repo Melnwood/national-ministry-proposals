@@ -60,7 +60,7 @@ export function Country({ boot, session, onRefresh }) {
   );
 
   // ── The leader's to-do picture: reports to file, decisions pending, and
-  // NFP board accountability still open this year ──
+  // JV Covenant accountability still open this year ──
   const accYear = String(new Date().getFullYear());
   const accCountries = useMemo(() => {
     const all = countries;
@@ -137,7 +137,7 @@ export function Country({ boot, session, onRefresh }) {
             ? (accDue.open
               ? `${accDue.open === 1 ? 'item' : 'items'} to finish · due ${date(accDue.dueIso)} — ${accDue.days} ${accDue.days === 1 ? 'day' : 'days'} left`
               : `All done — due ${date(accDue.dueIso)}`)
-            : 'NFP board items'} · <b>click to work on it ↓</b></div>
+            : 'JV Covenant items'} · <b>click to work on it ↓</b></div>
         </div>
       </section>
 
@@ -660,7 +660,7 @@ function ReportForm({ r, p, midReport, onClose, onDone }) {
   );
 }
 
-// ── NFP BOARD ACCOUNTABILITY ─────────────────────────────────────────────────
+// ── JV COVENANT ACCOUNTABILITY ──────────────────────────────────────────────────
 // The board's chart, from the leader's side: three seasons, each with its
 // items. For every item the leader marks Yes / In progress / N/A, and for
 // document items they upload the actual latest version — so "when was the
@@ -727,12 +727,12 @@ function Accountability({ countries, acc, year, accDue, onRefresh }) {
   return (
     <>
       <div class="secthead" style="margin-top:26px">
-        NFP board accountability — {year} <span class="dim">— {done} of {ACC_ITEMS.length} done · click a season to open it</span>
+        JV Covenant accountability — {year} <span class="dim">— {done} of {ACC_ITEMS.length} done · click a season to open it</span>
       </div>
       <p class="lead">
-        What the NFP board asks every partner organization to show through the year. Mark each item,
-        and for documents upload the <b>latest version</b> — the board sees exactly what you upload,
-        with the date it was last updated.
+        What you and your board said yes to in the JV Covenant — being part of JV as an organization.
+        Mark each item, and for documents upload the <b>latest version</b> — JV sees exactly what you
+        upload, with the date it was last updated.
       </p>
       {countries.length > 1 && (
         <label class="fld" style="max-width:280px;margin-bottom:12px">

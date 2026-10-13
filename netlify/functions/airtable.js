@@ -30,7 +30,7 @@ const T_TXN = 'tblUW0NNoWqYx0iU9';    // Account Transactions (kept from reconci
 const T_GIFTS = 'tblOEROI7GJsQKlhk';  // Direct Gifts — money sent straight to individuals out of a foundation gift
 const GF = { person:'fldZDsvUHiOgBzWpK', country:'fldbmem2fMvKeO2Jx', amount:'fldnJONt1jdRPHvcB',
              date:'fldULLbMPxhucbIqc', cycle:'fldqtGk8VXh53Osj5', notes:'flddp2V34hJy4Pn7m' };
-const T_ACC = 'tblxDb0d1TJ2ihk7a';    // Accountability — NFP board seasons, one row per country/year/item
+const T_ACC = 'tblxDb0d1TJ2ihk7a';    // Accountability — JV Covenant seasons, one row per country/year/item
 const ACC = { key:'fldwk1zHNOwXaFE8l', country:'fldPZxddE3FqJ9SkV', year:'fldeI8sD9cnRlinlI',
               item:'fldHPgFq3o8esl9GO', status:'fldOdAP5qt8x2UiTr', updated:'fld2tpgTcnboaWETs',
               by:'fldZduMJREwNNribH', note:'fldDTs0nkjxer9BE3', file:'fldgoJCVB7FCcPH8L' };
@@ -850,7 +850,7 @@ exports.handler = async (event) => {
       // ALL account balances (multi-account: each foundation's money can sit
       // in its own account; the first row stays the main 510181 picture).
       const bals = balRecs.map(r => ({ account:r.fields['fldkVMZNye4ZFkUtK']||'', balance:r.fields['fld8Bv81lUPaMEAxS']||0, asOf:r.fields['fld4Wy34J0iJjqGCC']||'' }));
-      // NFP board accountability — country leaders fill it on My Country, the
+      // JV Covenant accountability — country leaders fill it on My Country, the
       // board reads the grid on Management. Latest files ride along so "when
       // was the handbook last updated" is answered by the handbook itself.
       const accRecs = await safe(fetchAll(T_ACC, {}));
@@ -1204,7 +1204,7 @@ exports.handler = async (event) => {
     }
 
     if(body.op === 'acc_set'){
-      // NFP board accountability: a country leader sets an item's status, adds
+      // JV Covenant accountability: a country leader sets an item's status, adds
       // a note, or uploads the actual document (handbook, org chart, …). One
       // row per country/year/item, upserted. Scoped leaders may only touch
       // their own country; coaches and oversight can help any country.

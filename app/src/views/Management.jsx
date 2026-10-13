@@ -430,7 +430,7 @@ function Stat({ label, val, big }) {
 }
 
 // ── THE BOARD'S ACCOUNTABILITY GRID ──────────────────────────────────────────
-// The NFP board chart, live: countries down the side, the season items across,
+// The JV Covenant accountability chart, live: countries down the side, the season items across,
 // each cell colored by what the country leader has marked (and uploaded) on
 // their My Country tab. Click a cell with a file to open the latest document.
 export function AccGrid({ boot }) {
@@ -458,7 +458,7 @@ export function AccGrid({ boot }) {
     <>
       <div class="gt-actions">
         <div>
-          <div class="secthead" style="margin:0">NFP board accountability <span class="dim">— what every partner organization has shown</span></div>
+          <div class="secthead" style="margin:0">JV Covenant accountability <span class="dim">— what every partner organization has shown</span></div>
           <p class="lead" style="margin:4px 0 0">Filled in by each country leader on their My Country tab — statuses, and the actual documents (click a ✓ cell to open the latest upload). Green = yes, yellow = in progress, dark = not applicable, blank = nothing yet.</p>
         </div>
         <label class="fld" style="max-width:120px">

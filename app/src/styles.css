@@ -302,7 +302,7 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .mtile-link { cursor:pointer; }
 .mtile-link:hover { border-color:var(--accent, #c56a1f); box-shadow:0 2px 10px rgba(0,0,0,.07); }
 
-/* ── NFP board accountability ── */
+/* ── JV Covenant accountability ── */
 .accrow { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:10px 2px; border-top:1px solid var(--line); }
 .accrow:first-of-type { border-top:none; }
 .accmain { flex:1 1 260px; min-width:220px; }

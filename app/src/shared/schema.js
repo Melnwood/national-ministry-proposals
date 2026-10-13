@@ -25,7 +25,7 @@ export const TABLES = {
   balance:    'tblWNR84jiDleBali', // Account Balance
   travel:     'tbl89ML7snRz5BQqL', // Travel Fund Requests
   gifts:      'tblOEROI7GJsQKlhk', // Direct Gifts (money sent straight to individuals from a foundation gift)
-  acc:        'tblxDb0d1TJ2ihk7a', // Accountability (NFP board seasons — one row per country/year/item)
+  acc:        'tblxDb0d1TJ2ihk7a', // Accountability (JV Covenant seasons — one row per country/year/item)
 };
 
 // ── Fields, grouped by table ─────────────────────────────────────────────────
@@ -137,7 +137,7 @@ export const F = {
              by:'fldZduMJREwNNribH', note:'fldDTs0nkjxer9BE3', file:'fldgoJCVB7FCcPH8L' },
 };
 
-// ── NFP board accountability — the seasons & items from the board's chart ─────
+// ── JV Covenant accountability — the seasons & items country leaders and their boards said yes to ──
 // One definition drives the country leader's checklist (My Country) AND the
 // board's colored grid (Management → Accountability). `upload: true` items ask
 // for the actual document, so "handbook updated?" is answered by the handbook
@@ -157,7 +157,7 @@ export const ACC_SEASONS = [
       { key: 'found.handbook',     label: 'Handbook', upload: true },
     ] },
   { key: 'spring', label: 'Spring Council — People and finances', short: 'Spring Council',
-    blurb: 'Due before the spring NFP board council.',
+    blurb: 'Due before the Spring Council.',
     due: { month: 5, day: 1 }, windowDays: 60,
     items: [
       { key: 'spring.position',     label: 'Position focus' },
@@ -169,7 +169,7 @@ export const ACC_SEASONS = [
       { key: 'spring.annualreport', label: 'Annual report', upload: true },
     ] },
   { key: 'fall', label: 'Fall Council — Plan', short: 'Fall Council',
-    blurb: 'Due before the fall NFP board council.',
+    blurb: 'Due before the Fall Council.',
     due: { month: 9, day: 15 }, windowDays: 60,
     items: [
       { key: 'fall.eval',      label: 'Evaluation of previous school year', upload: true },
