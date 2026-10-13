@@ -8,6 +8,7 @@ import { PipelineDash } from './PipelineDash.jsx';
 import { TravelCard } from './Travel.jsx';
 import { FitBox } from './StrategicPlans.jsx';
 import { BudgetViewer } from './BudgetViewer.jsx';
+import { giftPots } from '../shared/foundations.js';
 
 // Stages that are waiting on a council decision (pre-decision pipeline).
 const QUEUE_STAGES = new Set(['submitted', 'coach', 'council']);
@@ -24,6 +25,11 @@ export function Council({ boot, onRefresh }) {
   // gets its own section under these, same pattern: filter + its card.)
   const travelQueue = (boot.travel || []).filter(t => t.status === 'Submitted');
 
+  // Per-gift money picture, so every decision is made knowing what's free in
+  // each foundation's pot — gifts stay separate even in a shared account.
+  const { pots } = useMemo(() => giftPots(boot), [boot]);
+  const seccPot = pots.find(r => r.isSecc);
+
   return (
     <>
       <PipelineDash list={props} travel={boot.travel} />
@@ -36,10 +42,10 @@ export function Council({ boot, onRefresh }) {
       )}
 
       <div class="cards">
-        {queue.map(p => <DecisionCard key={p.id} p={p} cycles={cycles} onDone={onRefresh} />)}
+        {queue.map(p => <DecisionCard key={p.id} p={p} cycles={cycles} pots={pots} onDone={onRefresh} />)}
       </div>
 
-      <div class="secthead" style="margin-top:22px">SouthEast applications <span class="dim">— SECC travel fund · {travelQueue.length} waiting</span></div>
+      <div class="secthead" style="margin-top:22px">SouthEast applications <span class="dim">— SECC travel fund{seccPot ? ` · ${money(seccPot.free)} left to give` : ''} · {travelQueue.length} waiting</span></div>
       <p class="lead">Travel requests drawing on the SouthEast Christian restricted gift. Approve with an amount or deny — the fund balance and paid-out tracking live on the Grant Team tab.</p>
 
       {!travelQueue.length && (
@@ -89,7 +95,7 @@ function FullApplication({ p }) {
   );
 }
 
-function DecisionCard({ p, cycles, onDone }) {
+function DecisionCard({ p, cycles, pots = [], onDone }) {
   const f = p.fields || {};
   const val = key => aval(f[F.proposal[key]]);
   const review = Array.isArray(f[F.proposal.coachReview]) ? f[F.proposal.coachReview].map(aval) : [];
@@ -110,8 +116,14 @@ function DecisionCard({ p, cycles, onDone }) {
     });
     return Object.values(latest)
       .sort((a, b) => a.foundation.localeCompare(b.foundation))
-      .map(o => ({ id: o.id, label: `${o.foundation} — ${o.name || '(unnamed cycle)'}` }));
-  }, [cycles]);
+      .map(o => {
+        // Show what's free in each gift right in the picker, so an approval
+        // is never tied to money that isn't there.
+        const pot = pots.find(x => x.id === o.id);
+        const freeTxt = pot ? (pot.free < 0 ? `over-committed ${money(-pot.free)}` : `${money(pot.free)} free`) : '';
+        return { id: o.id, label: `${o.foundation} — ${o.name || '(unnamed cycle)'}${freeTxt ? ` · ${freeTxt}` : ''}` };
+      });
+  }, [cycles, pots]);
 
   const [mode, setMode] = useState(null); // 'approve' | 'defer' | 'deny' | null
   const [open, setOpen] = useState(false); // compact row by default; click for the full picture
@@ -224,7 +236,7 @@ function DecisionCard({ p, cycles, onDone }) {
                 {requested(p) > 0 && <button type="button" class="mini" onClick={() => setAmount(String(requested(p)))}>Requested = {money(requested(p))}</button>}
               </label>
               {mode === 'approve' && (
-                <label class="fld"><span class="flbl">Foundation grant cycle</span>
+                <label class="fld"><span class="flbl">Foundation grant cycle — where the money comes from</span>
                   <select value={cycleId} onChange={e => setCycleId(e.currentTarget.value)}>
                     <option value="">— none —</option>
                     {cycleOpts.map(c => <option value={c.id}>{c.label}</option>)}
@@ -233,6 +245,17 @@ function DecisionCard({ p, cycles, onDone }) {
               )}
             </div>
           )}
+          {mode === 'approve' && (() => {
+            const pot = cycleId ? pots.find(x => x.id === cycleId) : null;
+            const amt = Number(amount) || 0;
+            if (!pot || !amt || amt <= pot.free) return null;
+            return (
+              <div class="cycle-note" style="margin:0 0 10px">⚠ {pot.free <= 0
+                ? `${pot.foundation} ${pot.year} is already over-committed by ${money(-pot.free)} — this approval adds ${money(amt)} on top of that.`
+                : `Only ${money(pot.free)} of ${pot.foundation} ${pot.year} is free — approving ${money(amt)} overdraws it by ${money(amt - pot.free)}.`}
+              </div>
+            );
+          })()}
           <label class="fld"><span class="flbl">{mode === 'deny' ? 'Reason (shown to the country)' : 'Message (optional)'}</span>
             <textarea rows="2" value={message} onInput={e => setMessage(e.currentTarget.value)}
               placeholder={mode === 'deny' ? 'Why this was declined…' : 'A note to accompany the decision…'} />

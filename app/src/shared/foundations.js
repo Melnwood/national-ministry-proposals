@@ -80,3 +80,25 @@ export function buildFoundations(cycles = [], goals = [], props = [], reports = 
     }))
     .sort((a, b) => b.totalGift - a.totalGift);
 }
+
+// ── The per-gift money picture, shared everywhere money is shown ─────────────
+// Each foundation gift is its own pot even when the cash shares a bank account
+// (per Mel, 2026-10-13). SECC travel draws on the SECC gift; everything else
+// on its own cycle. `free` is what's left of that gift to give — negative
+// means over-committed.
+export function giftPots(boot) {
+  const travel = boot.travel || [];
+  const tAmt = t => t.appAmt || t.actual || t.reqAmt || 0;
+  const travelPaidTotal = travel.filter(t => t.status === 'Paid').reduce((a, t) => a + tAmt(t), 0);
+  const travelCommitted = travel.filter(t => t.status === 'Approved' || t.status === 'Paid').reduce((a, t) => a + tAmt(t), 0);
+  const pots = buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || [], boot.gifts || [])
+    .flatMap(f => f.cycles)
+    .map(cy => {
+      const isSecc = /southeast|se\s*christian/i.test(cy.foundation);
+      const goneOut = cy.paidOut + (isSecc ? travelPaidTotal : 0);
+      const promised = cy.stillToPay + (isSecc ? travelCommitted - travelPaidTotal : 0);
+      const free = cy.gift - cy.awarded - cy.directTotal - (isSecc ? travelCommitted : 0);
+      return { ...cy, isSecc, goneOut, promised, free };
+    });
+  return { pots, travelCommitted, travelPaidTotal };
+}

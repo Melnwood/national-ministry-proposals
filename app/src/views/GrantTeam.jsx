@@ -6,7 +6,7 @@ import { moneySummary, byStage, projectName, country, coach, requested, awarded,
 import { PIPELINE_FLOW, TILE_LABEL, ViewGrant } from './PipelineDash.jsx';
 import { FoundationReport } from './FoundationReport.jsx';
 import { TravelTable } from './Travel.jsx';
-import { buildFoundations } from '../shared/foundations.js';
+import { giftPots } from '../shared/foundations.js';
 
 // Approved but waiting on money — the projects the grant team can pay for if
 // funds free up. Council-pending, at-accounting, funded, denied and archived
@@ -51,6 +51,10 @@ export function GrantTeam({ boot, session, onRefresh }) {
   }, [props]);
 
   const summary = useMemo(() => moneySummary(props, boot.bal), [props, boot.bal]);
+  // Free money BY GIFT (grants stay separate per foundation) — the SECC travel
+  // fund is restricted, so it stays out of the project-money number.
+  const freeToGive = useMemo(() => giftPots(boot).pots
+    .filter(r => !r.isSecc).reduce((a, r) => a + Math.max(0, r.free), 0), [boot]);
   const { groups } = useMemo(() => byStage(props), [props]);
   const counts = k => (groups[k] ? groups[k].length : 0);
 
@@ -92,9 +96,9 @@ export function GrantTeam({ boot, session, onRefresh }) {
           <div class="mnote">Promised, not yet sent</div>
         </div>
         <div class="mtile hero">
-          <div class="mlbl">Available to grant</div>
-          <div class="mval">{money(summary.available)}</div>
-          <div class="mnote">{summary.pendingCount} pending {summary.pendingCount === 1 ? 'request' : 'requests'} asking {money(summary.asked)}</div>
+          <div class="mlbl">Free to give — project gifts</div>
+          <div class="mval">{money(freeToGive)}</div>
+          <div class="mnote">Kept separate by gift (Paid out tab has the split) · {summary.pendingCount} pending {summary.pendingCount === 1 ? 'request' : 'requests'} asking {money(summary.asked)}</div>
         </div>
       </section>
 
@@ -431,23 +435,8 @@ function PaidPanel({ boot }) {
   const fund = (boot.funds || []).find(r => /SE\s*Christian|SouthEast/i.test(aval((r.fields || {})[F.funds.source]) || ''));
   const fundName = fund ? aval(fund.fields[F.funds.source]) : 'SE Christian Foundation';
   const fundTotal = fund ? (fund.fields[F.funds.amount] || 0) : 0;
-  const travelCommitted = travel.filter(t => t.status === 'Approved' || t.status === 'Paid')
-    .reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
+  const { pots, travelCommitted, travelPaidTotal } = giftPots(boot);
   const travelPaid = travel.filter(t => t.status === 'Paid');
-  const travelPaidTotal = travelPaid.reduce((a, t) => a + (t.appAmt || t.actual || t.reqAmt || 0), 0);
-
-  // ── Each gift as its own pot (per Mel, 2026-10-13): the grants stay
-  // separate even when the money shares a bank account. SECC travel counts
-  // against the SECC gift; everything else against its own cycle.
-  const pots = buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || [], boot.gifts || [])
-    .flatMap(f => f.cycles)
-    .map(cy => {
-      const isSecc = /southeast|se\s*christian/i.test(cy.foundation);
-      const goneOut = cy.paidOut + (isSecc ? travelPaidTotal : 0);
-      const promised = cy.stillToPay + (isSecc ? travelCommitted - travelPaidTotal : 0);
-      const free = cy.gift - cy.awarded - cy.directTotal - (isSecc ? travelCommitted : 0);
-      return { ...cy, goneOut, promised, free };
-    });
   const potTot = pots.reduce((a, r) => ({ gift: a.gift + r.gift, gone: a.gone + r.goneOut, prom: a.prom + r.promised, free: a.free + r.free }),
     { gift: 0, gone: 0, prom: 0, free: 0 });
 
