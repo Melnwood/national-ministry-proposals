@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval, daysAgo } from '../shared/format.js';
-import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD, ACC_SEASONS, ACC_ITEMS, ACC_STATUSES } from '../shared/schema.js';
+import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD, ACC_SEASONS, ACC_ITEMS, ACC_STATUSES, nextAccDue } from '../shared/schema.js';
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
 import { shrinkImage } from '../shared/img.js';
@@ -71,12 +71,21 @@ export function Country({ boot, session, onRefresh }) {
     const overdue = reps.filter(r => r.status.key === 'overdue').length;
     const dueSoon = reps.filter(r => r.status.key === 'due-soon').length;
     const waiting = grants.filter(p => ['submitted', 'coach', 'council'].includes(stageKey(p))).length;
+    return { overdue, dueSoon, waiting };
+  }, [grants, reportsByProp]);
+
+  // The NEXT board deadline, and how that country stands against it — this is
+  // what pops up on the dashboard with enough runway to get things done.
+  const accDue = useMemo(() => {
+    const next = nextAccDue();
     const firstCty = accCountries[0];
-    const mine = (boot.acc || []).filter(a => a.year === accYear && firstCty && a.countryId === firstCty.id);
+    if (!next || !firstCty) return null;
+    const dueYear = String(next.due.getFullYear());
+    const mine = (boot.acc || []).filter(a => a.countryId === firstCty.id && a.year === dueYear);
     const ok = new Set(mine.filter(a => a.status === 'Yes' || a.status === 'N/A').map(a => a.item));
-    const accOpen = ACC_ITEMS.filter(i => !ok.has(i.key)).length;
-    return { overdue, dueSoon, waiting, accOpen };
-  }, [grants, reportsByProp, boot.acc, accCountries]);
+    const open = next.season.items.filter(i => !ok.has(i.key)).length;
+    return { ...next, open, dueIso: next.due.toISOString().slice(0, 10) };
+  }, [boot.acc, accCountries]);
 
   return (
     <>
@@ -104,34 +113,56 @@ export function Country({ boot, session, onRefresh }) {
           <div class="mnote">Submitted, in coach review, or with the council</div>
         </div>
         <div class="mtile">
-          <div class="mlbl">Accountability to finish</div>
-          <div class={`mval${todo.accOpen ? '' : ''}`}>{todo.accOpen}</div>
-          <div class="mnote">NFP board items for {accYear} — see below</div>
+          <div class="mlbl">{accDue ? `Accountability — ${accDue.season.short}` : 'Accountability'}</div>
+          <div class={`mval${accDue && accDue.open && accDue.days <= 21 ? ' neg' : ''}`}>{accDue ? accDue.open : '—'}</div>
+          <div class="mnote">{accDue
+            ? (accDue.open
+              ? `${accDue.open === 1 ? 'item' : 'items'} to finish · due ${date(accDue.dueIso)} — ${accDue.days} ${accDue.days === 1 ? 'day' : 'days'} left`
+              : `All done — due ${date(accDue.dueIso)}`)
+            : 'NFP board items — see below'}</div>
         </div>
       </section>
 
+      {/* Pops up with runway: the season banner, only inside its window. */}
+      {accDue && accDue.inWindow && accDue.open > 0 && (
+        <div class="cycle-note" style="margin:0 0 14px">
+          ⏰ <b>{accDue.season.short} is coming</b> — {accDue.open} accountability {accDue.open === 1 ? 'item' : 'items'} to
+          finish by <b>{date(accDue.dueIso)}</b> ({accDue.days} {accDue.days === 1 ? 'day' : 'days'} left).
+          The season is open below — upload the documents and mark each item off.
+        </div>
+      )}
+
       <PipelineDash list={grants} travel={myTravel} />
 
-      <div class="secthead" style="font-size:15px">Your grants <span class="dim">— {grants.length}</span></div>
+      <div class="secthead" style="font-size:15px">Your grants <span class="dim">— {grants.length} · click one to open it</span></div>
       {!grants.length && <div class="panel"><p style="color:var(--muted)">No grants on file yet — apply for one above.</p></div>}
-      <div class="cards">
-        {grants.map(p => <GrantStatus key={p.id} p={p} reports={reportsByProp[p.id] || []} onDone={onRefresh} />)}
+      <div class="ch-list">
+        {grants.map(p => (
+          <GrantFold key={p.id} p={p} reports={reportsByProp[p.id] || []}>
+            <GrantStatus p={p} reports={reportsByProp[p.id] || []} onDone={onRefresh} />
+          </GrantFold>
+        ))}
       </div>
 
       {myTravel.length > 0 && (
-        <>
-          <div class="secthead" style="font-size:15px;margin-top:22px">Your SECC travel requests <span class="dim">— {myTravel.length}</span></div>
-          <p class="lead">Submitted goes to the Council Lead Team; once approved, accounting pays it from the SouthEast travel fund and you'll get an email when the money is sent.</p>
-          <TravelTable list={myTravel} />
-        </>
+        <div class="ch-list" style="margin-top:14px">
+          <Fold title="Your SECC travel requests" dim={`— ${myTravel.length}`}>
+            <p class="lead">Submitted goes to the Council Lead Team; once approved, accounting pays it from the SouthEast travel fund and you'll get an email when the money is sent.</p>
+            <TravelTable list={myTravel} />
+          </Fold>
+        </div>
       )}
 
       {accCountries.length > 0 && (
-        <Accountability countries={accCountries} acc={boot.acc || []} year={accYear} onRefresh={onRefresh} />
+        <Accountability countries={accCountries} acc={boot.acc || []} year={accYear} accDue={accDue} onRefresh={onRefresh} />
       )}
 
-      <PlanManager countries={countries}
-        lead="Your country's strategic plan for the year. Keep it current — every grant you apply for is checked against it, and the fit is what the coach and Council Lead Team see first." />
+      <div class="ch-list" style="margin:14px 0 34px">
+        <Fold title="Your strategic plan" dim="— every application is checked against it">
+          <p class="lead">Your country's strategic plan for the year. Keep it current — every grant you apply for is checked against it, and the fit is what the coach and Council Lead Team see first.</p>
+          <PlanManager countries={countries} noHead lead=" " />
+        </Fold>
+      </div>
 
       {apply === 'project' && <ProjectGrantForm countries={countries} myCountryIds={myCountryIds}
         draftKey={draftKey} onClose={() => setApply(null)} onDone={onRefresh} />}
@@ -607,6 +638,43 @@ function ReportForm({ r, p, midReport, onClose, onDone }) {
 // document items they upload the actual latest version — so "when was the
 // handbook last updated?" is answered by the handbook itself, with its date.
 
+// A closed-by-default accordion (same look as the Grant Team groups). Per Mel:
+// nothing on this page sits open — you click what you want to see.
+function Fold({ title, dim, right, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div class={`ch-acc${open ? ' open' : ''}`}>
+      <button class="ch-acc-head" onClick={() => setOpen(o => !o)}>
+        <span class="ch-chev">{open ? '▾' : '▸'}</span>
+        <span class="ch-name">{title}</span>
+        {dim && <span class="ch-sub">{dim}</span>}
+        {right}
+      </button>
+      {open && <div class="ch-acc-body">{children}</div>}
+    </div>
+  );
+}
+
+// One grant, folded shut: name, country, stage, amount — and a flag when a
+// report is overdue or coming due, so nothing gets missed while closed.
+function GrantFold({ p, reports, children }) {
+  const amt = awarded(p) || requested(p);
+  const alert = reports.some(r => r.status.key === 'overdue') ? '⚠ report overdue'
+    : reports.some(r => r.status.key === 'due-soon') ? '⏳ report due soon' : '';
+  return (
+    <Fold
+      title={projectName(p)}
+      dim={`${country(p)}${alert ? ` · ${alert}` : ''}`}
+      right={<>
+        <span class={`badge stg-${stageKey(p)}`}>{stageLabel(p)}</span>
+        {amt ? <span class="ch-total">{money(amt)}</span> : null}
+      </>}
+    >
+      {children}
+    </Fold>
+  );
+}
+
 function readFileB64(file) {
   return new Promise((res, rej) => {
     const fr = new FileReader();
@@ -616,7 +684,7 @@ function readFileB64(file) {
   });
 }
 
-function Accountability({ countries, acc, year, onRefresh }) {
+function Accountability({ countries, acc, year, accDue, onRefresh }) {
   const [ctyId, setCtyId] = useState(countries[0] && countries[0].id);
   const cty = countries.find(c => c.id === ctyId) || countries[0];
   if (!cty) return null;
@@ -624,17 +692,19 @@ function Accountability({ countries, acc, year, onRefresh }) {
   const rows = acc.filter(a => a.countryId === cty.id && a.year === year);
   const byItem = Object.fromEntries(rows.map(r => [r.item, r]));
   const done = ACC_ITEMS.filter(i => { const r = byItem[i.key]; return r && (r.status === 'Yes' || r.status === 'N/A'); }).length;
+  // The season whose deadline is inside its window opens by itself — that's
+  // the "pop up at the right time". Everything else stays shut.
+  const activeSeason = accDue && accDue.inWindow ? accDue.season.key : null;
 
   return (
     <>
       <div class="secthead" style="margin-top:26px">
-        NFP board accountability — {year} <span class="dim">— {done} of {ACC_ITEMS.length} done</span>
+        NFP board accountability — {year} <span class="dim">— {done} of {ACC_ITEMS.length} done · click a season to open it</span>
       </div>
       <p class="lead">
         What the NFP board asks every partner organization to show through the year. Mark each item,
         and for documents upload the <b>latest version</b> — the board sees exactly what you upload,
-        with the date it was last updated. Finishing these before the council meetings means no
-        scramble when the board reviews {cty.name}.
+        with the date it was last updated.
       </p>
       {countries.length > 1 && (
         <label class="fld" style="max-width:280px;margin-bottom:12px">
@@ -644,18 +714,24 @@ function Accountability({ countries, acc, year, onRefresh }) {
           </select>
         </label>
       )}
-      {ACC_SEASONS.map(s => {
-        const sDone = s.items.filter(i => { const r = byItem[i.key]; return r && (r.status === 'Yes' || r.status === 'N/A'); }).length;
-        return (
-          <div class="panel" style="margin-bottom:12px" key={s.key}>
-            <div class="secthead" style="font-size:15px;margin:0 0 2px">{s.label} <span class="dim">— {sDone} of {s.items.length} done</span></div>
-            <p class="lead" style="margin:0 0 10px">{s.blurb}</p>
-            {s.items.map(i => (
-              <AccRow key={i.key} item={i} rec={byItem[i.key]} cty={cty} year={year} onRefresh={onRefresh} />
-            ))}
-          </div>
-        );
-      })}
+      <div class="ch-list">
+        {ACC_SEASONS.map(s => {
+          const sDone = s.items.filter(i => { const r = byItem[i.key]; return r && (r.status === 'Yes' || r.status === 'N/A'); }).length;
+          const isActive = s.key === activeSeason;
+          const dueTxt = isActive ? `due ${date(accDue.dueIso)} · ${accDue.days} ${accDue.days === 1 ? 'day' : 'days'} left` : '';
+          return (
+            <Fold key={s.key + cty.id} defaultOpen={isActive}
+              title={s.label}
+              dim={`— ${sDone} of ${s.items.length} done${dueTxt ? ` · ${dueTxt}` : ''}`}
+              right={isActive && sDone < s.items.length ? <span class="pillcount">{s.items.length - sDone}</span> : null}>
+              <p class="lead" style="margin:0 0 10px">{s.blurb}</p>
+              {s.items.map(i => (
+                <AccRow key={i.key} item={i} rec={byItem[i.key]} cty={cty} year={year} onRefresh={onRefresh} />
+              ))}
+            </Fold>
+          );
+        })}
+      </div>
     </>
   );
 }

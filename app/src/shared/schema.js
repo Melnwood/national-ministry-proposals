@@ -142,16 +142,22 @@ export const F = {
 // board's colored grid (Management → Accountability). `upload: true` items ask
 // for the actual document, so "handbook updated?" is answered by the handbook
 // itself with its upload date.
+// `due` is when the season's items must be turned in ({month, day}, each year)
+// and `windowDays` is how far ahead it surfaces on the leader's dashboard so
+// there's time to get it done. Dates are placeholders until Mel confirms the
+// real council meeting rhythm — change them HERE only.
 export const ACC_SEASONS = [
-  { key: 'found', label: 'Beginning — Foundational documents',
-    blurb: 'The documents every partner organization starts from.',
+  { key: 'found', label: 'Beginning — Foundational documents', short: 'Foundational documents',
+    blurb: 'The documents every partner organization starts from. Keep them current all year.',
+    due: null, windowDays: 0,
     items: [
       { key: 'found.constitution', label: 'Constitution and bylaws', upload: true },
       { key: 'found.vmv',          label: 'Vision, mission, values', upload: true },
       { key: 'found.handbook',     label: 'Handbook', upload: true },
     ] },
-  { key: 'spring', label: 'Spring Council — People and finances',
+  { key: 'spring', label: 'Spring Council — People and finances', short: 'Spring Council',
     blurb: 'Due before the spring NFP board council.',
+    due: { month: 3, day: 31 }, windowDays: 60,
     items: [
       { key: 'spring.position',     label: 'Position focus' },
       { key: 'spring.evalgrowth',   label: 'Evaluation and growth plan', upload: true },
@@ -161,8 +167,9 @@ export const ACC_SEASONS = [
       { key: 'spring.finreport',    label: 'Financial report', upload: true },
       { key: 'spring.annualreport', label: 'Annual report', upload: true },
     ] },
-  { key: 'fall', label: 'Fall Council — Plan',
+  { key: 'fall', label: 'Fall Council — Plan', short: 'Fall Council',
     blurb: 'Due before the fall NFP board council.',
+    due: { month: 10, day: 31 }, windowDays: 60,
     items: [
       { key: 'fall.eval',      label: 'Evaluation of previous school year', upload: true },
       { key: 'fall.stratplan', label: 'Strategic plan for upcoming school year', upload: true },
@@ -171,6 +178,25 @@ export const ACC_SEASONS = [
 ];
 export const ACC_ITEMS = ACC_SEASONS.flatMap(s => s.items.map(i => ({ ...i, season: s.key })));
 export const ACC_STATUSES = ['Yes', 'In Progress', 'N/A'];
+
+// The next season deadline from `now`: {season, due:Date, days, inWindow}.
+// Drives the dashboard tile, the "time to get it done" banner, and which
+// season's accordion opens by itself.
+export function nextAccDue(now = new Date()) {
+  const cands = [];
+  ACC_SEASONS.forEach(s => {
+    if (!s.due) return;
+    for (const yr of [now.getFullYear(), now.getFullYear() + 1]) {
+      const d = new Date(yr, s.due.month - 1, s.due.day, 23, 59, 59);
+      if (d >= now) { cands.push({ season: s, due: d }); break; }
+    }
+  });
+  cands.sort((a, b) => a.due - b.due);
+  const next = cands[0];
+  if (!next) return null;
+  const days = Math.ceil((next.due.getTime() - now.getTime()) / 86400000);
+  return { ...next, days, inWindow: days <= (next.season.windowDays || 60) };
+}
 
 // ── The canonical pipeline ───────────────────────────────────────────────────
 // ONE ordered list of stages = the spine of the whole app. `key` is what the
