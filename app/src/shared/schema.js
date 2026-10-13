@@ -114,7 +114,8 @@ export const F = {
     proposal:'fldDCLcDUyODA0AvP', // linked
   },
   cycle:   { name:'fld4xy7sYr8vl8dNj', foundation:'fldnNt8n0RNqdSccO', total:'fldw0BPZ4mU0GwiXz', projects:'fld4GE2gj9YRXIrQv',
-             acct:'fldnA4eb4KTWZ20wz' }, // which account this gift's money sits in
+             acct:'fldnA4eb4KTWZ20wz',  // which account this gift's money sits in
+             note:'fldO31Rfh4ZoInsiw' }, // short note shown on the cycle card (e.g. "Possible 10% (JV 10%)")
   goal:    { type:'fldynRy5JVc8MHzmn', target:'fldC8KQzgngaBtmmL', actual:'fldrzoRt4JsDZb8gQ',
              cycleYear:'fldgijFFoi0e2LfjR', foundationCycle:'fldfKb4Blj2HsDvee', cycle:'fldvzwukj9URXZoG7' },
   report:  { type:'fldVK0eF1dBGNnMG0', proposal:'fldWLpL3N2yIRfn0t', submitted:'fldTytlPqwAo01YtX', due:'fldkjC4V3NmC4ylDy',

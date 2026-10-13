@@ -45,6 +45,7 @@ export function buildFoundations(cycles = [], goals = [], props = [], reports = 
       year: aval(c.fields[F.cycle.name]) || '',
       gift: num(c.fields[F.cycle.total]),
       acct: aval(c.fields[F.cycle.acct]) || '',
+      note: aval(c.fields[F.cycle.note]) || '',
       awarded: grants.reduce((a, p) => a + awarded(p), 0),
       grantCount: grants.length,
       fundedCount,

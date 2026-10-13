@@ -296,6 +296,7 @@ button.mini { border:none; background:none; color:var(--orange); cursor:pointer;
 .cycle-top { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
 .cycle-year { font-family:'Fraunces',serif; font-weight:600; font-size:19px; min-width:78px; }
 .cycle-stats { display:flex; gap:26px; flex-wrap:wrap; }
+.cycle-note { margin:10px 0 2px; padding:8px 12px; background:#fdf6e7; border:1px solid #ecd9a8; border-radius:9px; font-size:13.5px; color:#7a5c15; }
 .cstat-l { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
 .cstat-v { font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:16px; margin-top:2px; }
 .cstat-v.neg { color:var(--red); }

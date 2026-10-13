@@ -149,6 +149,8 @@ function CycleCard({ cy, canAct, onRefresh }) {
         </div>
       </div>
 
+      {cy.note && <div class="cycle-note">📌 {cy.note}</div>}
+
       {canAct && (
         <div style="margin:6px 0 2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           {editAcct ? (
