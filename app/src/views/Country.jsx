@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, date, aval, daysAgo } from '../shared/format.js';
-import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD } from '../shared/schema.js';
+import { F, GRANT_CATEGORIES, REQUEST_TYPES, APPLICANT_CHECKLIST, YESNO, YESNO_MPD, ACC_SEASONS, ACC_ITEMS, ACC_STATUSES } from '../shared/schema.js';
 import { projectName, country, requested, awarded, stageKey, stageLabel } from '../shared/grants.js';
 import { enrichReports } from '../shared/reports.js';
 import { shrinkImage } from '../shared/img.js';
@@ -59,6 +59,25 @@ export function Country({ boot, session, onRefresh }) {
     [boot.travel, myEmail]
   );
 
+  // ── The leader's to-do picture: reports to file, decisions pending, and
+  // NFP board accountability still open this year ──
+  const accYear = String(new Date().getFullYear());
+  const accCountries = useMemo(() => {
+    const all = countries;
+    return myCountryIds.length ? all.filter(c => myCountryIds.includes(c.id)) : all;
+  }, [countries, myCountryIds]);
+  const todo = useMemo(() => {
+    const reps = grants.flatMap(p => reportsByProp[p.id] || []);
+    const overdue = reps.filter(r => r.status.key === 'overdue').length;
+    const dueSoon = reps.filter(r => r.status.key === 'due-soon').length;
+    const waiting = grants.filter(p => ['submitted', 'coach', 'council'].includes(stageKey(p))).length;
+    const firstCty = accCountries[0];
+    const mine = (boot.acc || []).filter(a => a.year === accYear && firstCty && a.countryId === firstCty.id);
+    const ok = new Set(mine.filter(a => a.status === 'Yes' || a.status === 'N/A').map(a => a.item));
+    const accOpen = ACC_ITEMS.filter(i => !ok.has(i.key)).length;
+    return { overdue, dueSoon, waiting, accOpen };
+  }, [grants, reportsByProp, boot.acc, accCountries]);
+
   return (
     <>
       <div class="applybar">
@@ -71,6 +90,25 @@ export function Country({ boot, session, onRefresh }) {
           <button class="ghostbtn big" onClick={() => setApply('travel')}>Apply for the SECC Travel Grant</button>
         </div>
       </div>
+
+      {/* The leader's dashboard: what needs their attention right now. */}
+      <section class="money">
+        <div class="mtile">
+          <div class="mlbl">Reports to file</div>
+          <div class={`mval${todo.overdue ? ' neg' : ''}`}>{todo.overdue + todo.dueSoon}</div>
+          <div class="mnote">{todo.overdue ? `${todo.overdue} overdue · ` : ''}{todo.dueSoon} due within 30 days</div>
+        </div>
+        <div class="mtile">
+          <div class="mlbl">Waiting on a decision</div>
+          <div class="mval">{todo.waiting}</div>
+          <div class="mnote">Submitted, in coach review, or with the council</div>
+        </div>
+        <div class="mtile">
+          <div class="mlbl">Accountability to finish</div>
+          <div class={`mval${todo.accOpen ? '' : ''}`}>{todo.accOpen}</div>
+          <div class="mnote">NFP board items for {accYear} — see below</div>
+        </div>
+      </section>
 
       <PipelineDash list={grants} travel={myTravel} />
 
@@ -86,6 +124,10 @@ export function Country({ boot, session, onRefresh }) {
           <p class="lead">Submitted goes to the Council Lead Team; once approved, accounting pays it from the SouthEast travel fund and you'll get an email when the money is sent.</p>
           <TravelTable list={myTravel} />
         </>
+      )}
+
+      {accCountries.length > 0 && (
+        <Accountability countries={accCountries} acc={boot.acc || []} year={accYear} onRefresh={onRefresh} />
       )}
 
       <PlanManager countries={countries}
@@ -555,6 +597,125 @@ function ReportForm({ r, p, midReport, onClose, onDone }) {
           <button class="savebtn" onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit report'}</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── NFP BOARD ACCOUNTABILITY ─────────────────────────────────────────────────
+// The board's chart, from the leader's side: three seasons, each with its
+// items. For every item the leader marks Yes / In progress / N/A, and for
+// document items they upload the actual latest version — so "when was the
+// handbook last updated?" is answered by the handbook itself, with its date.
+
+function readFileB64(file) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result).split(',')[1] || '');
+    fr.onerror = () => rej(new Error('Could not read the file.'));
+    fr.readAsDataURL(file);
+  });
+}
+
+function Accountability({ countries, acc, year, onRefresh }) {
+  const [ctyId, setCtyId] = useState(countries[0] && countries[0].id);
+  const cty = countries.find(c => c.id === ctyId) || countries[0];
+  if (!cty) return null;
+
+  const rows = acc.filter(a => a.countryId === cty.id && a.year === year);
+  const byItem = Object.fromEntries(rows.map(r => [r.item, r]));
+  const done = ACC_ITEMS.filter(i => { const r = byItem[i.key]; return r && (r.status === 'Yes' || r.status === 'N/A'); }).length;
+
+  return (
+    <>
+      <div class="secthead" style="margin-top:26px">
+        NFP board accountability — {year} <span class="dim">— {done} of {ACC_ITEMS.length} done</span>
+      </div>
+      <p class="lead">
+        What the NFP board asks every partner organization to show through the year. Mark each item,
+        and for documents upload the <b>latest version</b> — the board sees exactly what you upload,
+        with the date it was last updated. Finishing these before the council meetings means no
+        scramble when the board reviews {cty.name}.
+      </p>
+      {countries.length > 1 && (
+        <label class="fld" style="max-width:280px;margin-bottom:12px">
+          <span class="flbl">Country</span>
+          <select value={ctyId} onChange={e => setCtyId(e.currentTarget.value)}>
+            {countries.map(c => <option value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+      )}
+      {ACC_SEASONS.map(s => {
+        const sDone = s.items.filter(i => { const r = byItem[i.key]; return r && (r.status === 'Yes' || r.status === 'N/A'); }).length;
+        return (
+          <div class="panel" style="margin-bottom:12px" key={s.key}>
+            <div class="secthead" style="font-size:15px;margin:0 0 2px">{s.label} <span class="dim">— {sDone} of {s.items.length} done</span></div>
+            <p class="lead" style="margin:0 0 10px">{s.blurb}</p>
+            {s.items.map(i => (
+              <AccRow key={i.key} item={i} rec={byItem[i.key]} cty={cty} year={year} onRefresh={onRefresh} />
+            ))}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function AccRow({ item, rec, cty, year, onRefresh }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function setStatus(st) {
+    setBusy(true); setErr('');
+    try {
+      await api('acc_set', { countryId: cty.id, countryName: cty.name, year, item: item.key, status: st });
+      onRefresh && onRefresh();
+    } catch (e) { setErr(e.message || 'Could not save.'); }
+    setBusy(false);
+  }
+
+  async function upload(e) {
+    const f = e.currentTarget.files && e.currentTarget.files[0];
+    e.currentTarget.value = '';
+    if (!f) return;
+    if (f.size > 4.5 * 1024 * 1024) { setErr('That file is too big — keep it under 4.5 MB (a PDF works well).'); return; }
+    setBusy(true); setErr('');
+    try {
+      const data = await readFileB64(f);
+      await api('acc_set', { countryId: cty.id, countryName: cty.name, year, item: item.key,
+        file: { filename: f.name, contentType: f.type || 'application/octet-stream', data } });
+      onRefresh && onRefresh();
+    } catch (ex) { setErr(ex.message || 'Could not upload.'); }
+    setBusy(false);
+  }
+
+  const st = rec && rec.status;
+  const latest = rec && rec.files && rec.files.length ? rec.files[rec.files.length - 1] : null;
+  return (
+    <div class="accrow">
+      <div class="accmain">
+        <div class="accname">{item.label}</div>
+        <div class="accmeta">
+          {latest && <a href={latest.url} target="_blank" rel="noopener">📎 {latest.filename}</a>}
+          {rec && rec.updated
+            ? <span class="dim">{latest ? ' · ' : ''}updated {date(rec.updated)}{rec.by ? ` by ${rec.by}` : ''}</span>
+            : <span class="dim">Nothing on file yet{item.upload ? ' — upload the latest version' : ''}</span>}
+        </div>
+      </div>
+      <div class="accacts">
+        {ACC_STATUSES.map(s => (
+          <button key={s} disabled={busy} onClick={() => setStatus(s)}
+            class={`accst a-${s === 'Yes' ? 'yes' : s === 'In Progress' ? 'prog' : 'na'}${st === s ? ' on' : ''}`}>
+            {s === 'In Progress' ? 'In progress' : s}
+          </button>
+        ))}
+        {item.upload && (
+          <label class="accup">
+            {busy ? 'Saving…' : '⬆ Upload'}
+            <input type="file" style="display:none" onChange={upload} disabled={busy} />
+          </label>
+        )}
+      </div>
+      {err && <div class="editerr sm" style="flex-basis:100%">{err}</div>}
     </div>
   );
 }

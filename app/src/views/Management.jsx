@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
 import { money, moneyCents, date, aval } from '../shared/format.js';
 import { parseBankCSV } from '../shared/csv.js';
-import { ROLES, F } from '../shared/schema.js';
+import { ROLES, F, ACC_SEASONS } from '../shared/schema.js';
 import { PlanManager } from './StrategicPlans.jsx';
 import { Accounting } from './Accounting.jsx';
 import { Foundations } from './Foundations.jsx';
@@ -72,6 +72,7 @@ export function Management({ boot, session, onRefresh, view, onViewed }) {
     { key: 'accounting',  label: 'Accounting' },
     { key: 'foundations', label: 'Foundations' },
     { key: 'reports',     label: 'Reports' },
+    { key: 'accountability', label: 'Accountability' },
     ...(isEvp ? [{ key: 'admin', label: 'Setup & people' }] : []),
   ];
   const [sub, setSub] = useState(view && subs.some(s => s.key === view) ? view : 'accounting');
@@ -92,6 +93,7 @@ export function Management({ boot, session, onRefresh, view, onViewed }) {
       {sub === 'accounting' && <Accounting boot={boot} session={session} onRefresh={onRefresh} />}
       {sub === 'foundations' && <Foundations boot={boot} session={session} onRefresh={onRefresh} />}
       {sub === 'reports' && <Reports boot={boot} onRefresh={onRefresh} />}
+      {sub === 'accountability' && <AccGrid boot={boot} />}
       {sub === 'admin' && (
         <>
           <Reconcile boot={boot} onRefresh={onRefresh} />
@@ -425,4 +427,78 @@ function PersonEditor({ person, countries, onClose, onSaved }) {
 
 function Stat({ label, val, big }) {
   return <div class="cstat"><div class="cstat-l">{label}</div><div class={`cstat-v${big ? ' big' : ''}`}>{val}</div></div>;
+}
+
+// ── THE BOARD'S ACCOUNTABILITY GRID ──────────────────────────────────────────
+// The NFP board chart, live: countries down the side, the season items across,
+// each cell colored by what the country leader has marked (and uploaded) on
+// their My Country tab. Click a cell with a file to open the latest document.
+export function AccGrid({ boot }) {
+  const thisYear = String(new Date().getFullYear());
+  const years = useMemo(() => {
+    const ys = new Set((boot.acc || []).map(a => a.year).filter(Boolean));
+    ys.add(thisYear);
+    return [...ys].sort().reverse();
+  }, [boot.acc]);
+  const [year, setYear] = useState(thisYear);
+
+  const countries = (boot.countries_meta || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  const byCty = useMemo(() => {
+    const m = {};
+    (boot.acc || []).filter(a => a.year === year).forEach(a => {
+      (m[a.countryId] = m[a.countryId] || {})[a.item] = a;
+    });
+    return m;
+  }, [boot.acc, year]);
+
+  const cls = st => st === 'Yes' ? 'ok' : st === 'In Progress' ? 'prog' : st === 'N/A' ? 'na' : 'none';
+  const txt = st => st === 'Yes' ? 'Yes' : st === 'In Progress' ? 'In prog.' : st === 'N/A' ? 'N/A' : '—';
+
+  return (
+    <>
+      <div class="gt-actions">
+        <div>
+          <div class="secthead" style="margin:0">NFP board accountability <span class="dim">— what every partner organization has shown</span></div>
+          <p class="lead" style="margin:4px 0 0">Filled in by each country leader on their My Country tab — statuses, and the actual documents (click a ✓ cell to open the latest upload). Green = yes, yellow = in progress, dark = not applicable, blank = nothing yet.</p>
+        </div>
+        <label class="fld" style="max-width:120px">
+          <span class="flbl">Year</span>
+          <select value={year} onChange={e => setYear(e.currentTarget.value)}>
+            {years.map(y => <option value={y}>{y}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div class="tablewrap">
+        <table class="grants accgrid">
+          <thead>
+            <tr>
+              <th rowspan="2">Country</th>
+              {ACC_SEASONS.map(s => <th colspan={s.items.length} class="accseason">{s.label}</th>)}
+            </tr>
+            <tr>
+              {ACC_SEASONS.flatMap(s => s.items.map(i => <th class="accitem" title={i.label}>{i.label}</th>))}
+            </tr>
+          </thead>
+          <tbody>
+            {countries.map(c => (
+              <tr key={c.id}>
+                <td class="nm">{c.name}</td>
+                {ACC_SEASONS.flatMap(s => s.items.map(i => {
+                  const r = (byCty[c.id] || {})[i.key];
+                  const st = r && r.status;
+                  const latest = r && r.files && r.files.length ? r.files[r.files.length - 1] : null;
+                  const inner = latest
+                    ? <a href={latest.url} target="_blank" rel="noopener" title={`${latest.filename}${r.updated ? ` · updated ${date(r.updated)}` : ''}`}>{txt(st)}</a>
+                    : <span title={r && r.updated ? `Updated ${date(r.updated)}${r.by ? ` by ${r.by}` : ''}` : 'Nothing yet'}>{txt(st)}</span>;
+                  return <td class={`acccell ${cls(st)}`}>{inner}</td>;
+                }))}
+              </tr>
+            ))}
+            {!countries.length && <tr><td colspan="99" class="empty-row">No countries on file.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
 }

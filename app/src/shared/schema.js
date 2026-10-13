@@ -25,6 +25,7 @@ export const TABLES = {
   balance:    'tblWNR84jiDleBali', // Account Balance
   travel:     'tbl89ML7snRz5BQqL', // Travel Fund Requests
   gifts:      'tblOEROI7GJsQKlhk', // Direct Gifts (money sent straight to individuals from a foundation gift)
+  acc:        'tblxDb0d1TJ2ihk7a', // Accountability (NFP board seasons — one row per country/year/item)
 };
 
 // ── Fields, grouped by table ─────────────────────────────────────────────────
@@ -131,7 +132,45 @@ export const F = {
   countries: { name:'fldzgWM7sqaFDM4Cl', phase:'flduog58oXfNq2aEt', recordId:'fldca6uVjtxsluVK1', approvers:'fldwpCrK2Mr68tQh5' },
   gifts:   { person:'fldZDsvUHiOgBzWpK', country:'fldbmem2fMvKeO2Jx', amount:'fldnJONt1jdRPHvcB',
              date:'fldULLbMPxhucbIqc', cycle:'fldqtGk8VXh53Osj5', notes:'flddp2V34hJy4Pn7m' },
+  acc:     { key:'fldwk1zHNOwXaFE8l', country:'fldPZxddE3FqJ9SkV', year:'fldeI8sD9cnRlinlI',
+             item:'fldHPgFq3o8esl9GO', status:'fldOdAP5qt8x2UiTr', updated:'fld2tpgTcnboaWETs',
+             by:'fldZduMJREwNNribH', note:'fldDTs0nkjxer9BE3', file:'fldgoJCVB7FCcPH8L' },
 };
+
+// ── NFP board accountability — the seasons & items from the board's chart ─────
+// One definition drives the country leader's checklist (My Country) AND the
+// board's colored grid (Management → Accountability). `upload: true` items ask
+// for the actual document, so "handbook updated?" is answered by the handbook
+// itself with its upload date.
+export const ACC_SEASONS = [
+  { key: 'found', label: 'Beginning — Foundational documents',
+    blurb: 'The documents every partner organization starts from.',
+    items: [
+      { key: 'found.constitution', label: 'Constitution and bylaws', upload: true },
+      { key: 'found.vmv',          label: 'Vision, mission, values', upload: true },
+      { key: 'found.handbook',     label: 'Handbook', upload: true },
+    ] },
+  { key: 'spring', label: 'Spring Council — People and finances',
+    blurb: 'Due before the spring NFP board council.',
+    items: [
+      { key: 'spring.position',     label: 'Position focus' },
+      { key: 'spring.evalgrowth',   label: 'Evaluation and growth plan', upload: true },
+      { key: 'spring.orgchart',     label: 'Organizational chart', upload: true },
+      { key: 'spring.handbook',     label: 'Handbook update', upload: true },
+      { key: 'spring.covenant',     label: 'Re-sign covenant', upload: true },
+      { key: 'spring.finreport',    label: 'Financial report', upload: true },
+      { key: 'spring.annualreport', label: 'Annual report', upload: true },
+    ] },
+  { key: 'fall', label: 'Fall Council — Plan',
+    blurb: 'Due before the fall NFP board council.',
+    items: [
+      { key: 'fall.eval',      label: 'Evaluation of previous school year', upload: true },
+      { key: 'fall.stratplan', label: 'Strategic plan for upcoming school year', upload: true },
+      { key: 'fall.budgets',   label: 'Program budgets', upload: true },
+    ] },
+];
+export const ACC_ITEMS = ACC_SEASONS.flatMap(s => s.items.map(i => ({ ...i, season: s.key })));
+export const ACC_STATUSES = ['Yes', 'In Progress', 'N/A'];
 
 // ── The canonical pipeline ───────────────────────────────────────────────────
 // ONE ordered list of stages = the spine of the whole app. `key` is what the

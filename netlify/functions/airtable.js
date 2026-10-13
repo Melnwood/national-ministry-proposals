@@ -30,6 +30,10 @@ const T_TXN = 'tblUW0NNoWqYx0iU9';    // Account Transactions (kept from reconci
 const T_GIFTS = 'tblOEROI7GJsQKlhk';  // Direct Gifts — money sent straight to individuals out of a foundation gift
 const GF = { person:'fldZDsvUHiOgBzWpK', country:'fldbmem2fMvKeO2Jx', amount:'fldnJONt1jdRPHvcB',
              date:'fldULLbMPxhucbIqc', cycle:'fldqtGk8VXh53Osj5', notes:'flddp2V34hJy4Pn7m' };
+const T_ACC = 'tblxDb0d1TJ2ihk7a';    // Accountability — NFP board seasons, one row per country/year/item
+const ACC = { key:'fldwk1zHNOwXaFE8l', country:'fldPZxddE3FqJ9SkV', year:'fldeI8sD9cnRlinlI',
+              item:'fldHPgFq3o8esl9GO', status:'fldOdAP5qt8x2UiTr', updated:'fld2tpgTcnboaWETs',
+              by:'fldZduMJREwNNribH', note:'fldDTs0nkjxer9BE3', file:'fldgoJCVB7FCcPH8L' };
 const TX = { desc:'fldckKnSA6h73Icuf', date:'fldratD3Q5oKMpVRr', out:'fldvLgnoi0j4vTf1X',
              inn:'fldJ2u2yBiY8VQjMt', bal:'fldPKI25ssLpsWHB8', acct:'fld8oaU1u4IPbWf5Q', file:'fld6GSntHCWa9E2Pm' };
 const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS', link:'fldkcJpvziAQoRSWz' };
@@ -846,6 +850,27 @@ exports.handler = async (event) => {
       // ALL account balances (multi-account: each foundation's money can sit
       // in its own account; the first row stays the main 510181 picture).
       const bals = balRecs.map(r => ({ account:r.fields['fldkVMZNye4ZFkUtK']||'', balance:r.fields['fld8Bv81lUPaMEAxS']||0, asOf:r.fields['fld4Wy34J0iJjqGCC']||'' }));
+      // NFP board accountability — country leaders fill it on My Country, the
+      // board reads the grid on Management. Latest files ride along so "when
+      // was the handbook last updated" is answered by the handbook itself.
+      const accRecs = await safe(fetchAll(T_ACC, {}));
+      const acc = accRecs.map(r => {
+        const link = r.fields[ACC.country];
+        const st = r.fields[ACC.status];
+        return {
+          id: r.id,
+          countryId: (Array.isArray(link) && link.length) ? ((link[0] && link[0].id) || link[0]) : '',
+          year: r.fields[ACC.year] || '',
+          item: r.fields[ACC.item] || '',
+          status: (st && (st.name || (typeof st === 'string' ? st : ''))) || '',
+          updated: r.fields[ACC.updated] || '',
+          by: r.fields[ACC.by] || '',
+          note: r.fields[ACC.note] || '',
+          files: (Array.isArray(r.fields[ACC.file]) ? r.fields[ACC.file] : []).slice(-3)
+            .map(a => ({ url: a.url, filename: a.filename || 'file' }))
+        };
+      }).filter(x => x.countryId && x.item);
+
       // Direct gifts to individuals (e.g. House of Vicryn) — shown under the
       // giving foundation's cycle on the Foundations tab.
       const giftRecs = await safe(fetchAll(T_GIFTS, {}));
@@ -881,9 +906,10 @@ exports.handler = async (event) => {
         // SECC request is never a black hole for the person who sent it.
         const myEmail = ((who.email||'').trim().toLowerCase());
         const mineTravel = travel.filter(t => (t.email||'').trim().toLowerCase() === myEmail);
-        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, user:who });
+        const mineAcc = acc.filter(a => allowed.has(a.countryId));
+        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, acc:mineAcc, user:who });
       }
-      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, gifts, user:who });
+      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, gifts, acc, user:who });
     }
 
     if(body.op === 'people_list'){
@@ -1175,6 +1201,54 @@ exports.handler = async (event) => {
         .sort((a,b) => String(b.date).localeCompare(String(a.date)))
         .slice(0, 500);
       return reply(200, { txns, user:who });
+    }
+
+    if(body.op === 'acc_set'){
+      // NFP board accountability: a country leader sets an item's status, adds
+      // a note, or uploads the actual document (handbook, org chart, …). One
+      // row per country/year/item, upserted. Scoped leaders may only touch
+      // their own country; coaches and oversight can help any country.
+      const countryId = String(body.countryId||'').trim();
+      const item = String(body.item||'').trim();
+      const year = String(body.year||'').trim() || String(new Date().getFullYear());
+      if(!countryId || !item) return reply(400, { error:'Missing countryId or item.' });
+      if(isScopedCountry(who)){
+        const allowed = new Set([...(who.countryIds||[]), ...(who.leadsCountryIds||[])]);
+        if(!allowed.has(countryId)) return reply(403, { error:'You can only update your own country.' });
+      }
+      const allAcc = await fetchAll(T_ACC, {});
+      let rec = allAcc.find(r => {
+        const l = r.fields[ACC.country];
+        const cid = (Array.isArray(l) && l.length) ? ((l[0] && l[0].id) || l[0]) : '';
+        return cid === countryId && (r.fields[ACC.year]||'') === year && (r.fields[ACC.item]||'') === item;
+      });
+      const today = new Date().toISOString().slice(0,10);
+      const fields = { [ACC.year]:year, [ACC.item]:item, [ACC.updated]:today, [ACC.by]:(who.name||who.email||'') };
+      if(body.status != null && body.status !== '') fields[ACC.status] = String(body.status);
+      if(body.note != null) fields[ACC.note] = String(body.note);
+      // Uploading the document IS the proof — it also marks the item Yes
+      // unless the caller set a status explicitly.
+      if(body.file && body.file.data && body.status == null) fields[ACC.status] = 'Yes';
+      if(!rec){
+        fields[ACC.country] = [countryId];
+        fields[ACC.key] = `${String(body.countryName||countryId)} · ${year} · ${item}`;
+        const created = await at(BASE+'/'+T_ACC, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+        rec = created.records && created.records[0];
+      } else {
+        await at(BASE+'/'+T_ACC+'/'+rec.id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      }
+      let uploaded = false;
+      if(rec && body.file && body.file.data){
+        try{
+          await fetch('https://content.airtable.com/v0/'+BASE+'/'+rec.id+'/'+ACC.file+'/uploadAttachment', {
+            method:'POST', headers:{ Authorization:'Bearer '+TOKEN, 'Content-Type':'application/json' },
+            body: JSON.stringify({ contentType: body.file.contentType||'application/octet-stream',
+              file: body.file.data, filename: body.file.filename||'document' })
+          });
+          uploaded = true;
+        }catch(e){ /* status saved; file upload failed */ }
+      }
+      return reply(200, { ok:true, id: rec && rec.id, uploaded });
     }
 
     if(body.op === 'report_submit'){
