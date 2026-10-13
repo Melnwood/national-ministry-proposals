@@ -144,11 +144,12 @@ export const F = {
 // itself with its upload date.
 // `due` is when the season's items must be turned in ({month, day}, each year)
 // and `windowDays` is how far ahead it surfaces on the leader's dashboard so
-// there's time to get it done. Dates are placeholders until Mel confirms the
-// real council meeting rhythm — change them HERE only.
+// there's time to get it done. Per Mel (2026-10-13): Fall Council Sep 15,
+// Spring Council May 1, and the foundational documents are ongoing (the
+// orange section of the board's chart) — no deadline, keep them current.
 export const ACC_SEASONS = [
-  { key: 'found', label: 'Beginning — Foundational documents', short: 'Foundational documents',
-    blurb: 'The documents every partner organization starts from. Keep them current all year.',
+  { key: 'found', label: 'Ongoing — Foundational documents', short: 'Foundational documents',
+    blurb: 'Ongoing — the documents every partner organization starts from. No deadline; keep them current all year.',
     due: null, windowDays: 0,
     items: [
       { key: 'found.constitution', label: 'Constitution and bylaws', upload: true },
@@ -157,7 +158,7 @@ export const ACC_SEASONS = [
     ] },
   { key: 'spring', label: 'Spring Council — People and finances', short: 'Spring Council',
     blurb: 'Due before the spring NFP board council.',
-    due: { month: 3, day: 31 }, windowDays: 60,
+    due: { month: 5, day: 1 }, windowDays: 60,
     items: [
       { key: 'spring.position',     label: 'Position focus' },
       { key: 'spring.evalgrowth',   label: 'Evaluation and growth plan', upload: true },
@@ -169,7 +170,7 @@ export const ACC_SEASONS = [
     ] },
   { key: 'fall', label: 'Fall Council — Plan', short: 'Fall Council',
     blurb: 'Due before the fall NFP board council.',
-    due: { month: 10, day: 31 }, windowDays: 60,
+    due: { month: 9, day: 15 }, windowDays: 60,
     items: [
       { key: 'fall.eval',      label: 'Evaluation of previous school year', upload: true },
       { key: 'fall.stratplan', label: 'Strategic plan for upcoming school year', upload: true },
