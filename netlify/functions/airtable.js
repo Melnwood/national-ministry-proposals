@@ -26,6 +26,9 @@ const TR = { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKE
              acct:'fld79txN2YZDxffqu' }; // Cedarstone account the money gets sent to
 const FUND_AMT_F = 'fldcZFJwHyfu5IgCl', FUND_STAT_F = 'fldXwNvQuraOWvgq7'; // Available Funds amount + status
 const T_NOTIF = 'tblEpClYAomtd5t2l';  // Notifications
+const T_TXN = 'tblUW0NNoWqYx0iU9';    // Account Transactions (kept from reconcile CSVs)
+const TX = { desc:'fldckKnSA6h73Icuf', date:'fldratD3Q5oKMpVRr', out:'fldvLgnoi0j4vTf1X',
+             inn:'fldJ2u2yBiY8VQjMt', bal:'fldPKI25ssLpsWHB8', acct:'fld8oaU1u4IPbWf5Q', file:'fld6GSntHCWa9E2Pm' };
 const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS', link:'fldkcJpvziAQoRSWz' };
 const SITE_URL = 'https://national-ministry-proposals.netlify.app'; // recipients sign in and land on their own page
 // Where the "ready to send" payment emails go. Accounting is NOT an app user —
@@ -1110,12 +1113,51 @@ exports.handler = async (event) => {
         rec = created.records && created.records[0];
       }
       const acctName = want || (target && target.fields[B.account]) || '510181 - National Expansion Projects';
+      // Keep the CSV's transactions permanently (Account Transactions table),
+      // so "who was paid from this account?" is answerable later. Lines the
+      // table already holds are skipped — re-uploading a file never duplicates.
+      let stored = 0, skipped = 0;
+      if(Array.isArray(body.txns) && body.txns.length){
+        try{
+          const existing = await fetchAll(T_TXN, {});
+          const keyOf = (t, acct) => [String(t.date||'').slice(0,10), String(t.description||'').trim(),
+            Math.round((Number(t.debit)||0)*100), Math.round((Number(t.credit)||0)*100),
+            Math.round((Number(t.balance)||0)*100), String(acct||'')].join('|');
+          const have = new Set(existing.map(r => keyOf({
+            date:r.fields[TX.date], description:r.fields[TX.desc], debit:r.fields[TX.out],
+            credit:r.fields[TX.inn], balance:r.fields[TX.bal] }, r.fields[TX.acct])));
+          const fresh = body.txns.slice(0, 1500).filter(t => t && t.date && !have.has(keyOf(t, acctName)));
+          const recs = fresh.map(t => ({ fields:{
+            [TX.desc]: String(t.description||'').slice(0,500), [TX.date]: String(t.date||'').slice(0,10),
+            [TX.out]: Number(t.debit)||0, [TX.inn]: Number(t.credit)||0, [TX.bal]: Number(t.balance)||0,
+            [TX.acct]: acctName, [TX.file]: String(body.note||'').replace(/^Reconciled from /,'').slice(0,200) } }));
+          for(let i=0;i<recs.length;i+=10){
+            await at(BASE+'/'+T_TXN, { method:'POST', body:JSON.stringify({ records:recs.slice(i,i+10), typecast:true }) });
+          }
+          stored = recs.length; skipped = (body.txns.length - fresh.length);
+        }catch(txErr){ /* transactions are best-effort; the balance is saved */ }
+      }
       try{
         await writeLog([{ fields:{ [L.entry]:'Account balance updated — '+acctName, [L.type]:'Status change',
-          [L.detail]:(who.name||who.email)+' set the balance of '+acctName+' to $'+Number(body.balance).toLocaleString('en-US')+(body.asOf?(' as of '+body.asOf):''),
+          [L.detail]:(who.name||who.email)+' set the balance of '+acctName+' to $'+Number(body.balance).toLocaleString('en-US')+(body.asOf?(' as of '+body.asOf):'')+(stored?` · ${stored} transactions stored`:''),
           [L.user]:who.name||'', [L.email]:who.email||'' } }]);
       }catch(logErr){ /* best effort */ }
-      return reply(200, { ok:true, account:acctName, balance:Number(body.balance), asOf:body.asOf||'', user:who });
+      return reply(200, { ok:true, account:acctName, balance:Number(body.balance), asOf:body.asOf||'', txnsStored:stored, txnsSkipped:skipped, user:who });
+    }
+
+    // Browse the stored bank transactions (Management → Reconcile).
+    if(body.op === 'txns_list'){
+      if(!isOversight(who)) return reply(403, { error:'Not permitted.' });
+      const all = await fetchAll(T_TXN, {});
+      const want2 = String(body.account||'').trim().toLowerCase();
+      const txns = all
+        .map(r => ({ id:r.id, date:r.fields[TX.date]||'', description:r.fields[TX.desc]||'',
+          out:r.fields[TX.out]||0, inn:r.fields[TX.inn]||0, balance:r.fields[TX.bal]||0,
+          account:r.fields[TX.acct]||'', file:r.fields[TX.file]||'' }))
+        .filter(t => !want2 || String(t.account).toLowerCase() === want2)
+        .sort((a,b) => String(b.date).localeCompare(String(a.date)))
+        .slice(0, 500);
+      return reply(200, { txns, user:who });
     }
 
     if(body.op === 'report_submit'){

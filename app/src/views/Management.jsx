@@ -12,6 +12,60 @@ import { Reports } from './Reports.jsx';
 // out), Foundations (the donors' money), Reports (what the countries owe us),
 // and — for EVP only — Setup & people (reconcile, people & access, strategic
 // plans). The whole grant department lands here; each role sees its sections.
+// The transactions kept from every reconcile CSV — searchable history, so
+// "who was paid from this account?" has an answer inside the tool.
+function TxnHistory({ account }) {
+  const [open, setOpen] = useState(false);
+  const [txns, setTxns] = useState(null);
+  const [err, setErr] = useState('');
+  const [q, setQ] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setTxns(null); setErr('');
+    api('txns_list', { account }).then(d => setTxns(d.txns || [])).catch(e => setErr(e.message || 'Could not load.'));
+  }, [open, account]);
+
+  const shown = (txns || []).filter(t => !q.trim() || (t.description || '').toLowerCase().includes(q.trim().toLowerCase()));
+
+  return (
+    <div style="margin-top:12px">
+      <button type="button" class="foldhead" style="border:none;box-shadow:none;padding:2px 0;background:transparent" onClick={() => setOpen(o => !o)}>
+        <span class="secthead" style="margin:0;font-size:15px">Transactions on file <span class="dim">— saved from every CSV</span></span>
+        <span class="dc-caret">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <div style="margin-top:10px">
+          <input value={q} onInput={e => setQ(e.currentTarget.value)} placeholder="Search descriptions — a name, a project…"
+            style="width:100%;max-width:360px;font:inherit;font-size:13.5px;padding:8px 11px;border:1px solid var(--line-d);border-radius:9px;margin-bottom:10px" />
+          {err && <div class="editerr">{err}</div>}
+          {!txns && !err && <p class="dim">Loading…</p>}
+          {txns && (
+            <div class="tablewrap">
+              <table class="grants">
+                <thead><tr><th>Date</th><th>Description</th><th class="r">Out</th><th class="r">In</th><th class="r">Balance</th></tr></thead>
+                <tbody>
+                  {shown.slice(0, 120).map(t => (
+                    <tr key={t.id}>
+                      <td class="cty">{t.date ? date(t.date) : '—'}</td>
+                      <td>{t.description}</td>
+                      <td class="r owe">{t.out ? moneyCents(t.out) : ''}</td>
+                      <td class="r ok">{t.inn ? moneyCents(t.inn) : ''}</td>
+                      <td class="r cty">{moneyCents(t.balance)}</td>
+                    </tr>
+                  ))}
+                  {!shown.length && <tr><td colspan="5" class="empty-row">{txns.length ? 'Nothing matches that search.' : 'No transactions saved yet — they are kept from the next CSV you apply.'}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {txns && shown.length > 120 && <p class="dim" style="margin-top:8px">Showing 120 of {shown.length} — narrow it with the search box.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Management({ boot, session, onRefresh, view, onViewed }) {
   const isEvp = !!(session && session.role && session.role.key === 'evp');
   const subs = [
@@ -112,8 +166,12 @@ function Reconcile({ boot, onRefresh }) {
     if (!chosenAcct) { setErr('Pick which account this CSV is from.'); return; }
     setBusy(true); setErr(''); setMsg('');
     try {
-      await api('set_balance', { balance: parsed.balance, asOf: parsed.asOf, note: `Reconciled from ${fileName}`, account: chosenAcct });
-      setMsg(`${chosenAcct}: balance updated to ${money(parsed.balance)} as of ${date(parsed.asOf)}.`);
+      // The transactions go along too — kept permanently in Airtable
+      // (Account Transactions), duplicates skipped automatically.
+      const r = await api('set_balance', { balance: parsed.balance, asOf: parsed.asOf, note: `Reconciled from ${fileName}`, account: chosenAcct,
+        txns: parsed.txns.map(t => ({ date: t.date, description: t.description, debit: t.debit, credit: t.credit, balance: t.balance })) });
+      setMsg(`${chosenAcct}: balance updated to ${money(parsed.balance)} as of ${date(parsed.asOf)}.`
+        + (r.txnsStored ? ` ${r.txnsStored} transactions saved to the history${r.txnsSkipped ? ` (${r.txnsSkipped} already on file)` : ''}.` : ' All transactions were already on file.'));
       onRefresh && onRefresh();
     } catch (e) { setErr(e.message || 'Could not update the balance.'); }
     finally { setBusy(false); }
@@ -192,6 +250,8 @@ function Reconcile({ boot, onRefresh }) {
             {parsed.count > 40 && <p class="dim" style="margin-top:8px">Showing 40 of {parsed.count} transactions.</p>}
           </div>
         )}
+
+        <TxnHistory account={chosenAcct} />
       </div>
     </section>
   );
