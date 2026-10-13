@@ -31,6 +31,23 @@ const T_GIFTS = 'tblOEROI7GJsQKlhk';  // Direct Gifts — money sent straight to
 const GF = { person:'fldZDsvUHiOgBzWpK', country:'fldbmem2fMvKeO2Jx', amount:'fldnJONt1jdRPHvcB',
              date:'fldULLbMPxhucbIqc', cycle:'fldqtGk8VXh53Osj5', notes:'flddp2V34hJy4Pn7m' };
 const T_ACC = 'tblxDb0d1TJ2ihk7a';    // Accountability — JV Covenant seasons, one row per country/year/item
+// ── Intern Scholarships — a SEPARATE Airtable base; applications land there
+// (its own automations handle approval emails) and the app tracks status.
+const INTERN_BASE = 'appBE892uMIl6lKxP';
+const T_INTERN = 'tblRVKI89XU39pqJ5'; // "Country Teams" — one row per intern application
+const IN = {
+  country:'fldB1pJhCm4pzKZ8n', first:'fld0j963f9wdR2eAl', last:'fldPGH1NqNDUMoLKL',
+  start:'fldyTJetwMCwM5Bz5', end:'fldkjYWVw7R818fRv', age:'fldfhcqKN4dLzcZGL',
+  doing:'fldv5VpmAredc3F52',
+  submitter:'fldQZae5tFWCqZWch', submitterEmail:'fldNMo6w0WIBvZxxh', submitterEmail2:'fldNEnF7eI1WgP9jE',
+  total:'fldneOpYoskN9FWzZ', raise:'fldq0fB4DJExymeeh', teamContrib:'fldtkukVbg5HRRSOM',
+  hoursWeek:'fld9Dy31ev4kzKDjK', payMonthly:'fldrpsoHAB5FTcoAN',
+  fromGrant:'fldN5W4X3mog3cSgS', awarded:'fldBfKxQx2DdovISQ',
+  status:'fldJwDvBy3f0kHWzu', transfer:'fldL9qlHweBCTneni',
+  acct:'fldEs7HkqMjK6O9zq', internCount:'flddvee0ORK65QtsM',
+  obj1:'fldSR9o7C3DVQWmWh', obj2:'fldHQhdoBWNqhMezB', obj3:'fldQYu3e1oekc8pcU',
+  leaderName:'fldwO6KNssOUXvJyG', leaderEmail:'fldxPSWS4yijbgvIK',
+};
 const ACC = { key:'fldwk1zHNOwXaFE8l', country:'fldPZxddE3FqJ9SkV', year:'fldeI8sD9cnRlinlI',
               item:'fldHPgFq3o8esl9GO', status:'fldOdAP5qt8x2UiTr', updated:'fld2tpgTcnboaWETs',
               by:'fldZduMJREwNNribH', note:'fldDTs0nkjxer9BE3', file:'fldgoJCVB7FCcPH8L' };
@@ -182,6 +199,17 @@ async function at(path, opts={}){
   const t = await r.text(); let d; try{ d = JSON.parse(t); }catch(e){ d = { raw:t }; }
   if(!r.ok) throw new Error((d.error && (d.error.message||d.error.type)) || ('Airtable HTTP '+r.status));
   return d;
+}
+// Same as fetchAll but against another base (Intern Scholarships lives apart).
+async function fetchAllFrom(base, table, params){
+  let recs=[], offset;
+  do{
+    const q = new URLSearchParams(params||{}); q.set('returnFieldsByFieldId','true'); q.set('pageSize','100');
+    if(offset) q.set('offset', offset);
+    const d = await at(base+'/'+table+'?'+q.toString());
+    recs = recs.concat(d.records); offset = d.offset;
+  } while(offset);
+  return recs;
 }
 async function fetchAll(table, params){
   let recs=[], offset;
@@ -850,6 +878,24 @@ exports.handler = async (event) => {
       // ALL account balances (multi-account: each foundation's money can sit
       // in its own account; the first row stays the main 510181 picture).
       const bals = balRecs.map(r => ({ account:r.fields['fldkVMZNye4ZFkUtK']||'', balance:r.fields['fld8Bv81lUPaMEAxS']||0, asOf:r.fields['fld4Wy34J0iJjqGCC']||'' }));
+      // Intern scholarship applications — they live in the Intern Scholarships
+      // base, tracked here by status. Best effort: if the token can't reach
+      // that base, the rest of the app still loads.
+      const internRecs = await safe(fetchAllFrom(INTERN_BASE, T_INTERN, {}));
+      const sname3 = x => ((x && (x.name || x)) || '');
+      const interns = internRecs.map(r => { const f = r.fields || {}; return {
+        id: r.id, country: f[IN.country] || '',
+        first: f[IN.first] || '', last: f[IN.last] || '',
+        start: f[IN.start] || '', end: f[IN.end] || '',
+        total: Number(f[IN.total]) || 0, fromGrant: Number(f[IN.fromGrant]) || 0,
+        awarded: Number(f[IN.awarded]) || 0,
+        status: sname3(f[IN.status]) || 'Submitted',
+        transfer: sname3(f[IN.transfer]) || '',
+        submitterEmail: String(f[IN.submitterEmail] || f[IN.submitterEmail2] || '').trim().toLowerCase(),
+        leaderEmail: String(f[IN.leaderEmail] || '').trim().toLowerCase(),
+        created: r.createdTime
+      };});
+
       // JV Covenant accountability — country leaders fill it on My Country, the
       // board reads the grid on Management. Latest files ride along so "when
       // was the handbook last updated" is answered by the handbook itself.
@@ -907,9 +953,14 @@ exports.handler = async (event) => {
         const myEmail = ((who.email||'').trim().toLowerCase());
         const mineTravel = travel.filter(t => (t.email||'').trim().toLowerCase() === myEmail);
         const mineAcc = acc.filter(a => allowed.has(a.countryId));
-        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, acc:mineAcc, user:who });
+        // Their own intern applications: submitted by them, addressed to them
+        // as leader, or for a country they lead.
+        const myNames = new Set(myCountries.map(c => (c.name || '').trim().toLowerCase()));
+        const mineInterns = interns.filter(x => x.submitterEmail === myEmail || x.leaderEmail === myEmail
+          || myNames.has((x.country || '').trim().toLowerCase()));
+        return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, acc:mineAcc, interns:mineInterns, user:who });
       }
-      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, gifts, acc, user:who });
+      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, gifts, acc, interns, user:who });
     }
 
     if(body.op === 'people_list'){
@@ -1201,6 +1252,40 @@ exports.handler = async (event) => {
         .sort((a,b) => String(b.date).localeCompare(String(a.date)))
         .slice(0, 500);
       return reply(200, { txns, user:who });
+    }
+
+    if(body.op === 'intern_submit'){
+      // Long-term intern scholarship application — the record is created in
+      // the Intern Scholarships base (whose own automations send the approval
+      // emails); the app shows its status on My Country.
+      const v = body.fields || {};
+      if(!String(v.first||'').trim() || !String(v.last||'').trim()) return reply(400, { error:'The intern’s first and last name are required.' });
+      if(!String(v.country||'').trim()) return reply(400, { error:'Country is required.' });
+      const fields = {};
+      const setS = (k, val) => { if(val != null && String(val).trim() !== '') fields[IN[k]] = String(val).trim(); };
+      const setN = (k, val) => { if(val != null && val !== '' && !isNaN(Number(val))) fields[IN[k]] = Number(val); };
+      setS('country', v.country); setS('first', v.first); setS('last', v.last);
+      setS('start', v.start); setS('end', v.end); setN('age', v.age);
+      setS('doing', v.doing);
+      setN('total', v.total); setN('raise', v.raise); setN('teamContrib', v.teamContrib);
+      setN('hoursWeek', v.hoursWeek); setN('payMonthly', v.payMonthly); setN('fromGrant', v.fromGrant);
+      setS('obj1', v.obj1); setS('obj2', v.obj2); setS('obj3', v.obj3);
+      setS('acct', v.acct);
+      setN('internCount', v.internCount != null && v.internCount !== '' ? v.internCount : 1);
+      setS('leaderName', v.leaderName); setS('leaderEmail', v.leaderEmail);
+      fields[IN.submitter] = who.name || who.email || '';
+      if(who.email){ fields[IN.submitterEmail] = who.email; fields[IN.submitterEmail2] = who.email; }
+      fields[IN.status] = 'Submitted';
+      try{
+        const created = await at(INTERN_BASE+'/'+T_INTERN, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+        const nm = `${String(v.first||'').trim()} ${String(v.last||'').trim()}`.trim();
+        await writeLog([{ fields:{ [L.entry]:`Intern scholarship application — ${nm}`, [L.type]:'Status change',
+          [L.detail]:`${who.name||who.email||'Someone'} applied for an intern scholarship for ${nm} (${String(v.country||'').trim()}).` } }]).catch(()=>{});
+        return reply(200, { ok:true, id: created.records && created.records[0] && created.records[0].id });
+      }catch(e){
+        return reply(502, { error:'Could not save to the Intern Scholarships base — ' + (e.message||'unknown error')
+          + '. If this mentions permissions or authorization, the app’s Airtable token needs access to that base.' });
+      }
     }
 
     if(body.op === 'acc_set'){

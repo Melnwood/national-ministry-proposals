@@ -114,6 +114,7 @@ export function Country({ boot, session, onRefresh }) {
         <div class="applybtns">
           <button class="btn-approve" onClick={() => setApply('project')}>{hasDraft ? 'Continue your application ▸' : 'Apply for a project grant'}</button>
           <button class="ghostbtn big" onClick={() => setApply('travel')}>Apply for the SECC Travel Grant</button>
+          <button class="ghostbtn big" onClick={() => setApply('intern')}>Apply for an intern scholarship</button>
         </div>
       </div>
 
@@ -179,6 +180,34 @@ export function Country({ boot, session, onRefresh }) {
         </div>
       )}
 
+      {(boot.interns || []).length > 0 && (
+        <div class="ch-list" style="margin-top:14px">
+          <Fold title="Your intern scholarship applications" dim={`— ${(boot.interns || []).length}`}>
+            <p class="lead">Long-term intern scholarships — JV's grant covers up to $3,000 per intern. The status updates here as the application moves.</p>
+            <div class="tablewrap">
+              <table class="grants">
+                <thead><tr><th>Intern</th><th>Country</th><th>Internship</th><th class="r">Asked from grant</th><th>Status</th></tr></thead>
+                <tbody>
+                  {[...(boot.interns || [])].sort((a, b) => String(b.created).localeCompare(String(a.created))).map(x => {
+                    const paid = x.transfer === 'Transfer Made';
+                    const bk = paid ? 'funded' : x.status === 'Approved' ? 'transferred' : x.status === 'Denied' ? 'denied' : 'submitted';
+                    return (
+                      <tr key={x.id}>
+                        <td class="nm">{x.first} {x.last}</td>
+                        <td class="cty">{x.country || '—'}</td>
+                        <td class="cty">{x.start || x.end ? `${x.start ? date(x.start) : '?'} → ${x.end ? date(x.end) : '?'}` : '—'}</td>
+                        <td class="r">{x.fromGrant ? money(x.fromGrant) : '—'}</td>
+                        <td><span class={`badge stg-${bk}`}>{paid ? 'Paid' : x.status}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Fold>
+        </div>
+      )}
+
       {accCountries.length > 0 && (
         <div id="acc-section" style="scroll-margin-top:16px">
           <Accountability countries={accCountries} acc={boot.acc || []} year={accYear} accDue={accDue} onRefresh={onRefresh} />
@@ -195,6 +224,7 @@ export function Country({ boot, session, onRefresh }) {
       {apply === 'project' && <ProjectGrantForm countries={countries} myCountryIds={myCountryIds}
         draftKey={draftKey} onClose={() => setApply(null)} onDone={onRefresh} />}
       {apply === 'travel' && <TravelGrantForm user={session.user} onClose={() => setApply(null)} />}
+      {apply === 'intern' && <InternForm countries={countries} user={session.user} onClose={() => setApply(null)} onDone={onRefresh} />}
     </>
   );
 }
@@ -826,6 +856,117 @@ function AccRow({ item, rec, cty, year, onRefresh }) {
         )}
       </div>
       {err && <div class="editerr sm" style="flex-basis:100%">{err}</div>}
+    </div>
+  );
+}
+
+// ── LONG-TERM INTERN SCHOLARSHIP APPLICATION ─────────────────────────────────
+// Mirrors the Intern Scholarships Airtable base: the application is created
+// there (its own automations send the approval emails) and tracked on this
+// page by status. JV's grant covers up to $3,000 per intern.
+function InternForm({ countries, user, onClose, onDone }) {
+  const [v, setV] = useState({
+    first: '', last: '', age: '', country: (countries[0] && countries[0].name) || '',
+    start: '', end: '', doing: '', obj1: '', obj2: '', obj3: '',
+    total: '', raise: '', teamContrib: '', payMonthly: '', hoursWeek: '', fromGrant: '',
+    acct: '', leaderName: (user && user.name) || '', leaderEmail: (user && user.email) || '',
+  });
+  const set = (k, val) => setV(s => ({ ...s, [k]: val }));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+
+  async function submit() {
+    if (!v.first.trim() || !v.last.trim()) { setErr('Give the intern’s first and last name.'); return; }
+    if (!v.country.trim()) { setErr('Pick the country.'); return; }
+    if (!v.doing.trim()) { setErr('Describe what the intern will be doing.'); return; }
+    setBusy(true); setErr('');
+    try {
+      await api('intern_submit', { fields: v });
+      setDone(true);
+      onDone && onDone();
+    } catch (e) { setErr(e.message || 'Could not submit.'); setBusy(false); }
+  }
+
+  if (done) {
+    return (
+      <div class="modal-scrim" onClick={onClose}>
+        <div class="modal" onClick={e => e.stopPropagation()}>
+          <div class="modal-head"><div><h2>Application submitted 🎉</h2>
+            <div class="sub2">{v.first} {v.last} is in — you can follow the status under "Your intern scholarship applications" on this page.</div></div>
+            <button class="ghostbtn" onClick={onClose}>Close ✕</button></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Plain helpers (NOT components — an inline component would remount and drop
+  // focus on every keystroke).
+  const inp = (k, type = 'text', ph = '') =>
+    <input type={type} value={v[k]} placeholder={ph} onInput={e => set(k, e.currentTarget.value)} />;
+  const moneyIn = k =>
+    <div class="moneyin"><span>$</span><input type="number" step="50" value={v[k]} onInput={e => set(k, e.currentTarget.value)} placeholder="0" /></div>;
+
+  return (
+    <div class="modal-scrim" onClick={onClose}>
+      <div class="modal" onClick={e => e.stopPropagation()}>
+        <div class="modal-head">
+          <div><h2>Intern scholarship application</h2>
+            <div class="sub2">A long-term intern for your country team. JV's grant covers up to <b>$3,000</b> per intern; the rest comes from the intern's own raising and your team.</div></div>
+          <button class="ghostbtn" onClick={onClose}>Close ✕</button>
+        </div>
+        <div class="editor">
+          <div class="fldrow">
+            <Fld label="Intern's first name">{inp('first')}</Fld>
+            <Fld label="Intern's last name">{inp('last')}</Fld>
+          </div>
+          <div class="fldrow">
+            <label class="fld"><span class="flbl">Country</span>
+              <select value={v.country} onChange={e => set('country', e.currentTarget.value)}>
+                {countries.map(c => <option value={c.name}>{c.name}</option>)}
+              </select>
+            </label>
+            <Fld label="Intern's age">{inp('age', 'number')}</Fld>
+          </div>
+          <div class="fldrow">
+            <Fld label="Internship starts">{inp('start', 'date')}</Fld>
+            <Fld label="Internship ends">{inp('end', 'date')}</Fld>
+          </div>
+          <label class="fld"><span class="flbl">What will this intern be doing during their internship?</span>
+            <textarea rows="4" value={v.doing} onInput={e => set('doing', e.currentTarget.value)}
+              placeholder="Their role, who they serve alongside, and what the internship builds toward…" />
+          </label>
+          <label class="fld"><span class="flbl">Objective 1</span>
+            <textarea rows="2" value={v.obj1} onInput={e => set('obj1', e.currentTarget.value)} /></label>
+          <label class="fld"><span class="flbl">Objective 2</span>
+            <textarea rows="2" value={v.obj2} onInput={e => set('obj2', e.currentTarget.value)} /></label>
+          <label class="fld"><span class="flbl">Objective 3</span>
+            <textarea rows="2" value={v.obj3} onInput={e => set('obj3', e.currentTarget.value)} /></label>
+
+          <div class="fldrow">
+            <Fld label="Total cost of the internship">{moneyIn('total')}</Fld>
+            <Fld label="Amount needed from the JV grant">{moneyIn('fromGrant')}</Fld>
+          </div>
+          <div class="fldrow">
+            <Fld label="Amount the intern will raise">{moneyIn('raise')}</Fld>
+            <Fld label="Your country team's contribution">{moneyIn('teamContrib')}</Fld>
+          </div>
+          <div class="fldrow">
+            <Fld label="Intern's monthly pay">{moneyIn('payMonthly')}</Fld>
+            <Fld label="Average hours per week">{inp('hoursWeek', 'number')}</Fld>
+          </div>
+          <Fld label="Account number at Cedarstone (where the grant gets sent)">{inp('acct', 'text', 'e.g. 510xxx')}</Fld>
+          <div class="fldrow">
+            <Fld label="Country team leader">{inp('leaderName')}</Fld>
+            <Fld label="Leader's email">{inp('leaderEmail', 'email')}</Fld>
+          </div>
+        </div>
+        {err && <div class="editerr">{err}</div>}
+        <div class="modal-foot actions">
+          <button class="ghostbtn" onClick={onClose} disabled={busy}>Cancel</button>
+          <button class="savebtn" onClick={submit} disabled={busy}>{busy ? 'Submitting…' : 'Submit application'}</button>
+        </div>
+      </div>
     </div>
   );
 }
