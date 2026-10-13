@@ -1224,7 +1224,10 @@ exports.handler = async (event) => {
       });
       const today = new Date().toISOString().slice(0,10);
       const fields = { [ACC.year]:year, [ACC.item]:item, [ACC.updated]:today, [ACC.by]:(who.name||who.email||'') };
-      if(body.status != null && body.status !== '') fields[ACC.status] = String(body.status);
+      // Clicking the already-selected button un-does it: the status clears and
+      // the item goes back to untouched.
+      if(body.clearStatus) fields[ACC.status] = null;
+      else if(body.status != null && body.status !== '') fields[ACC.status] = String(body.status);
       if(body.note != null) fields[ACC.note] = String(body.note);
       // Uploading the document IS the proof — it also marks the item Yes
       // unless the caller set a status explicitly.

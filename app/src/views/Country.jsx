@@ -773,8 +773,11 @@ function AccRow({ item, rec, cty, year, onRefresh }) {
 
   async function setStatus(st) {
     setBusy(true); setErr('');
+    // Clicking the button that's already on un-does the choice.
+    const clearing = rec && rec.status === st;
     try {
-      await api('acc_set', { countryId: cty.id, countryName: cty.name, year, item: item.key, status: st });
+      await api('acc_set', { countryId: cty.id, countryName: cty.name, year, item: item.key,
+        ...(clearing ? { clearStatus: true } : { status: st }) });
       onRefresh && onRefresh();
     } catch (e) { setErr(e.message || 'Could not save.'); }
     setBusy(false);
