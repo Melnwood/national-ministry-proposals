@@ -10,9 +10,14 @@ import { awarded, stageKey } from './grants.js';
 const linkIds = v => Array.isArray(v) ? v.map(x => (x && x.id) ? x.id : x) : [];
 const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
 
-export function buildFoundations(cycles = [], goals = [], props = [], reports = []) {
+export function buildFoundations(cycles = [], goals = [], props = [], reports = [], gifts = []) {
   const cycleList = cycles.map(c => {
     const grants = props.filter(p => linkIds(p.fields[F.proposal.cycles]).includes(c.id));
+    // Money sent straight to individuals out of this gift (e.g. House of
+    // Vicryn) — counts against the gift just like awarded grants do.
+    const directGifts = gifts.filter(g => g.cycleId === c.id)
+      .sort((a, b) => b.amount - a.amount || String(a.person).localeCompare(String(b.person)));
+    const directTotal = directGifts.reduce((a, g) => a + num(g.amount), 0);
     const fundedCount = grants.filter(p => stageKey(p) === 'funded').length;
     // The cycle's filed reports, joined report → grant → cycle (the report's
     // own links are unreliable); goal actuals are summed from these.
@@ -45,6 +50,8 @@ export function buildFoundations(cycles = [], goals = [], props = [], reports = 
       fundedCount,
       goals: cycleGoals,
       grants,
+      directGifts,
+      directTotal,
     };
   });
 

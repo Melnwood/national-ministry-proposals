@@ -27,6 +27,9 @@ const TR = { name:'fldbCntiM2HMr1RB8', email:'fldkvXwabXsOhU4jX', team:'fldWcmKE
 const FUND_AMT_F = 'fldcZFJwHyfu5IgCl', FUND_STAT_F = 'fldXwNvQuraOWvgq7'; // Available Funds amount + status
 const T_NOTIF = 'tblEpClYAomtd5t2l';  // Notifications
 const T_TXN = 'tblUW0NNoWqYx0iU9';    // Account Transactions (kept from reconcile CSVs)
+const T_GIFTS = 'tblOEROI7GJsQKlhk';  // Direct Gifts — money sent straight to individuals out of a foundation gift
+const GF = { person:'fldZDsvUHiOgBzWpK', country:'fldbmem2fMvKeO2Jx', amount:'fldnJONt1jdRPHvcB',
+             date:'fldULLbMPxhucbIqc', cycle:'fldqtGk8VXh53Osj5', notes:'flddp2V34hJy4Pn7m' };
 const TX = { desc:'fldckKnSA6h73Icuf', date:'fldratD3Q5oKMpVRr', out:'fldvLgnoi0j4vTf1X',
              inn:'fldJ2u2yBiY8VQjMt', bal:'fldPKI25ssLpsWHB8', acct:'fld8oaU1u4IPbWf5Q', file:'fld6GSntHCWa9E2Pm' };
 const N = { msg:'fldrTRN1vLi2HC3Db', email:'fld6amQya62dBl92t', type:'fldYI8zxRVWHXuue0', read:'fldPKZTrB6gLZEIQ2', prop:'fldtwJsPOfbte87pS', link:'fldkcJpvziAQoRSWz' };
@@ -843,6 +846,20 @@ exports.handler = async (event) => {
       // ALL account balances (multi-account: each foundation's money can sit
       // in its own account; the first row stays the main 510181 picture).
       const bals = balRecs.map(r => ({ account:r.fields['fldkVMZNye4ZFkUtK']||'', balance:r.fields['fld8Bv81lUPaMEAxS']||0, asOf:r.fields['fld4Wy34J0iJjqGCC']||'' }));
+      // Direct gifts to individuals (e.g. House of Vicryn) — shown under the
+      // giving foundation's cycle on the Foundations tab.
+      const giftRecs = await safe(fetchAll(T_GIFTS, {}));
+      const gifts = giftRecs.map(r => {
+        const link = r.fields[GF.cycle];
+        return {
+          id: r.id,
+          person: r.fields[GF.person] || '',
+          country: r.fields[GF.country] || '',
+          amount: Number(r.fields[GF.amount]) || 0,
+          date: r.fields[GF.date] || '',
+          cycleId: (Array.isArray(link) && link.length) ? ((link[0] && link[0].id) || link[0]) : ''
+        };
+      }).filter(g => g.person);
       const travelRecs = await safe(fetchAll(T_TRAVEL, {}));
       const travel = travelRecs.map(r => ({
         id:r.id, name:r.fields[TR.name]||'', email:r.fields[TR.email]||'', team:r.fields[TR.team]||'',
@@ -866,7 +883,7 @@ exports.handler = async (event) => {
         const mineTravel = travel.filter(t => (t.email||'').trim().toLowerCase() === myEmail);
         return reply(200, { cycles, props:mineProps, logs:[], funds:[], bal:null, goals, countries_meta:myCountries, reports:mineReports, travel:mineTravel, user:who });
       }
-      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, user:who });
+      return reply(200, { cycles, props, logs, funds, bal, bals, goals, countries_meta, reports, travel, gifts, user:who });
     }
 
     if(body.op === 'people_list'){

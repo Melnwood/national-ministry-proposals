@@ -24,6 +24,7 @@ export const TABLES = {
   approvers:  'tblKGAf1Y7hSYTIjg', // Approvers (people + roles)
   balance:    'tblWNR84jiDleBali', // Account Balance
   travel:     'tbl89ML7snRz5BQqL', // Travel Fund Requests
+  gifts:      'tblOEROI7GJsQKlhk', // Direct Gifts (money sent straight to individuals from a foundation gift)
 };
 
 // ── Fields, grouped by table ─────────────────────────────────────────────────
@@ -127,6 +128,8 @@ export const F = {
              notes:'fldbcUSKRon6HgyDC', timing:'fldU7Chmdixe07jZs', actual:'flduryDoK9wzjxh3C',
              acct:'fld79txN2YZDxffqu' }, // Cedarstone account the money gets sent to
   countries: { name:'fldzgWM7sqaFDM4Cl', phase:'flduog58oXfNq2aEt', recordId:'fldca6uVjtxsluVK1', approvers:'fldwpCrK2Mr68tQh5' },
+  gifts:   { person:'fldZDsvUHiOgBzWpK', country:'fldbmem2fMvKeO2Jx', amount:'fldnJONt1jdRPHvcB',
+             date:'fldULLbMPxhucbIqc', cycle:'fldqtGk8VXh53Osj5', notes:'flddp2V34hJy4Pn7m' },
 };
 
 // ── The canonical pipeline ───────────────────────────────────────────────────

@@ -7,8 +7,8 @@ import { PipelineDash } from './PipelineDash.jsx';
 
 export function Foundations({ boot, session, onRefresh }) {
   const data = useMemo(
-    () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || []),
-    [boot.cycles, boot.goals, boot.props, boot.reports]
+    () => buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || [], boot.gifts || []),
+    [boot.cycles, boot.goals, boot.props, boot.reports, boot.gifts]
   );
   const [adding, setAdding] = useState(false);
   // Setting where a gift's money sits is an EVP action (it steers transfers).
@@ -116,11 +116,14 @@ function AddGiftForm({ foundations, onClose, onDone }) {
 
 function CycleCard({ cy, canAct, onRefresh }) {
   const [open, setOpen] = useState(false);
+  const [giftsOpen, setGiftsOpen] = useState(false);
   const [editAcct, setEditAcct] = useState(false);
   const [acct, setAcct] = useState(cy.acct || '');
   const [savingAcct, setSavingAcct] = useState(false);
   const [acctErr, setAcctErr] = useState('');
-  const remaining = cy.gift - cy.awarded;
+  const directTotal = cy.directTotal || 0;
+  const directGifts = cy.directGifts || [];
+  const remaining = cy.gift - cy.awarded - directTotal;
 
   async function saveAcct() {
     setSavingAcct(true); setAcctErr('');
@@ -139,6 +142,7 @@ function CycleCard({ cy, canAct, onRefresh }) {
         <div class="cycle-stats">
           <Stat label="Gift" val={money(cy.gift)} />
           <Stat label="Awarded" val={money(cy.awarded)} />
+          {directTotal > 0 && <Stat label="To individuals" val={money(directTotal)} />}
           <Stat label="Remaining" val={money(remaining)} tone={remaining < 0 ? 'neg' : ''} />
           <Stat label="Grants" val={`${cy.fundedCount}${cy.grantCount !== cy.fundedCount ? ` / ${cy.grantCount}` : ''}`} />
           <Stat label="Money sits in" val={cy.acct || 'Main (510181)'} />
@@ -167,6 +171,31 @@ function CycleCard({ cy, canAct, onRefresh }) {
         </div>
       )}
 
+      {directGifts.length > 0 && (
+        <>
+          <button class="grants-toggle" onClick={() => setGiftsOpen(o => !o)}>
+            {giftsOpen ? '▾' : '▸'} {directGifts.length} {directGifts.length === 1 ? 'gift' : 'gifts'} to individuals — {money(directTotal)}
+          </button>
+          {giftsOpen && (
+            <div class="tablewrap" style="margin-top:10px">
+              <table class="grants">
+                <thead><tr><th>Person</th><th>Country</th><th>Sent</th><th class="r">Amount</th></tr></thead>
+                <tbody>
+                  {directGifts.map(g => (
+                    <tr key={g.id}>
+                      <td class="nm">{g.person}</td>
+                      <td class="cty">{g.country || '—'}</td>
+                      <td>{fmtDate(g.date)}</td>
+                      <td class="r">{money(g.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
       <button class="grants-toggle" onClick={() => setOpen(o => !o)}>
         {open ? '▾' : '▸'} {cy.grantCount} {cy.grantCount === 1 ? 'grant' : 'grants'}
       </button>
@@ -190,6 +219,12 @@ function CycleCard({ cy, canAct, onRefresh }) {
       )}
     </div>
   );
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(String(d).slice(0, 10) + 'T12:00:00');
+  return isNaN(dt) ? String(d) : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function Stat({ label, val, tone }) {
