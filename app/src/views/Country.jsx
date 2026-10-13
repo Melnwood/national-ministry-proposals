@@ -730,7 +730,6 @@ function Accountability({ countries, acc, year, accDue, onRefresh }) {
         JV Covenant accountability — {year} <span class="dim">— {done} of {ACC_ITEMS.length} done · click a season to open it</span>
       </div>
       <p class="lead">
-        What you and your board said yes to in the JV Covenant — being part of JV as an organization.
         Mark each item, and for documents upload the <b>latest version</b> — JV sees exactly what you
         upload, with the date it was last updated.
       </p>
