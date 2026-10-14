@@ -1523,6 +1523,20 @@ exports.handler = async (event) => {
       if(!f.name || !f.requested) return reply(400, { error:'Project name and amount are required.' });
       let countryId = body.countryId || (who.countryIds && who.countryIds[0]) || '';
       if(isScopedCountry(who) && countryId && !(who.countryIds||[]).includes(countryId)) countryId = (who.countryIds||[])[0] || '';
+      // A session token issued before the person's country was assigned carries
+      // no countryIds — look them up FRESH so an application never lands
+      // without its country (that breaks coach routing and scoping).
+      if(!countryId && who.email){
+        try{
+          const ppl = await fetchAll(T_APP, {});
+          const me = ppl.find(p => ((p.fields[A.email]||'').trim().toLowerCase()) === who.email.trim().toLowerCase());
+          const link = me && (me.fields[A.leads] && me.fields[A.leads].length ? me.fields[A.leads] : me.fields[A.countries]);
+          if(Array.isArray(link) && link.length) countryId = (link[0] && link[0].id) || link[0];
+        }catch(e){}
+      }
+      // No country means no coach routing, no scoping, no reports — refuse
+      // clearly rather than letting a half-blank application through.
+      if(!countryId) return reply(400, { error:'Your account isn’t linked to a country yet, so this application can’t be routed. Ask Mel to set your country in People & access, then sign out and back in.' });
       const PA = { name:'fld1qi35letQtg6yC', requested:'fld3bvuKr1SIXAwUf', stage:STAGE_F, status:STATUS_F,
         submitted:'fldiAdRWxktreIrDZ', country:'fldaHnvEM4RokRDth', leaderName:'fldcwusDwTyQ5E5Qf', leaderEmail:'fldbs0FzyPWbS1waI',
         subName:'fldlfXrnrE7yAyNul', subEmail:'fld64OxiMWtnko2H7', category:'fldqZcI9IgfOPCdt3', requestType:'fldvmIx5iytXPIgve',
@@ -1539,12 +1553,14 @@ exports.handler = async (event) => {
       };
       if(countryId) fields[PA.country] = [countryId];
       // Stamp the country's coach email (from People & access) so the
-      // notify-the-coach automation has a recipient.
+      // notify-the-coach automation has a recipient. If NO coach covers this
+      // country, fall back to Mel so the email never fails with an empty "To".
+      // (Coach first name & country text are computed fields now — never write
+      // them, Airtable rejects the whole record if we do.)
       try{
         const cp = await coachForCountry(countryId);
-        if(cp.email) fields['fld4lLrDwB5x0ck72'] = cp.email;
-        if(cp.name) fields['fldZ174mj2pCvJA37'] = cp.name.split(/\s+/)[0];
-      }catch(e){}
+        fields['fld4lLrDwB5x0ck72'] = cp.email || 'mellenwood@josiahventure.com';
+      }catch(e){ fields['fld4lLrDwB5x0ck72'] = 'mellenwood@josiahventure.com'; }
       const setN = (k,v)=>{ if(v!=null&&v!=='') fields[k]=Number(v)||0; };
       const setS = (k,v)=>{ if(v!=null&&String(v).trim()!=='') fields[k]=String(v).trim(); };
       setS(PA.category,f.category); setS(PA.requestType,f.requestType); setS(PA.problem,f.problem);
