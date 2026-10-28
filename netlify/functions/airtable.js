@@ -932,7 +932,8 @@ exports.handler = async (event) => {
         reqAmt:r.fields[TR.reqAmt]||0, appAmt:r.fields[TR.appAmt]||0, acct:r.fields[TR.acct]||'',
         timing:(r.fields[TR.timing]&&(r.fields[TR.timing].name||r.fields[TR.timing]))||'',
         actual:r.fields[TR.actual]||0,
-        status:(r.fields[TR.status]&&(r.fields[TR.status].name||r.fields[TR.status]))||'Submitted'
+        status:(r.fields[TR.status]&&(r.fields[TR.status].name||r.fields[TR.status]))||'Submitted',
+        created:r.createdTime
       }));
       // ---- scope for country leaders (their countries only) ----
       if(isScopedCountry(who)){

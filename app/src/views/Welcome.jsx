@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'preact/hooks';
 import { api } from '../shared/api.js';
-import { date } from '../shared/format.js';
-import { stageKey, coach as coachName } from '../shared/grants.js';
+import { date, money } from '../shared/format.js';
+import { F } from '../shared/schema.js';
+import { stageKey, coach as coachName, projectName, country, awarded } from '../shared/grants.js';
 import { reportKind } from '../shared/reports.js';
 
 // A leader's own "your grant has been funded" message gets the big
@@ -78,8 +79,7 @@ export function Welcome({ boot, session, onGo }) {
       const q = props.filter(p => ['submitted', 'coach'].includes(stageKey(p))).length;
       if (q) list.push({ n: q, text: 'awaiting a Council Lead Team decision', tab: 'council', btn: 'Decide' });
       if (travelQ) list.push({ n: travelQ, text: `SouthEast travel application${travelQ === 1 ? '' : 's'} awaiting a decision`, tab: 'council', btn: 'Decide' });
-      const acc = at('accounting');
-      if (acc) list.push({ n: acc, text: 'ready to transfer at accounting', tab: 'accounting', btn: 'Open Accounting' });
+      // Money waiting to be SENT lives in the red urgent box above, not here.
     }
     if (['grant', 'cfo', 'president'].includes(role)) {
       const acc = at('accounting');
@@ -91,7 +91,27 @@ export function Welcome({ boot, session, onGo }) {
     return list;
   }, [boot.props, boot.travel, session]);
 
-  if (!notifs.length && !todos.length) return null;
+  // The red urgent box (per Mel): money that is approved and WAITING to be
+  // sent, listed item by item, with anything unpayable (missing Cedarstone
+  // account) called out. Shown to the EVP team — the people who send money.
+  const urgent = useMemo(() => {
+    const role = session.role && session.role.key;
+    if (role !== 'evp') return null;
+    const items = [];
+    (boot.travel || []).filter(t => t.status === 'Approved').forEach(t => {
+      const days = t.created ? Math.floor((Date.now() - new Date(t.created).getTime()) / 86400000) : null;
+      items.push({ name: t.name || 'A travel grant', sub: 'SECC travel', amt: t.appAmt || t.reqAmt || 0,
+        acct: String(t.acct || '').trim(), days });
+    });
+    (boot.props || []).filter(p => ['accounting', 'transferred'].includes(stageKey(p))).forEach(p => {
+      items.push({ name: projectName(p), sub: country(p) || 'project grant', amt: awarded(p) || 0,
+        acct: String((p.fields || {})[F.proposal.cedarstoneAccount] || '').trim(), days: null });
+    });
+    if (!items.length) return null;
+    return { items, total: items.reduce((a, it) => a + (it.amt || 0), 0) };
+  }, [boot.travel, boot.props, session]);
+
+  if (!notifs.length && !todos.length && !urgent) return null;
 
   const first = (session.user && (session.user.name || session.user.email) || '').split(/[@\s]/)[0];
   const heroes = notifs.filter(isFundedHero);
@@ -100,6 +120,21 @@ export function Welcome({ boot, session, onGo }) {
   return (
     <div class="welcome">
       <div class="w-head">{first ? `${first}, here's what's new for you` : "Here's what's new for you"}</div>
+      {urgent && (
+        <div class="w-urgent">
+          <div class="w-urgent-head">🔴 Urgent — {money(urgent.total)} is approved and waiting to be sent</div>
+          <ul class="w-urgent-list">
+            {urgent.items.map(it => (
+              <li>
+                <b>{it.name}</b> <span class="dim">({it.sub})</span> — <b>{money(it.amt)}</b>
+                {it.days != null && it.days > 0 ? ` · waiting ${it.days} ${it.days === 1 ? 'day' : 'days'}` : ''}
+                {!it.acct && <span class="w-urgent-miss"> — missing the Cedarstone account number, can't be paid yet</span>}
+              </li>
+            ))}
+          </ul>
+          <button class="w-go w-urgent-go" onClick={() => onGo('accounting')}>Open Accounting →</button>
+        </div>
+      )}
       {heroes.map(n => <FundedBanner key={n.id} n={n} boot={boot} onGotIt={() => gotIt(n.id)} />)}
       {todos.map(t => (
         <div class="w-card action">
