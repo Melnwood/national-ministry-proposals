@@ -97,11 +97,16 @@ export function Country({ boot, session, onRefresh }) {
     const next = nextAccDue();
     const firstCty = accCountries[0];
     if (!next || !firstCty) return null;
-    const dueYear = String(next.due.getFullYear());
-    const mine = (boot.acc || []).filter(a => a.countryId === firstCty.id && a.year === dueYear);
+    // Count against the year the section below WRITES (the current year), so
+    // marking an item off always moves this tile — never a different year.
+    const mine = (boot.acc || []).filter(a => a.countryId === firstCty.id && a.year === accYear);
     const ok = new Set(mine.filter(a => a.status === 'Yes' || a.status === 'N/A').map(a => a.item));
     const open = next.season.items.filter(i => !ok.has(i.key)).length;
-    return { ...next, open, dueIso: next.due.toISOString().slice(0, 10) };
+    // Format the due date from LOCAL parts — toISOString shifts it a day for
+    // viewers west of UTC.
+    const d = next.due, pad = n => String(n).padStart(2, '0');
+    const dueIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    return { ...next, open, dueIso };
   }, [boot.acc, accCountries]);
 
   return (

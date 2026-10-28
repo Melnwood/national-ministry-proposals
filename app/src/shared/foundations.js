@@ -55,7 +55,9 @@ export function buildFoundations(cycles = [], goals = [], props = [], reports = 
       gift: num(c.fields[F.cycle.total]),
       acct: aval(c.fields[F.cycle.acct]) || '',
       note: aval(c.fields[F.cycle.note]) || '',
-      awarded: grants.reduce((a, p) => a + awarded(p), 0),
+      // Denied and archived grants don't hold the gift's money — a project
+      // that was archived never gets paid, so its award goes back in the pot.
+      awarded: live.reduce((a, p) => a + awarded(p), 0),
       grantCount: grants.length,
       fundedCount,
       goals: cycleGoals,
@@ -91,14 +93,17 @@ export function giftPots(boot) {
   const tAmt = t => t.appAmt || t.actual || t.reqAmt || 0;
   const travelPaidTotal = travel.filter(t => t.status === 'Paid').reduce((a, t) => a + tAmt(t), 0);
   const travelCommitted = travel.filter(t => t.status === 'Approved' || t.status === 'Paid').reduce((a, t) => a + tAmt(t), 0);
-  const pots = buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || [], boot.gifts || [])
-    .flatMap(f => f.cycles)
-    .map(cy => {
-      const isSecc = /southeast|se\s*christian/i.test(cy.foundation);
-      const goneOut = cy.paidOut + (isSecc ? travelPaidTotal : 0);
-      const promised = cy.stillToPay + (isSecc ? travelCommitted - travelPaidTotal : 0);
-      const free = cy.gift - cy.awarded - cy.directTotal - (isSecc ? travelCommitted : 0);
-      return { ...cy, isSecc, goneOut, promised, free };
-    });
+  const flat = buildFoundations(boot.cycles || [], boot.goals || [], boot.props || [], boot.reports || [], boot.gifts || [])
+    .flatMap(f => f.cycles);
+  // Travel draws on ONE SECC pot (the latest cycle — cycles sort newest
+  // first), never on several, or a second SECC gift would double-count it.
+  const seccPot = flat.find(cy => /southeast|se\s*christian/i.test(cy.foundation));
+  const pots = flat.map(cy => {
+    const isSecc = !!(seccPot && cy.id === seccPot.id);
+    const goneOut = cy.paidOut + (isSecc ? travelPaidTotal : 0);
+    const promised = cy.stillToPay + (isSecc ? travelCommitted - travelPaidTotal : 0);
+    const free = cy.gift - cy.awarded - cy.directTotal - (isSecc ? travelCommitted : 0);
+    return { ...cy, isSecc, goneOut, promised, free };
+  });
   return { pots, travelCommitted, travelPaidTotal };
 }

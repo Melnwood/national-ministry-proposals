@@ -211,16 +211,7 @@ async function fetchAllFrom(base, table, params){
   } while(offset);
   return recs;
 }
-async function fetchAll(table, params){
-  let recs=[], offset;
-  do{
-    const q = new URLSearchParams(params); q.set('returnFieldsByFieldId','true'); q.set('pageSize','100');
-    if(offset) q.set('offset', offset);
-    const d = await at(BASE+'/'+table+'?'+q.toString());
-    recs = recs.concat(d.records); offset = d.offset;
-  } while(offset);
-  return recs;
-}
+const fetchAll = (table, params) => fetchAllFrom(BASE, table, params);
 async function writeLog(records){
   for(let i=0;i<records.length;i+=10){
     await at(BASE+'/'+T_LOG, { method:'POST', body:JSON.stringify({ records:records.slice(i,i+10), typecast:true }) });
@@ -878,10 +869,16 @@ exports.handler = async (event) => {
       // ALL account balances (multi-account: each foundation's money can sit
       // in its own account; the first row stays the main 510181 picture).
       const bals = balRecs.map(r => ({ account:r.fields['fldkVMZNye4ZFkUtK']||'', balance:r.fields['fld8Bv81lUPaMEAxS']||0, asOf:r.fields['fld4Wy34J0iJjqGCC']||'' }));
-      // Intern scholarship applications — they live in the Intern Scholarships
-      // base, tracked here by status. Best effort: if the token can't reach
-      // that base, the rest of the app still loads.
-      const internRecs = await safe(fetchAllFrom(INTERN_BASE, T_INTERN, {}));
+      // Interns, accountability, direct gifts and travel are independent —
+      // fetch them TOGETHER so the four lookups don't stack up on every load.
+      const [internRecs, accRecs, giftRecs, travelRecs] = await Promise.all([
+        // Intern scholarships live in their own base; best effort — if the
+        // token can't reach it, the rest of the app still loads.
+        safe(fetchAllFrom(INTERN_BASE, T_INTERN, {})),
+        safe(fetchAll(T_ACC, {})),
+        safe(fetchAll(T_GIFTS, {})),
+        safe(fetchAll(T_TRAVEL, {}))
+      ]);
       const sname3 = x => ((x && (x.name || x)) || '');
       const interns = internRecs.map(r => { const f = r.fields || {}; return {
         id: r.id, country: f[IN.country] || '',
@@ -899,7 +896,6 @@ exports.handler = async (event) => {
       // JV Covenant accountability — country leaders fill it on My Country, the
       // board reads the grid on Management. Latest files ride along so "when
       // was the handbook last updated" is answered by the handbook itself.
-      const accRecs = await safe(fetchAll(T_ACC, {}));
       const acc = accRecs.map(r => {
         const link = r.fields[ACC.country];
         const st = r.fields[ACC.status];
@@ -919,7 +915,6 @@ exports.handler = async (event) => {
 
       // Direct gifts to individuals (e.g. House of Vicryn) — shown under the
       // giving foundation's cycle on the Foundations tab.
-      const giftRecs = await safe(fetchAll(T_GIFTS, {}));
       const gifts = giftRecs.map(r => {
         const link = r.fields[GF.cycle];
         return {
@@ -931,7 +926,6 @@ exports.handler = async (event) => {
           cycleId: (Array.isArray(link) && link.length) ? ((link[0] && link[0].id) || link[0]) : ''
         };
       }).filter(g => g.person);
-      const travelRecs = await safe(fetchAll(T_TRAVEL, {}));
       const travel = travelRecs.map(r => ({
         id:r.id, name:r.fields[TR.name]||'', email:r.fields[TR.email]||'', team:r.fields[TR.team]||'',
         purpose:r.fields[TR.purpose]||'', depart:r.fields[TR.depart]||'', ret:r.fields[TR.ret]||'',
@@ -942,7 +936,9 @@ exports.handler = async (event) => {
       }));
       // ---- scope for country leaders (their countries only) ----
       if(isScopedCountry(who)){
-        const allowed = new Set(who.countryIds||[]);
+        // Both country lists count: assigned countries AND countries the
+        // person LEADS (acc_set already honors leads — the view must too).
+        const allowed = new Set([...(who.countryIds||[]), ...(who.leadsCountryIds||[])]);
         const mineProps = props.filter(p => { const l = p.fields[PROP_COUNTRY_LINK]; return Array.isArray(l) && l.some(id => allowed.has(id)); });
         const mineIds = new Set(mineProps.map(p => p.id));
         const mineReports = reports.filter(r => mineIds.has(r.proposalId));
@@ -1301,42 +1297,51 @@ exports.handler = async (event) => {
         const allowed = new Set([...(who.countryIds||[]), ...(who.leadsCountryIds||[])]);
         if(!allowed.has(countryId)) return reply(403, { error:'You can only update your own country.' });
       }
-      const allAcc = await fetchAll(T_ACC, {});
-      let rec = allAcc.find(r => {
+      // Fetch only this year+item's rows (a handful — one per country), not
+      // the whole table, then match the country link in code.
+      const esc = s => String(s).replace(/['"\\]/g, '');
+      const candidates = await fetchAll(T_ACC, { filterByFormula: `AND({Year}='${esc(year)}',{Item}='${esc(item)}')` });
+      let rec = candidates.find(r => {
         const l = r.fields[ACC.country];
         const cid = (Array.isArray(l) && l.length) ? ((l[0] && l[0].id) || l[0]) : '';
-        return cid === countryId && (r.fields[ACC.year]||'') === year && (r.fields[ACC.item]||'') === item;
+        return cid === countryId;
       });
       const today = new Date().toISOString().slice(0,10);
-      const fields = { [ACC.year]:year, [ACC.item]:item, [ACC.updated]:today, [ACC.by]:(who.name||who.email||'') };
-      // Clicking the already-selected button un-does it: the status clears and
-      // the item goes back to untouched.
-      if(body.clearStatus) fields[ACC.status] = null;
-      else if(body.status != null && body.status !== '') fields[ACC.status] = String(body.status);
-      if(body.note != null) fields[ACC.note] = String(body.note);
-      // Uploading the document IS the proof — it also marks the item Yes
-      // unless the caller set a status explicitly.
-      if(body.file && body.file.data && body.status == null) fields[ACC.status] = 'Yes';
       if(!rec){
-        fields[ACC.country] = [countryId];
-        fields[ACC.key] = `${String(body.countryName||countryId)} · ${year} · ${item}`;
-        const created = await at(BASE+'/'+T_ACC, { method:'POST', body:JSON.stringify({ records:[{fields}], typecast:true }) });
+        const seed = { [ACC.year]:year, [ACC.item]:item, [ACC.country]:[countryId],
+          [ACC.key]:`${String(body.countryName||countryId)} · ${year} · ${item}` };
+        const created = await at(BASE+'/'+T_ACC, { method:'POST', body:JSON.stringify({ records:[{fields:seed}], typecast:true }) });
         rec = created.records && created.records[0];
-      } else {
-        await at(BASE+'/'+T_ACC+'/'+rec.id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
       }
+      if(!rec) return reply(502, { error:'Could not save the item.' });
+      // Upload the document FIRST and check it really landed — "Yes" is only
+      // stamped on proof that exists. fetch() resolves on HTTP errors, so the
+      // status code must be checked explicitly.
       let uploaded = false;
-      if(rec && body.file && body.file.data){
+      if(body.file && body.file.data){
+        let up;
         try{
-          await fetch('https://content.airtable.com/v0/'+BASE+'/'+rec.id+'/'+ACC.file+'/uploadAttachment', {
+          up = await fetch('https://content.airtable.com/v0/'+BASE+'/'+rec.id+'/'+ACC.file+'/uploadAttachment', {
             method:'POST', headers:{ Authorization:'Bearer '+TOKEN, 'Content-Type':'application/json' },
             body: JSON.stringify({ contentType: body.file.contentType||'application/octet-stream',
               file: body.file.data, filename: body.file.filename||'document' })
           });
-          uploaded = true;
-        }catch(e){ /* status saved; file upload failed */ }
+        }catch(e){ up = null; }
+        if(!up || !up.ok){
+          let detail = ''; try{ const t = await up.text(); const j = JSON.parse(t); detail = (j.error && (j.error.message||j.error.type)) || ''; }catch(e){}
+          return reply(502, { error:'The document could not be uploaded'+(detail?` — ${detail}`:'')+'. The item was NOT marked done — please try again (PDFs under 4.5 MB work best).' });
+        }
+        uploaded = true;
       }
-      return reply(200, { ok:true, id: rec && rec.id, uploaded });
+      const fields = { [ACC.updated]:today, [ACC.by]:(who.name||who.email||'') };
+      // Clicking the already-selected button un-does it: the status clears and
+      // the item goes back to untouched.
+      if(body.clearStatus) fields[ACC.status] = null;
+      else if(body.status != null && body.status !== '') fields[ACC.status] = String(body.status);
+      else if(uploaded) fields[ACC.status] = 'Yes'; // the upload IS the proof
+      if(body.note != null) fields[ACC.note] = String(body.note);
+      await at(BASE+'/'+T_ACC+'/'+rec.id, { method:'PATCH', body:JSON.stringify({ fields, typecast:true }) });
+      return reply(200, { ok:true, id: rec.id, uploaded });
     }
 
     if(body.op === 'report_submit'){
