@@ -14,3 +14,7 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Weekly money reminder to Amanda — Monday 07:30 UTC (morning across CEE/US).
+[functions."reminders"]
+  schedule = "30 7 * * 1"
